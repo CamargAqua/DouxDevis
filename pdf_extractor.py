@@ -8,7 +8,7 @@ from typing import Any
 
 import google.generativeai as genai
 
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-2.0-flash"
 
 EXTRACTION_PROMPT = """Tu es un assistant chargé d'extraire les informations d'un devis de service après-vente horloger envoyé par une marque partenaire (Chanel, Tag Heuer, Breitling, Rolex, etc.) à la bijouterie DOUX Joaillier.
 
