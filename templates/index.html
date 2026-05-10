@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Nouveau devis — DOUX Joaillier{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Nouveau devis</h1>
+  <p class="lead">
+    Importez le devis PDF reçu d'un partenaire horloger. Les informations
+    sont extraites automatiquement.
+  </p>
+
+  <form action="{{ url_for('extract') }}" method="post" enctype="multipart/form-data" class="upload-form">
+    <label for="pdf" class="dropzone">
+      <span class="dropzone-title">Glisser-déposer le PDF du partenaire</span>
+      <span class="dropzone-sub">ou cliquer pour parcourir (max 25 Mo)</span>
+      <input type="file" id="pdf" name="pdf" accept="application/pdf" required>
+      <span id="filename" class="dropzone-filename"></span>
+    </label>
+
+    <button type="submit" class="btn btn-primary">Extraire les informations</button>
+    <p class="hint">L'extraction prend généralement 10 à 20 secondes.</p>
+  </form>
+</section>
+
+<script>
+  const pdfInput = document.getElementById('pdf');
+  const fname    = document.getElementById('filename');
+  pdfInput.addEventListener('change', () => {
+    fname.textContent = pdfInput.files[0] ? pdfInput.files[0].name : '';
+  });
+</script>
+{% endblock %}

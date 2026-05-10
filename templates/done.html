@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Devis prêt — DOUX Joaillier{% endblock %}
+{% block content %}
+<section class="card card-success">
+  <h1>Devis généré</h1>
+  <p class="lead">Les fichiers sont prêts. Téléchargez les deux versions ci-dessous.</p>
+
+  <div class="downloads">
+    <a class="download-card" href="{{ url_for('download', token=token, filename=docx_name) }}">
+      <span class="download-icon">DOCX</span>
+      <span class="download-name">{{ docx_name }}</span>
+      <span class="download-cta">Télécharger</span>
+    </a>
+    <a class="download-card" href="{{ url_for('download', token=token, filename=pdf_name) }}">
+      <span class="download-icon">PDF</span>
+      <span class="download-name">{{ pdf_name }}</span>
+      <span class="download-cta">Télécharger</span>
+    </a>
+  </div>
+
+  <div class="form-actions">
+    <a href="{{ url_for('review') }}" class="btn btn-ghost">Revenir au formulaire</a>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">Nouveau devis</a>
+  </div>
+</section>
+{% endblock %}

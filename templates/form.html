@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Vérification du devis — DOUX Joaillier{% endblock %}
+{% block content %}
+<section class="card">
+  <header class="card-header">
+    <h1>Vérification &amp; ajustement</h1>
+    <p class="lead">Vérifiez les informations extraites, ajustez les prix au tarif DOUX, ajoutez la photo puis générez.</p>
+  </header>
+
+  <form action="{{ url_for('generate') }}" method="post" enctype="multipart/form-data" class="form">
+    <fieldset>
+      <legend>En-tête</legend>
+      <div class="grid grid-3">
+        <label>Marque partenaire
+          <input type="text" name="marque" value="{{ data.marque or '' }}" placeholder="Breitling, Rolex…" required>
+        </label>
+        <label>Numéro SAV
+          <input type="text" name="sav_numero" value="{{ data.sav.numero or '' }}" required>
+        </label>
+        <label>Date
+          <input type="text" name="sav_date" value="{{ data.sav.date or '' }}" placeholder="JJ.MM.AAAA">
+        </label>
+      </div>
+      <div class="grid grid-2">
+        <label>Lieu
+          <input type="text" name="sav_lieu" value="{{ data.sav.lieu or 'Avignon' }}">
+        </label>
+        <label>Nom du client
+          <input type="text" name="client_nom" value="{{ data.client.nom or '' }}" placeholder="NOM PRENOM">
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Informations de la montre</legend>
+      <div class="grid grid-3">
+        <label>Modèle<input type="text" name="modele" value="{{ data.montre.modele or '' }}"></label>
+        <label>Référence<input type="text" name="reference" value="{{ data.montre.reference or '' }}"></label>
+        <label>N° de série<input type="text" name="numero_serie" value="{{ data.montre.numero_serie or '' }}"></label>
+      </div>
+      <div class="grid grid-3">
+        <label>Poids<input type="text" name="poids" value="{{ data.montre.poids or '' }}"></label>
+        <label>Métal<input type="text" name="metal" value="{{ data.montre.metal or '' }}"></label>
+        <label>Taille<input type="text" name="taille" value="{{ data.montre.taille or '' }}"></label>
+      </div>
+      <label>État / défauts (une ligne par constat)
+        <textarea name="etat" rows="5">{% if data.montre.etat is iterable and data.montre.etat is not string %}{% for line in data.montre.etat %}{{ line }}
+{% endfor %}{% else %}{{ data.montre.etat or '' }}{% endif %}</textarea>
+      </label>
+      <label style="margin-top:12px">Photo de la montre (facultatif)
+        <input type="file" name="photo" accept="image/*">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Travail nécessaire</legend>
+      <label>Description du service complet
+        <textarea name="service_complet" rows="3">{{ data.service_complet_description or '' }}</textarea>
+      </label>
+      <div class="lines" style="margin-top:16px">
+        <div class="lines-header"><span>Description</span><span>Label libre</span><span>Prix €</span><span></span></div>
+        {% for line in (data.interventions_necessaires or [{'description':'','prix':''}]) %}
+        <div class="line">
+          <input type="text" name="nec_description[]" value="{{ line.description or '' }}" placeholder="Intitulé">
+          <input type="text" name="nec_label[]" value="{{ line.prix_label or '' }}" placeholder="OFFERT">
+          <input type="text" name="nec_prix[]" value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}" placeholder="0,00">
+          <button type="button" class="btn-icon" data-remove>×</button>
+        </div>
+        {% endfor %}
+        <button type="button" class="btn btn-ghost" data-add="nec">+ Ajouter</button>
+      </div>
+      <label class="total" style="margin-top:16px">Total TTC (vide = auto)
+        <input type="text" name="total_ttc" value="{% if data.total_ttc %}{{ '%.2f'|format(data.total_ttc) }}{% endif %}" placeholder="auto">
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Travail optionnel</legend>
+      <div class="lines">
+        <div class="lines-header"><span>Description</span><span>Label libre</span><span>Prix €</span><span></span></div>
+        {% for line in (data.interventions_optionnelles or []) %}
+        <div class="line">
+          <input type="text" name="opt_description[]" value="{{ line.description or '' }}" placeholder="Intitulé">
+          <input type="text" name="opt_label[]" value="{{ line.prix_label or '' }}" placeholder="">
+          <input type="text" name="opt_prix[]" value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}" placeholder="0,00">
+          <button type="button" class="btn-icon" data-remove>×</button>
+        </div>
+        {% endfor %}
+        <button type="button" class="btn btn-ghost" data-add="opt">+ Ajouter</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Délai</legend>
+      <input type="text" name="delai" value="{{ data.delai or '4 à 6 semaines' }}" style="max-width:260px">
+    </fieldset>
+
+    <div class="form-actions">
+      <a href="{{ url_for('index') }}" class="btn btn-ghost">Recommencer</a>
+      <button type="submit" class="btn btn-primary">Générer le devis</button>
+    </div>
+  </form>
+</section>
+
+<template id="line-tpl">
+  <div class="line">
+    <input type="text" name="__P___description[]" placeholder="Intitulé">
+    <input type="text" name="__P___label[]" placeholder="">
+    <input type="text" name="__P___prix[]" placeholder="0,00">
+    <button type="button" class="btn-icon" data-remove>×</button>
+  </div>
+</template>
+
+<script>
+  document.querySelectorAll('[data-add]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = btn.dataset.add;
+      const node = document.getElementById('line-tpl').content.firstElementChild.cloneNode(true);
+      node.querySelectorAll('input').forEach(i => { i.name = i.name.replace('__P__', p); });
+      btn.parentNode.insertBefore(node, btn);
+    });
+  });
+  document.addEventListener('click', e => {
+    if (e.target.matches('[data-remove]')) e.target.closest('.line')?.remove();
+  });
+</script>
+{% endblock %}

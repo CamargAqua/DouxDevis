@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: doux-devis
+    env: python
+    pythonVersion: "3.11.0"
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    plan: free
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FLASK_SECRET_KEY
+        generateValue: true
