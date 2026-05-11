@@ -92,6 +92,12 @@ def create_app() -> Flask:
             flash(f"Erreur lors de l'extraction : {exc}", "error")
             return redirect(url_for("index"))
 
+        # Date du jour si absente ou vide
+        if not (data.get("sav") or {}).get("date"):
+            if "sav" not in data or not isinstance(data["sav"], dict):
+                data["sav"] = {}
+            data["sav"]["date"] = datetime.now().strftime("%d.%m.%Y")
+
         token = uuid.uuid4().hex
         session_dir = UPLOAD_DIR / token
         session_dir.mkdir(parents=True, exist_ok=True)

@@ -42,7 +42,7 @@
             <input type="text" name="sav_numero" value="{{ data.sav.numero or '' }}" required>
           </label>
           <label class="field">Date
-            <input type="text" name="sav_date" value="{{ data.sav.date or '' }}" placeholder="JJ.MM.AAAA">
+            <input type="text" name="sav_date" id="sav-date" value="{{ data.sav.date or '' }}" placeholder="JJ.MM.AAAA">
           </label>
           <label class="field">Lieu
             <input type="text" name="sav_lieu" value="{{ data.sav.lieu or 'Avignon' }}">
@@ -235,6 +235,17 @@
 </section>
 
 <script>
+/* ── Date du jour si vide ── */
+(function() {
+  const f = document.getElementById('sav-date');
+  if (f && !f.value.trim()) {
+    const d = new Date();
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    f.value = `${dd}.${mm}.${d.getFullYear()}`;
+  }
+})();
+
 /* ── Sections toggle ── */
 function toggleSection(header) {
   header.closest('.form-section').classList.toggle('collapsed');
