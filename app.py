@@ -221,7 +221,7 @@ def _form_to_data(form) -> dict:
         total = sum(line.get("prix") or 0 for line in necessaires)
 
     return {
-        "marque": form.get("marque", "Autre"),
+        "marque": (form.get("marque_custom") or form.get("marque") or "Autre").strip(),
         "client": {"nom": form.get("client_nom", "").strip()},
         "sav": {
             "numero": form.get("sav_numero", "").strip(),

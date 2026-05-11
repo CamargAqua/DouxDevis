@@ -1,127 +1,307 @@
 {% extends "base.html" %}
-{% block title %}Vérification du devis — DOUX Joaillier{% endblock %}
+{% block title %}Vérification — DOUX Joaillier{% endblock %}
 {% block content %}
 <section class="card">
-  <header class="card-header">
-    <h1>Vérification &amp; ajustement</h1>
-    <p class="lead">Vérifiez les informations extraites, ajustez les prix au tarif DOUX, ajoutez la photo puis générez.</p>
+  <header style="margin-bottom:28px">
+    <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;margin-bottom:6px">Vérification &amp; ajustement</h1>
+    <p class="lead" style="color:var(--ink-mid);font-size:14px">Vérifiez les données extraites, ajustez les prix, activez OFFERT d'un clic — puis générez.</p>
   </header>
 
   <form action="{{ url_for('generate') }}" method="post" enctype="multipart/form-data" class="form">
-    <fieldset>
-      <legend>En-tête</legend>
-      <div class="grid grid-3">
-        <label>Marque partenaire
-          <input type="text" name="marque" value="{{ data.marque or '' }}" placeholder="Breitling, Rolex…" required>
-        </label>
-        <label>Numéro SAV
-          <input type="text" name="sav_numero" value="{{ data.sav.numero or '' }}" required>
-        </label>
-        <label>Date
-          <input type="text" name="sav_date" value="{{ data.sav.date or '' }}" placeholder="JJ.MM.AAAA">
-        </label>
-      </div>
-      <div class="grid grid-2">
-        <label>Lieu
-          <input type="text" name="sav_lieu" value="{{ data.sav.lieu or 'Avignon' }}">
-        </label>
-        <label>Nom du client
-          <input type="text" name="client_nom" value="{{ data.client.nom or '' }}" placeholder="NOM PRENOM">
-        </label>
-      </div>
-    </fieldset>
 
-    <fieldset>
-      <legend>Informations de la montre</legend>
-      <div class="grid grid-3">
-        <label>Modèle<input type="text" name="modele" value="{{ data.montre.modele or '' }}"></label>
-        <label>Référence<input type="text" name="reference" value="{{ data.montre.reference or '' }}"></label>
-        <label>N° de série<input type="text" name="numero_serie" value="{{ data.montre.numero_serie or '' }}"></label>
+    <!-- ── EN-TÊTE ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">📋</span>
+        <span class="section-title">En-tête du devis</span>
+        <span class="section-chevron">▾</span>
       </div>
-      <div class="grid grid-3">
-        <label>Poids<input type="text" name="poids" value="{{ data.montre.poids or '' }}"></label>
-        <label>Métal<input type="text" name="metal" value="{{ data.montre.metal or '' }}"></label>
-        <label>Taille<input type="text" name="taille" value="{{ data.montre.taille or '' }}"></label>
-      </div>
-      <label>État / défauts (une ligne par constat)
-        <textarea name="etat" rows="5">{% if data.montre.etat is iterable and data.montre.etat is not string %}{% for line in data.montre.etat %}{{ line }}
-{% endfor %}{% else %}{{ data.montre.etat or '' }}{% endif %}</textarea>
-      </label>
-      <label style="margin-top:12px">Photo de la montre (facultatif)
-        <input type="file" name="photo" accept="image/*">
-      </label>
-    </fieldset>
-
-    <fieldset>
-      <legend>Travail nécessaire</legend>
-      <label>Description du service complet
-        <textarea name="service_complet" rows="3">{{ data.service_complet_description or '' }}</textarea>
-      </label>
-      <div class="lines" style="margin-top:16px">
-        <div class="lines-header"><span>Description</span><span>Label libre</span><span>Prix €</span><span></span></div>
-        {% for line in (data.interventions_necessaires or [{'description':'','prix':''}]) %}
-        <div class="line">
-          <input type="text" name="nec_description[]" value="{{ line.description or '' }}" placeholder="Intitulé">
-          <input type="text" name="nec_label[]" value="{{ line.prix_label or '' }}" placeholder="OFFERT">
-          <input type="text" name="nec_prix[]" value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}" placeholder="0,00">
-          <button type="button" class="btn-icon" data-remove>×</button>
+      <div class="form-section-body">
+        <!-- Marque en pills -->
+        <div>
+          <div style="font-size:12px;color:var(--ink-mid);font-weight:600;margin-bottom:8px;letter-spacing:.3px">Marque partenaire</div>
+          <div class="marque-select">
+            {% set marques_list = ['Breitling','Chanel','Rolex','Tag Heuer','Patek Philippe','March LA.B','Autre'] %}
+            {% for m in marques_list %}
+            <label class="marque-pill {% if (data.marque or '') == m %}selected{% endif %}">
+              <input class="marque-pill-input" type="radio" name="marque" value="{{ m }}" {% if (data.marque or '') == m %}checked{% endif %}>
+              {{ m }}
+            </label>
+            {% endfor %}
+          </div>
+          <input type="text" name="marque_custom" id="marque_custom"
+                 value="{{ data.marque if data.marque not in marques_list else '' }}"
+                 placeholder="Autre marque…"
+                 style="margin-top:10px;max-width:260px;{% if data.marque in marques_list %}display:none{% endif %}">
         </div>
-        {% endfor %}
-        <button type="button" class="btn btn-ghost" data-add="nec">+ Ajouter</button>
-      </div>
-      <label class="total" style="margin-top:16px">Total TTC (vide = auto)
-        <input type="text" name="total_ttc" value="{% if data.total_ttc %}{{ '%.2f'|format(data.total_ttc) }}{% endif %}" placeholder="auto">
-      </label>
-    </fieldset>
 
-    <fieldset>
-      <legend>Travail optionnel</legend>
-      <div class="lines">
-        <div class="lines-header"><span>Description</span><span>Label libre</span><span>Prix €</span><span></span></div>
-        {% for line in (data.interventions_optionnelles or []) %}
-        <div class="line">
-          <input type="text" name="opt_description[]" value="{{ line.description or '' }}" placeholder="Intitulé">
-          <input type="text" name="opt_label[]" value="{{ line.prix_label or '' }}" placeholder="">
-          <input type="text" name="opt_prix[]" value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}" placeholder="0,00">
-          <button type="button" class="btn-icon" data-remove>×</button>
+        <div class="grid grid-3">
+          <label class="field">Numéro SAV
+            <input type="text" name="sav_numero" value="{{ data.sav.numero or '' }}" required>
+          </label>
+          <label class="field">Date
+            <input type="text" name="sav_date" value="{{ data.sav.date or '' }}" placeholder="JJ.MM.AAAA">
+          </label>
+          <label class="field">Lieu
+            <input type="text" name="sav_lieu" value="{{ data.sav.lieu or 'Avignon' }}">
+          </label>
         </div>
-        {% endfor %}
-        <button type="button" class="btn btn-ghost" data-add="opt">+ Ajouter</button>
+
+        <label class="field" style="max-width:360px">Nom du client
+          <input type="text" name="client_nom" value="{{ data.client.nom or '' }}" placeholder="NOM PRENOM" style="font-weight:600">
+        </label>
       </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>Délai</legend>
-      <input type="text" name="delai" value="{{ data.delai or '4 à 6 semaines' }}" style="max-width:260px">
-    </fieldset>
-
-    <div class="form-actions">
-      <a href="{{ url_for('index') }}" class="btn btn-ghost">Recommencer</a>
-      <button type="submit" class="btn btn-primary">Générer le devis</button>
     </div>
+
+    <!-- ── MONTRE ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">⌚</span>
+        <span class="section-title">Informations de la montre</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <div class="grid grid-3">
+          <label class="field">Modèle
+            <input type="text" name="modele" value="{{ data.montre.modele or '' }}">
+          </label>
+          <label class="field">Référence
+            <input type="text" name="reference" value="{{ data.montre.reference or '' }}">
+          </label>
+          <label class="field">N° de série
+            <input type="text" name="numero_serie" value="{{ data.montre.numero_serie or '' }}">
+          </label>
+        </div>
+        <div class="grid grid-3">
+          <label class="field">Poids
+            <input type="text" name="poids" value="{{ data.montre.poids or '' }}" placeholder="—">
+          </label>
+          <label class="field">Métal
+            <input type="text" name="metal" value="{{ data.montre.metal or '' }}" placeholder="Acier, Or blanc…">
+          </label>
+          <label class="field">Taille
+            <input type="text" name="taille" value="{{ data.montre.taille or '' }}" placeholder="41 mm">
+          </label>
+        </div>
+
+        <label class="field">État constaté
+          <textarea name="etat" rows="4" placeholder="Une ligne par constat…">{% if data.montre.etat is iterable and data.montre.etat is not string %}{% for line in data.montre.etat %}{{ line }}
+{% endfor %}{% else %}{{ data.montre.etat or '' }}{% endif %}</textarea>
+        </label>
+
+        <div class="photo-upload">
+          <div style="font-size:12px;color:var(--ink-mid);font-weight:600;letter-spacing:.3px">Photo de la montre <span style="font-weight:400;color:var(--ink-soft)">(facultatif)</span></div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <img id="photo-preview" class="photo-preview" src="" alt="Aperçu">
+            <label class="btn btn-ghost" style="cursor:pointer;font-size:13px">
+              Choisir une photo
+              <input type="file" name="photo" id="photo-input" accept="image/*" style="display:none">
+            </label>
+            <span id="photo-name" style="font-size:12px;color:var(--ink-soft)"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TRAVAIL NÉCESSAIRE ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">🔧</span>
+        <span class="section-title">Travail nécessaire</span>
+        <span class="section-badge nec">Facturation</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <label class="field">Description du service complet
+          <textarea name="service_complet" rows="3" placeholder="Sous-points du service : démontage, nettoyage…">{{ data.service_complet_description or '' }}</textarea>
+        </label>
+
+        <div class="interventions" id="nec-lines">
+          {% for line in (data.interventions_necessaires or [{'description':'','prix':''}]) %}
+          {% set is_offert = (line.prix == 0 or line.prix_label == 'OFFERT') %}
+          <div class="intervention-line {% if is_offert %}is-offert{% endif %}">
+            <input type="text" name="nec_description[]" value="{{ line.description or '' }}" placeholder="Intitulé de l'intervention">
+            <input type="text" name="nec_prix[]" class="prix-input"
+                   value="{% if line.prix and not is_offert %}{{ '%.2f'|format(line.prix) }}{% endif %}"
+                   placeholder="0,00">
+            <input type="hidden" name="nec_label[]" class="label-input" value="{{ 'OFFERT' if is_offert else '' }}">
+            <button type="button" class="toggle-offert {% if is_offert %}active{% endif %}" onclick="toggleOffert(this)">
+              <span class="dot"></span>OFFERT
+            </button>
+            <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>
+          </div>
+          {% endfor %}
+        </div>
+
+        <button type="button" class="btn-add" onclick="addLine('nec')">＋ Ajouter une intervention</button>
+
+        <!-- Total live -->
+        <div class="total-bar" id="total-bar">
+          <span class="total-bar-label">Total TTC</span>
+          <span class="total-bar-value"><span>€</span><span id="total-display">0,00</span></span>
+        </div>
+        <div class="total-override">
+          <span>Forcer un total différent :</span>
+          <input type="text" name="total_ttc" id="total-override-input"
+                 value="{% if data.total_ttc %}{{ '%.2f'|format(data.total_ttc) }}{% endif %}"
+                 placeholder="laisser vide = auto">
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TRAVAIL OPTIONNEL ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">✨</span>
+        <span class="section-title">Travail optionnel</span>
+        <span class="section-badge opt">Options</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <div class="interventions" id="opt-lines">
+          {% if data.interventions_optionnelles %}
+            {% for line in data.interventions_optionnelles %}
+            <div class="intervention-line">
+              <input type="text" name="opt_description[]" value="{{ line.description or '' }}" placeholder="Option proposée au client">
+              <input type="text" name="opt_prix[]" class="prix-input"
+                     value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
+                     placeholder="0,00">
+              <input type="hidden" name="opt_label[]" class="label-input" value="{{ line.prix_label or '' }}">
+              <button type="button" class="toggle-offert" onclick="toggleOffert(this)">
+                <span class="dot"></span>OFFERT
+              </button>
+              <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove()">×</button>
+            </div>
+            {% endfor %}
+          {% endif %}
+        </div>
+        <button type="button" class="btn-add" onclick="addLine('opt')">＋ Ajouter une option</button>
+      </div>
+    </div>
+
+    <!-- ── DÉLAI ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">📅</span>
+        <span class="section-title">Délai estimé</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <div class="delai-pills" id="delai-pills">
+          {% set delais = ['4 semaines','4 à 6 semaines','6 à 8 semaines','8 à 10 semaines','8 à 12 semaines','Sur devis'] %}
+          {% for d in delais %}
+          <span class="delai-pill {% if (data.delai or '') == d %}selected{% endif %}"
+                onclick="selectDelai(this, '{{ d }}')">{{ d }}</span>
+          {% endfor %}
+        </div>
+        <input type="text" name="delai" id="delai-input"
+               value="{{ data.delai or '4 à 6 semaines' }}"
+               class="delai-custom" placeholder="Délai personnalisé"
+               style="margin-top:10px">
+      </div>
+    </div>
+
+    <!-- ── ACTIONS ── -->
+    <div class="form-actions-sticky">
+      <a href="{{ url_for('index') }}" class="btn btn-ghost">← Recommencer</a>
+      <button type="submit" class="btn btn-gold btn-lg">Générer le devis →</button>
+    </div>
+
   </form>
 </section>
 
-<template id="line-tpl">
-  <div class="line">
-    <input type="text" name="__P___description[]" placeholder="Intitulé">
-    <input type="text" name="__P___label[]" placeholder="">
-    <input type="text" name="__P___prix[]" placeholder="0,00">
-    <button type="button" class="btn-icon" data-remove>×</button>
-  </div>
-</template>
-
 <script>
-  document.querySelectorAll('[data-add]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const p = btn.dataset.add;
-      const node = document.getElementById('line-tpl').content.firstElementChild.cloneNode(true);
-      node.querySelectorAll('input').forEach(i => { i.name = i.name.replace('__P__', p); });
-      btn.parentNode.insertBefore(node, btn);
-    });
+/* ── Sections toggle ── */
+function toggleSection(header) {
+  header.closest('.form-section').classList.toggle('collapsed');
+}
+
+/* ── Marque pills ── */
+document.querySelectorAll('.marque-pill input').forEach(radio => {
+  radio.addEventListener('change', () => {
+    document.querySelectorAll('.marque-pill').forEach(p => p.classList.remove('selected'));
+    radio.closest('.marque-pill').classList.add('selected');
+    const customInput = document.getElementById('marque_custom');
+    customInput.style.display = radio.value === 'Autre' ? 'block' : 'none';
+    if (radio.value !== 'Autre') customInput.value = '';
   });
-  document.addEventListener('click', e => {
-    if (e.target.matches('[data-remove]')) e.target.closest('.line')?.remove();
+});
+
+/* ── Délai pills ── */
+function selectDelai(el, val) {
+  document.querySelectorAll('.delai-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('delai-input').value = val;
+}
+document.getElementById('delai-input').addEventListener('input', function() {
+  document.querySelectorAll('.delai-pill').forEach(p => p.classList.remove('selected'));
+});
+
+/* ── Toggle OFFERT ── */
+function toggleOffert(btn) {
+  const line  = btn.closest('.intervention-line');
+  const prix  = line.querySelector('.prix-input');
+  const label = line.querySelector('.label-input');
+  const on    = !btn.classList.contains('active');
+  btn.classList.toggle('active', on);
+  line.classList.toggle('is-offert', on);
+  label.value = on ? 'OFFERT' : '';
+  if (on) { prix._saved = prix.value; prix.value = ''; }
+  else    { prix.value = prix._saved || ''; }
+  updateTotal();
+}
+
+/* ── Total live ── */
+function updateTotal() {
+  let sum = 0;
+  document.querySelectorAll('#nec-lines .intervention-line').forEach(line => {
+    const label = line.querySelector('.label-input').value;
+    if (label === 'OFFERT') return;
+    const v = parseFloat((line.querySelector('.prix-input').value || '0').replace(',','.'));
+    if (!isNaN(v)) sum += v;
   });
+  const override = document.getElementById('total-override-input');
+  if (!override.value.trim()) {
+    document.getElementById('total-display').textContent =
+      sum.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+}
+document.querySelectorAll('#nec-lines').forEach(container => {
+  container.addEventListener('input', updateTotal);
+});
+updateTotal();
+
+/* ── Ajouter une ligne ── */
+function addLine(prefix) {
+  const container = document.getElementById(prefix + '-lines');
+  const div = document.createElement('div');
+  div.className = 'intervention-line';
+  div.innerHTML = `
+    <input type="text" name="${prefix}_description[]" placeholder="Intitulé de l'intervention">
+    <input type="text" name="${prefix}_prix[]" class="prix-input" placeholder="0,00">
+    <input type="hidden" name="${prefix}_label[]" class="label-input" value="">
+    <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>
+    <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>
+  `;
+  container.appendChild(div);
+  if (prefix === 'nec') {
+    container.addEventListener('input', updateTotal);
+    div.querySelector('.prix-input').focus();
+  }
+}
+
+/* ── Photo preview ── */
+document.getElementById('photo-input').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+  document.getElementById('photo-name').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('photo-preview');
+    img.src = e.target.result;
+    img.classList.add('visible');
+  };
+  reader.readAsDataURL(file);
+});
 </script>
 {% endblock %}
