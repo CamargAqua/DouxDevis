@@ -7,7 +7,7 @@ services:
     startCommand: gunicorn app:app
     plan: free
     envVars:
-      - key: GEMINI_API_KEY
+      - key: ANTHROPIC_API_KEY
         sync: false
       - key: FLASK_SECRET_KEY
         generateValue: true

@@ -67,7 +67,7 @@ def create_app() -> Flask:
 
     @app.route("/extract", methods=["POST"])
     def extract():
-        api_key = os.environ.get("GEMINI_API_KEY")
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
             flash("Clé API manquante — contactez l'administrateur.", "error")
             return redirect(url_for("index"))
