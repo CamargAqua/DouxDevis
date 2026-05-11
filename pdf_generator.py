@@ -1,7 +1,9 @@
 """Génération PDF — format DOUX Joaillier (ReportLab)."""
 from __future__ import annotations
 
+import re
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 
 from reportlab.lib import colors
@@ -9,6 +11,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm, mm
 from reportlab.platypus import (
+    Image,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -19,6 +22,50 @@ from reportlab.platypus import (
 
 GOLD = colors.HexColor("#C8A028")
 DARK = colors.HexColor("#1A1814")
+
+# Dossier des logos (static/logos/)
+LOGOS_DIR = Path(__file__).parent / "static" / "logos"
+
+# Mapping marque → nom de fichier logo (sans extension)
+BRAND_LOGOS: dict[str, str] = {
+    "breitling":      "breitling",
+    "chanel":         "chanel",
+    "rolex":          "rolex",
+    "tag heuer":      "tag_heuer",
+    "tagheuer":       "tag_heuer",
+    "patek philippe": "patek_philippe",
+    "patek":          "patek_philippe",
+    "march la.b":     "march_lab",
+    "march lab":      "march_lab",
+    "cartier":        "cartier",
+    "omega":          "omega",
+    "iwc":            "iwc",
+    "longines":       "longines",
+    "tudor":          "tudor",
+}
+
+
+def _logo_path(name: str) -> Path | None:
+    """Retourne le chemin du logo si le fichier existe (png, jpg, jpeg)."""
+    key = name.lower().strip()
+    slug = BRAND_LOGOS.get(key, re.sub(r"[^a-z0-9]+", "_", key).strip("_"))
+    for ext in ("png", "jpg", "jpeg"):
+        p = LOGOS_DIR / f"{slug}.{ext}"
+        if p.exists():
+            return p
+    return None
+
+
+def _logo_img(path: Path, max_w: float, max_h: float) -> Image:
+    img = Image(str(path))
+    ratio = img.imageWidth / img.imageHeight
+    w = min(max_w, max_h * ratio)
+    h = w / ratio
+    if h > max_h:
+        h = max_h
+        w = h * ratio
+    img._restrictSize(w, h)
+    return img
 
 
 def _fmt(value: Any) -> str:
@@ -35,14 +82,14 @@ def _fmt(value: Any) -> str:
 
 
 def _p(text: str, style: ParagraphStyle) -> Paragraph:
-    """Texte brut → échappe les caractères spéciaux avant de passer à ReportLab."""
+    """Texte brut → échappe les caractères spéciaux."""
     safe = (text or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     safe = safe.replace("\n", "<br/>")
     return Paragraph(safe, style)
 
 
 def _html(markup: str, style: ParagraphStyle) -> Paragraph:
-    """Markup ReportLab déjà formé → passe directement sans échappement."""
+    """Markup ReportLab déjà formé → passe sans échappement."""
     return Paragraph(markup or "", style)
 
 
@@ -54,24 +101,54 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         topMargin=12 * mm, bottomMargin=12 * mm,
     )
 
-    base  = ParagraphStyle("base",  fontName="Helvetica",          fontSize=9,  leading=13)
-    bold  = ParagraphStyle("bold",  fontName="Helvetica-Bold",     fontSize=9,  leading=13)
-    small = ParagraphStyle("small", fontName="Helvetica",          fontSize=7.5, alignment=1, leading=10)
-    rb    = ParagraphStyle("rb",    fontName="Helvetica-Bold",     fontSize=9,  alignment=2, leading=13)
+    base  = ParagraphStyle("base",  fontName="Helvetica",       fontSize=9,  leading=13)
+    bold  = ParagraphStyle("bold",  fontName="Helvetica-Bold",  fontSize=9,  leading=13)
+    small = ParagraphStyle("small", fontName="Helvetica",       fontSize=7.5, alignment=1, leading=10)
+    rb    = ParagraphStyle("rb",    fontName="Helvetica-Bold",  fontSize=9,  alignment=2, leading=13)
 
     story: list[Any] = []
 
     # ── En-tête ───────────────────────────────────────────────────────────────
-    marque = (data.get("marque") or "PARTENAIRE").upper()
-    hdr = Table([[
-        _html('<font name="Helvetica-Bold" size="28">DOUX JOAILLIER</font>', base),
-        _html(f'<para align="right"><font name="Helvetica-Bold" size="22" color="#C8A028">{marque}</font></para>', base),
-    ]], colWidths=[9 * cm, 9 * cm])
+    marque_raw = (data.get("marque") or "PARTENAIRE")
+    marque_up  = marque_raw.upper()
+
+    # Logo DOUX (gauche)
+    doux_logo = _logo_path("doux")
+    if doux_logo:
+        left_cell = _logo_img(doux_logo, 7 * cm, 1.4 * cm)
+    else:
+        left_cell = _html(
+            '<font face="Helvetica-Bold" size="28">DOUX JOAILLIER</font>', base
+        )
+
+    # Logo marque partenaire (droite)
+    brand_logo = _logo_path(marque_raw)
+    if brand_logo:
+        right_style = ParagraphStyle("rc", parent=base, alignment=2)
+        right_cell = Table([[_logo_img(brand_logo, 7 * cm, 1.4 * cm)]],
+                           colWidths=[9 * cm])
+        right_cell.setStyle(TableStyle([
+            ("ALIGN",  (0, 0), (-1, -1), "RIGHT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
+            ("TOPPADDING",    (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
+    else:
+        right_cell = _html(
+            f'<para align="right"><font face="Helvetica-Bold" size="22"'
+            f' color="#C8A028">{marque_up}</font></para>', base
+        )
+
+    hdr = Table([[left_cell, right_cell]], colWidths=[9 * cm, 9 * cm],
+                rowHeights=[1.6 * cm])
     hdr.setStyle(TableStyle([
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("LEFTPADDING",   (0, 0), (-1, -1), 0),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("TOPPADDING",    (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ("LINEBELOW",     (0, 0), (-1, -1), 1, colors.black),
     ]))
     story.append(hdr)
@@ -111,17 +188,17 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     if isinstance(etat, str):
         etat = [l.strip() for l in etat.splitlines() if l.strip()]
 
-    serie  = montre.get("numero_serie", "")
-    modele = montre.get("modele", "").upper()
-    metal  = (montre.get("metal") or "").upper()
+    serie       = montre.get("numero_serie", "")
+    modele      = montre.get("modele", "").upper()
+    metal       = (montre.get("metal") or "").upper()
     modele_full = f"{modele} — {metal}" if metal else modele
 
-    etat_html = "<br/>".join(f"• {l.upper()}" for l in etat)
-    left_html = f"{serie}<br/><b>{modele_full}</b>"
+    etat_html  = "<br/>".join(f"• {l.upper()}" for l in etat)
+    left_html  = f"{serie}<br/><b>{modele_full}</b>"
     if etat_html:
         left_html += f"<br/><br/>{etat_html}"
 
-    ref = montre.get("reference", "")
+    ref        = montre.get("reference", "")
     right_html = f"<b>Référence :</b><br/>{ref}"
     if serie:
         right_html += f"<br/><br/><b>N° de série :</b><br/>{serie}"
@@ -168,7 +245,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
 
         if i == 0 and intro:
             intro_lines = "<br/>".join(
-                f'. <font size="8" name="Helvetica-Oblique">{l.strip()}</font>'
+                f'. <font size="8" face="Helvetica-Oblique">{l.strip()}</font>'
                 for l in intro.split("\n") if l.strip()
             )
             cell_desc = _html(f"<b>{desc}</b><br/>{intro_lines}", base)
@@ -176,7 +253,9 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
             cell_desc = _p(desc, base)
 
         if prix_txt == "OFFERT":
-            cell_prix = _html('<para align="right"><font color="#C8A028"><b>OFFERT</b></font></para>', base)
+            cell_prix = _html(
+                '<para align="right"><font color="#C8A028"><b>OFFERT</b></font></para>', base
+            )
         else:
             cell_prix = _html(f'<para align="right">{prix_txt}</para>', base)
 
