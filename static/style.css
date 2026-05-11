@@ -329,6 +329,37 @@ textarea { resize: vertical; min-height: 90px; }
 .delai-pill.selected { background: var(--gold-ultra); border-color: var(--gold); color: var(--gold-deep); font-weight: 700; }
 .delai-custom { max-width: 180px !important; }
 
+/* ── Bloc marge % ── */
+.marge-block {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 16px 20px;
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+.marge-presets { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.marge-label { font-size: 12px; font-weight: 600; color: var(--ink-mid); white-space: nowrap; margin-right: 4px; }
+.marge-pill {
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  border: 1.5px solid var(--line-strong); background: var(--surface);
+  cursor: pointer; transition: all var(--transition); font-family: inherit;
+}
+.marge-pill:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-ultra); }
+.marge-pill.active { background: var(--gold); border-color: var(--gold-deep); color: #fff; }
+
+.marge-input-row { display: flex; align-items: center; gap: 12px; }
+.marge-input-wrap {
+  display: flex; align-items: center;
+  border: 1.5px solid var(--line-strong); border-radius: var(--r);
+  background: var(--surface); overflow: hidden; width: 100px;
+}
+.marge-input-wrap input {
+  border: none; padding: 8px 10px; font-size: 15px; font-weight: 700;
+  width: 65px; text-align: right; background: transparent;
+}
+.marge-input-wrap input:focus { outline: none; }
+.marge-unit { padding: 0 10px 0 4px; font-size: 15px; font-weight: 700; color: var(--gold); }
+.marge-result { font-size: 13px; font-weight: 600; color: var(--ok-ink); }
+
 /* ── Étiquette optionnel ── */
 .section-badge {
   font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;

@@ -22,9 +22,11 @@
           <div style="font-size:12px;color:var(--ink-mid);font-weight:600;margin-bottom:8px;letter-spacing:.3px">Marque partenaire</div>
           <div class="marque-select">
             {% set marques_list = ['Breitling','Chanel','Rolex','Tag Heuer','Patek Philippe','March LA.B','Autre'] %}
+            {% set marque_lower = (data.marque or '')|lower %}
             {% for m in marques_list %}
-            <label class="marque-pill {% if (data.marque or '') == m %}selected{% endif %}">
-              <input class="marque-pill-input" type="radio" name="marque" value="{{ m }}" {% if (data.marque or '') == m %}checked{% endif %}>
+            {% set is_selected = (marque_lower == m|lower) or (m == 'Autre' and marque_lower not in marques_list|map('lower')|list) %}
+            <label class="marque-pill {% if is_selected %}selected{% endif %}">
+              <input class="marque-pill-input" type="radio" name="marque" value="{{ m }}" {% if is_selected %}checked{% endif %}>
               {{ m }}
             </label>
             {% endfor %}
@@ -137,15 +139,37 @@
 
         <!-- Total live -->
         <div class="total-bar" id="total-bar">
-          <span class="total-bar-label">Total TTC</span>
-          <span class="total-bar-value"><span>€</span><span id="total-display">0,00</span></span>
+          <div>
+            <div class="total-bar-label">Total TTC partenaire</div>
+            <div class="total-bar-value"><span>€</span><span id="total-display">0,00</span></div>
+          </div>
+          <div style="text-align:right">
+            <div class="total-bar-label">Total facturé client</div>
+            <div class="total-bar-value" style="color:var(--gold-light)"><span>€</span><span id="total-final-display">0,00</span></div>
+          </div>
         </div>
-        <div class="total-override">
-          <span>Forcer un total différent :</span>
-          <input type="text" name="total_ttc" id="total-override-input"
-                 value="{% if data.total_ttc %}{{ '%.2f'|format(data.total_ttc) }}{% endif %}"
-                 placeholder="laisser vide = auto">
+
+        <!-- Marge % -->
+        <div class="marge-block">
+          <div class="marge-presets">
+            <span class="marge-label">Marge DOUX</span>
+            <button type="button" class="marge-pill" onclick="setMarge(0)">Sans marge</button>
+            <button type="button" class="marge-pill" onclick="setMarge(10)">+10%</button>
+            <button type="button" class="marge-pill" onclick="setMarge(15)">+15%</button>
+            <button type="button" class="marge-pill" onclick="setMarge(20)">+20%</button>
+            <button type="button" class="marge-pill" onclick="setMarge(25)">+25%</button>
+            <button type="button" class="marge-pill" onclick="setMarge(30)">+30%</button>
+          </div>
+          <div class="marge-input-row">
+            <span class="marge-label">Personnalisé :</span>
+            <div class="marge-input-wrap">
+              <input type="number" id="marge-pct" min="0" max="200" step="1" value="0" placeholder="0">
+              <span class="marge-unit">%</span>
+            </div>
+            <span id="marge-result" class="marge-result"></span>
+          </div>
         </div>
+        <input type="hidden" name="total_ttc" id="total-override-input" value="{% if data.total_ttc %}{{ '%.2f'|format(data.total_ttc) }}{% endif %}">
       </div>
     </div>
 
@@ -251,24 +275,53 @@ function toggleOffert(btn) {
   updateTotal();
 }
 
-/* ── Total live ── */
-function updateTotal() {
+/* ── Total live + marge ── */
+function fmt(n) {
+  return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function getBase() {
   let sum = 0;
   document.querySelectorAll('#nec-lines .intervention-line').forEach(line => {
-    const label = line.querySelector('.label-input').value;
-    if (label === 'OFFERT') return;
+    if (line.querySelector('.label-input').value === 'OFFERT') return;
     const v = parseFloat((line.querySelector('.prix-input').value || '0').replace(',','.'));
     if (!isNaN(v)) sum += v;
   });
-  const override = document.getElementById('total-override-input');
-  if (!override.value.trim()) {
-    document.getElementById('total-display').textContent =
-      sum.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2});
-  }
+  return sum;
 }
-document.querySelectorAll('#nec-lines').forEach(container => {
-  container.addEventListener('input', updateTotal);
+
+function updateTotal() {
+  const base = getBase();
+  const pct  = parseFloat(document.getElementById('marge-pct').value) || 0;
+  const final = base * (1 + pct / 100);
+
+  document.getElementById('total-display').textContent = fmt(base);
+  document.getElementById('total-final-display').textContent = fmt(final);
+  document.getElementById('total-override-input').value = final.toFixed(2);
+
+  const gain = final - base;
+  document.getElementById('marge-result').textContent =
+    gain > 0 ? `+ ${fmt(gain)} € de marge` : '';
+
+  // Highlight marge pills
+  document.querySelectorAll('.marge-pill').forEach(p => {
+    p.classList.toggle('active', parseFloat(p.dataset.pct) === pct);
+  });
+}
+
+function setMarge(pct) {
+  document.getElementById('marge-pct').value = pct;
+  updateTotal();
+}
+
+// Tag data-pct on pills after render
+document.querySelectorAll('.marge-pill').forEach(p => {
+  const m = p.textContent.match(/(\d+)/);
+  p.dataset.pct = m ? m[1] : '0';
 });
+
+document.getElementById('marge-pct').addEventListener('input', updateTotal);
+document.querySelectorAll('#nec-lines').forEach(c => c.addEventListener('input', updateTotal));
 updateTotal();
 
 /* ── Ajouter une ligne ── */
