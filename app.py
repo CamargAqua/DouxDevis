@@ -26,14 +26,15 @@ from docx_generator import build_docx
 from pdf_extractor import extract_from_pdf
 from pdf_generator import docx_to_pdf
 
-load_dotenv()
-
 # Quand on tourne depuis l'exe PyInstaller, launcher.py pose ces vars
 # pour séparer les ressources statiques (sys._MEIPASS) des données runtime.
 _runtime = os.environ.get("DOUX_RUNTIME_DIR")
 _base = os.environ.get("DOUX_BASE_DIR")
 
 BASE_DIR = Path(_base) if _base else Path(__file__).parent
+
+load_dotenv(dotenv_path=BASE_DIR / ".env", override=True)
+load_dotenv(override=False)
 RUNTIME_DIR = Path(_runtime) if _runtime else BASE_DIR
 
 UPLOAD_DIR = RUNTIME_DIR / "uploads"
