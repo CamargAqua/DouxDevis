@@ -307,16 +307,48 @@ textarea { resize: vertical; min-height: 90px; }
 }
 .photo-preview.visible { display: block; }
 
-/* ── Badges marque ── */
-.marque-select { display: flex; flex-wrap: wrap; gap: 8px; }
-.marque-pill {
-  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
-  border: 1.5px solid var(--line-strong); background: var(--surface);
-  cursor: pointer; transition: all var(--transition); user-select: none;
+/* ── Recherche marque ── */
+.marque-search-wrap { position: relative; max-width: 420px; }
+.marque-search-box {
+  display: flex; align-items: center; gap: 8px;
+  border: 1.5px solid var(--line-strong); border-radius: var(--r);
+  background: var(--surface); padding: 0 12px;
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
-.marque-pill:hover { border-color: var(--gold-light); background: var(--gold-ultra); }
-.marque-pill.selected { background: var(--ink); color: #fff; border-color: var(--ink); }
-.marque-pill-input { position: absolute; opacity: 0; pointer-events: none; }
+.marque-search-box:focus-within {
+  border-color: var(--gold-light);
+  box-shadow: 0 0 0 3px rgba(184,150,46,.12);
+}
+.marque-search-icon { color: var(--ink-soft); font-size: 14px; flex-shrink: 0; }
+.marque-search-box input {
+  flex: 1; border: none; padding: 10px 0; font-size: 14px;
+  background: transparent; color: var(--ink);
+}
+.marque-search-box input:focus { outline: none; }
+.marque-clear {
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-soft); font-size: 18px; line-height: 1;
+  padding: 0; display: flex; align-items: center;
+}
+.marque-clear:hover { color: var(--err-ink); }
+.marque-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r); box-shadow: var(--shadow-lg);
+  list-style: none; max-height: 280px; overflow-y: auto; display: none;
+}
+.marque-option {
+  padding: 10px 14px; cursor: pointer; font-size: 14px;
+  transition: background var(--transition);
+}
+.marque-option:hover { background: var(--gold-ultra); }
+.marque-option mark { background: transparent; color: var(--gold); font-weight: 700; }
+.marque-add { color: var(--gold); font-style: italic; border-top: 1px solid var(--line); }
+.marque-badge {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 8px;
+  padding: 5px 14px; background: var(--ink); color: #fff;
+  border-radius: 20px; font-size: 13px; font-weight: 600;
+}
 
 /* ── Délai pills ── */
 .delai-pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

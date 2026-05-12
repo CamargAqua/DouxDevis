@@ -112,29 +112,19 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     marque_raw = (data.get("marque") or "PARTENAIRE")
     marque_up  = marque_raw.upper()
 
-    # Logo DOUX (gauche)
+    # Logo DOUX (gauche) — Image ou texte
     doux_logo = _logo_path("doux")
     if doux_logo:
-        left_cell = _logo_img(doux_logo, 7 * cm, 1.4 * cm)
+        left_cell = _logo_img(doux_logo, 8 * cm, 1.4 * cm)
+        left_cell.hAlign = 'LEFT'
     else:
-        left_cell = _html(
-            '<font face="Helvetica-Bold" size="28">DOUX JOAILLIER</font>', base
-        )
+        left_cell = _html('<font face="Helvetica-Bold" size="28">DOUX JOAILLIER</font>', base)
 
-    # Logo marque partenaire (droite)
+    # Logo marque partenaire (droite) — Image ou nom en or
     brand_logo = _logo_path(marque_raw)
     if brand_logo:
-        right_style = ParagraphStyle("rc", parent=base, alignment=2)
-        right_cell = Table([[_logo_img(brand_logo, 7 * cm, 1.4 * cm)]],
-                           colWidths=[9 * cm])
-        right_cell.setStyle(TableStyle([
-            ("ALIGN",  (0, 0), (-1, -1), "RIGHT"),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
-            ("TOPPADDING",    (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-        ]))
+        right_cell = _logo_img(brand_logo, 8 * cm, 1.4 * cm)
+        right_cell.hAlign = 'RIGHT'
     else:
         right_cell = _html(
             f'<para align="right"><font face="Helvetica-Bold" size="22"'
@@ -145,6 +135,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
                 rowHeights=[1.6 * cm])
     hdr.setStyle(TableStyle([
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN",         (1, 0), (1, 0),   "RIGHT"),
         ("LEFTPADDING",   (0, 0), (-1, -1), 0),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
         ("TOPPADDING",    (0, 0), (-1, -1), 0),
