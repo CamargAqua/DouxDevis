@@ -1,4 +1,4 @@
-"""Génération PDF — format DOUX Joaillier (ReportLab)."""
+﻿"""Génération PDF — format DOUX Joaillier (ReportLab)."""
 from __future__ import annotations
 
 import re
@@ -118,7 +118,7 @@ def _inject_js(pdf_bytes: bytes, base_total: float, opt_prices: list[float]) -> 
                 'if(f&&f.value==="Yes")t+=_opts[i];'
             "}"
             'var tf=_doc.getField("total_ttc");'
-            'if(tf)tf.value=t.toFixed(2).replace(".",",")+" €";'
+            'if(tf)tf.value=t.toFixed(2).replace(".",",")+" \\u20AC";'
         "}"
         "for(var i=0;i<_opts.length;i++){"
             'var f=_doc.getField("option_"+i);'
