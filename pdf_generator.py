@@ -13,7 +13,7 @@ from reportlab.lib.units import cm, mm
 from reportlab.platypus import (
     Flowable,
     Image,
-    PageBreak,
+
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -43,10 +43,16 @@ class _CheckboxField(Flowable):
         c = self.canv
         box = self.BOX
         y_box = (self._h - box) / 2
+
+        # AcroForm uses absolute page coords — transformer via la matrice courante
+        m = c._currentMatrix  # (a, b, c, d, e, f)
+        x_abs = m[0] * 0 + m[2] * y_box + m[4]
+        y_abs = m[1] * 0 + m[3] * y_box + m[5]
+
         c.acroForm.checkbox(
             name=self._name,
-            x=0,
-            y=y_box,
+            x=x_abs,
+            y=y_abs,
             size=box,
             buttonStyle="check",
             borderColor=colors.black,
@@ -139,17 +145,32 @@ def _html(markup: str, style: ParagraphStyle) -> Paragraph:
     return Paragraph(markup or "", style)
 
 
+_FOOTER = (
+    "SARL DOUX Développement au Capital de 15 245 € — R.C. Avignon 65 A 59 "
+    "— Siret 315 215 442 00023 — APE 4777 Z — TVA Intracommunautaire FR 313 152 15442 "
+    "| sav@douxjoaillier.com"
+)
+
+
+def _draw_footer(canvas, doc):
+    canvas.saveState()
+    canvas.setFont("Helvetica", 7.5)
+    canvas.setFillColor(colors.black)
+    canvas.drawCentredString(A4[0] / 2, 7 * mm, _FOOTER)
+    canvas.restoreState()
+
+
 def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     buf = BytesIO()
     doc = SimpleDocTemplate(
         buf, pagesize=A4,
         leftMargin=15 * mm, rightMargin=15 * mm,
-        topMargin=12 * mm, bottomMargin=12 * mm,
+        topMargin=12 * mm, bottomMargin=18 * mm,  # marge basse pour le pied de page
     )
 
     base  = ParagraphStyle("base",  fontName="Helvetica",       fontSize=9,  leading=13)
     bold  = ParagraphStyle("bold",  fontName="Helvetica-Bold",  fontSize=9,  leading=13)
-    small = ParagraphStyle("small", fontName="Helvetica",       fontSize=7.5, alignment=1, leading=10)
+
     rb    = ParagraphStyle("rb",    fontName="Helvetica-Bold",  fontSize=9,  alignment=2, leading=13)
 
     story: list[Any] = []
@@ -423,16 +444,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     ]))
     story.append(sig)
 
-    # ── Mentions légales — page 2 ─────────────────────────────────────────────
-    story.append(PageBreak())
-    story.append(_p(
-        "SARL DOUX Développement au Capital de 15 245 € — R.C. Avignon 65 A 59 "
-        "— Siret 315 215 442 00023 — APE 4777 Z — TVA Intracommunautaire FR 313 152 15442 "
-        "| sav@douxjoaillier.com",
-        small,
-    ))
-
-    doc.build(story)
+    doc.build(story, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
     return buf.getvalue()
 
 
