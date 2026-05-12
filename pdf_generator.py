@@ -154,9 +154,15 @@ _FOOTER = (
 
 def _draw_footer(canvas, doc):
     canvas.saveState()
-    canvas.setFont("Helvetica", 7.5)
-    canvas.setFillColor(colors.black)
-    canvas.drawCentredString(A4[0] / 2, 7 * mm, _FOOTER)
+    usable_w = A4[0] - 30 * mm  # marges gauche + droite
+    style = ParagraphStyle(
+        "footer_style",
+        fontName="Helvetica", fontSize=7,
+        alignment=1, leading=9, textColor=colors.black,
+    )
+    p = Paragraph(_FOOTER, style)
+    p.wrap(usable_w, 20 * mm)
+    p.drawOn(canvas, 15 * mm, 5 * mm)
     canvas.restoreState()
 
 
