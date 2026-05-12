@@ -345,7 +345,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
             desc     = (l.get("description") or "").upper()
             prix_txt = l.get("prix_label") or _fmt(l.get("prix"))
             opt_rows.append([
-                _html(f"■  <b>{desc}</b>", bold),
+                _html(f"□  <b>{desc}</b>", bold),
                 _html(f'<para align="right"><b>{prix_txt}</b></para>', bold),
             ])
         opt_tbl = Table(opt_rows, colWidths=[14 * cm, 4 * cm])
@@ -370,8 +370,8 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     story.append(Spacer(1, 3 * mm))
 
     sig = Table([
-        [_p("■  ACCORD AU DEVIS", base),  _html("<b>DATE ET SIGNATURE :</b>", bold)],
-        [_p("■  REFUS DU DEVIS",  base),  ""],
+        [_p("□  ACCORD AU DEVIS", base),  _html("<b>DATE ET SIGNATURE :</b>", bold)],
+        [_p("□  REFUS DU DEVIS",  base),  ""],
     ], colWidths=[11 * cm, 7 * cm], rowHeights=[1.2 * cm, 1.2 * cm])
     sig.setStyle(TableStyle([
         ("BOX",          (1, 0), (1, 1), 0.5, colors.black),
