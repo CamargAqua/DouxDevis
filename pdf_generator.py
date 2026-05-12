@@ -11,6 +11,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm, mm
 from reportlab.platypus import (
+    Flowable,
     Image,
     PageBreak,
     Paragraph,
@@ -19,6 +20,46 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+
+
+class _CheckboxField(Flowable):
+    """Case à cocher PDF interactive (AcroForm) avec libellé à droite."""
+
+    BOX = 10  # taille en points
+
+    def __init__(self, name: str, label: str, font: str = "Helvetica", font_size: int = 9):
+        super().__init__()
+        self._name = name
+        self._label = label
+        self._font = font
+        self._font_size = font_size
+        self.hAlign = "LEFT"
+
+    def wrap(self, avail_w, avail_h):
+        self._h = max(self.BOX + 4, self._font_size + 6)
+        return avail_w, self._h
+
+    def draw(self):
+        c = self.canv
+        box = self.BOX
+        y_box = (self._h - box) / 2
+        c.acroForm.checkbox(
+            name=self._name,
+            x=0,
+            y=y_box,
+            size=box,
+            buttonStyle="check",
+            borderColor=colors.black,
+            fillColor=colors.white,
+            textColor=colors.black,
+            borderWidth=0.5,
+            forceBorder=True,
+            checked=False,
+        )
+        c.setFont(self._font, self._font_size)
+        c.setFillColor(colors.black)
+        text_y = y_box + (box - self._font_size) / 2 + 1
+        c.drawString(box + 5, text_y, self._label)
 
 GOLD = colors.HexColor("#C8A028")
 DARK = colors.HexColor("#1A1814")
@@ -341,11 +382,11 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         story.append(hdr_opt)
 
         opt_rows = []
-        for l in optionnelles:
+        for i, l in enumerate(optionnelles):
             desc     = (l.get("description") or "").upper()
             prix_txt = l.get("prix_label") or _fmt(l.get("prix"))
             opt_rows.append([
-                _html(f"□  <b>{desc}</b>", bold),
+                _CheckboxField(f"option_{i}", desc, font="Helvetica-Bold", font_size=9),
                 _html(f'<para align="right"><b>{prix_txt}</b></para>', bold),
             ])
         opt_tbl = Table(opt_rows, colWidths=[14 * cm, 4 * cm])
@@ -370,8 +411,8 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     story.append(Spacer(1, 3 * mm))
 
     sig = Table([
-        [_p("□  ACCORD AU DEVIS", base),  _html("<b>DATE ET SIGNATURE :</b>", bold)],
-        [_p("□  REFUS DU DEVIS",  base),  ""],
+        [_CheckboxField("accord", "ACCORD AU DEVIS"),  _html("<b>DATE ET SIGNATURE :</b>", bold)],
+        [_CheckboxField("refus",  "REFUS DU DEVIS"),   ""],
     ], colWidths=[11 * cm, 7 * cm], rowHeights=[1.2 * cm, 1.2 * cm])
     sig.setStyle(TableStyle([
         ("BOX",          (1, 0), (1, 1), 0.5, colors.black),
