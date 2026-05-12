@@ -16,10 +16,13 @@
       <span id="filename" class="dropzone-filename" style="display:none"></span>
     </label>
 
-    <button type="submit" class="btn btn-primary btn-lg" style="align-self:center;min-width:220px">
+    <button type="submit" id="submit-btn" class="btn btn-primary btn-lg" style="align-self:center;min-width:220px">
       Extraire les informations
     </button>
-    <p class="hint">⏱ L'extraction prend généralement 10 à 20 secondes</p>
+    <p class="hint" id="hint-normal">⏱ L'extraction prend généralement 10 à 20 secondes</p>
+    <p class="hint" id="hint-loading" style="display:none;color:var(--gold);font-weight:600">
+      ⏳ Analyse du PDF en cours… ne pas fermer la page
+    </p>
   </form>
 </section>
 
@@ -40,5 +43,16 @@
   zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
   zone.addEventListener('drop', () => zone.classList.remove('drag-over'));
+
+  // Anti-double-submit + spinner
+  document.querySelector('.upload-form').addEventListener('submit', function(e) {
+    if (!input.files[0]) return; // laisser la validation HTML gérer
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Extraction en cours…';
+    btn.style.opacity = '0.7';
+    document.getElementById('hint-normal').style.display  = 'none';
+    document.getElementById('hint-loading').style.display = 'block';
+  });
 </script>
 {% endblock %}

@@ -1,9 +1,10 @@
-"""Extraction de données structurées depuis un PDF de devis partenaire via Gemini."""
+"""Extraction de données structurées depuis un PDF de devis partenaire via Claude."""
 from __future__ import annotations
 
 import base64
 import json
 import os
+import re
 from typing import Any
 
 import anthropic
@@ -91,7 +92,6 @@ Format JJ.MM.AAAA. Si absente ou non trouvée, chaîne vide."""
 
 def _clean(data: dict[str, Any]) -> dict[str, Any]:
     """Post-traitement pour corriger les cas que le prompt rate parfois."""
-    import re
 
     # SAV : supprimer le suffixe -1, -2, etc.
     sav = data.get("sav") or {}
@@ -153,6 +153,7 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, 
     response = client.messages.create(
         model=MODEL,
         max_tokens=2048,
+        timeout=60.0,
         messages=[
             {
                 "role": "user",

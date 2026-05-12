@@ -20,6 +20,7 @@ from flask import (
     session,
     url_for,
 )
+from flask_session import Session
 from werkzeug.utils import secure_filename
 
 from docx_generator import build_docx
@@ -61,6 +62,15 @@ def create_app() -> Flask:
     app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
     app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
     app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+
+    # Sessions côté serveur (filesystem) — évite la limite 4KB des cookies
+    SESSION_DIR = RUNTIME_DIR / "flask_sessions"
+    SESSION_DIR.mkdir(exist_ok=True)
+    app.config["SESSION_TYPE"] = "filesystem"
+    app.config["SESSION_FILE_DIR"] = str(SESSION_DIR)
+    app.config["SESSION_PERMANENT"] = False
+    app.config["SESSION_USE_SIGNER"] = True
+    Session(app)
 
     @app.route("/", methods=["GET"])
     def index():
@@ -255,9 +265,10 @@ def _form_to_data(form) -> dict:
 def _build_filename(data: dict) -> str:
     nom = (data.get("client") or {}).get("nom", "").strip() or "CLIENT"
     sav = (data.get("sav") or {}).get("numero", "").strip() or datetime.now().strftime("%Y%m%d")
-    raw = f"DEVIS_DOUX_{nom}_{sav}"
+    nom_short = "_".join(nom.split()[:2])  # max 2 mots du nom
+    raw = f"DEVIS_DOUX_{nom_short}_{sav}"
     safe = re.sub(r"[^A-Za-z0-9_-]+", "_", raw).strip("_")
-    return safe or "DEVIS_DOUX"
+    return (safe or "DEVIS_DOUX")[:80]  # cap 80 chars
 
 
 app = create_app()
