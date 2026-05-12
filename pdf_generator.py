@@ -28,20 +28,25 @@ LOGOS_DIR = Path(__file__).parent / "static" / "logos"
 
 # Mapping marque → nom de fichier logo (sans extension)
 BRAND_LOGOS: dict[str, str] = {
-    "breitling":      "breitling",
-    "chanel":         "chanel",
-    "rolex":          "rolex",
-    "tag heuer":      "tag_heuer",
-    "tagheuer":       "tag_heuer",
-    "patek philippe": "patek_philippe",
-    "patek":          "patek_philippe",
-    "march la.b":     "march_lab",
-    "march lab":      "march_lab",
-    "cartier":        "cartier",
-    "omega":          "omega",
-    "iwc":            "iwc",
-    "longines":       "longines",
-    "tudor":          "tudor",
+    "breitling":              "breitling",
+    "chanel":                 "chanel",
+    "rolex":                  "rolex",
+    "tag heuer":              "tag_heuer",
+    "tagheuer":               "tag_heuer",
+    "patek philippe":         "patek_philippe",
+    "patek":                  "patek_philippe",
+    "march la.b":             "march_lab",
+    "march lab":              "march_lab",
+    "cartier":                "cartier",
+    "omega":                  "omega",
+    "iwc":                    "iwc",
+    "iwc schaffhausen":       "iwc",
+    "longines":               "longines",
+    "tudor":                  "tudor",
+    "hublot":                 "hublot",
+    "audemars piguet":        "audemars_piguet",
+    "ap":                     "audemars_piguet",
+    "doux":                   "doux",
 }
 
 
@@ -185,28 +190,52 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     modele_full = f"{modele} — {metal}" if metal else modele
 
     etat_html  = "<br/>".join(f"• {l.upper()}" for l in etat)
-    left_html  = f"{serie}<br/><b>{modele_full}</b>"
+    info_html  = f"{serie}<br/><b>{modele_full}</b>"
     if etat_html:
-        left_html += f"<br/><br/>{etat_html}"
+        info_html += f"<br/><br/>{etat_html}"
 
     ref        = montre.get("reference", "")
     right_html = f"<b>Référence :</b><br/>{ref}"
     if serie:
         right_html += f"<br/><br/><b>N° de série :</b><br/>{serie}"
 
-    montre_tbl = Table([[
-        _html(left_html, base),
-        _html(right_html, base),
-    ]], colWidths=[13 * cm, 5 * cm])
-    montre_tbl.setStyle(TableStyle([
-        ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
-        ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
-        ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
-        ("TOPPADDING",    (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ]))
+    if photo_bytes:
+        try:
+            photo_img = Image(BytesIO(photo_bytes))
+            photo_img._restrictSize(4 * cm, 5 * cm)
+        except Exception:
+            photo_img = _p("", base)
+
+        montre_tbl = Table([[
+            photo_img,
+            _html(info_html, base),
+            _html(right_html, base),
+        ]], colWidths=[4.5 * cm, 8.5 * cm, 5 * cm])
+        montre_tbl.setStyle(TableStyle([
+            ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
+            ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
+            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+            ("ALIGN",         (0, 0), (0, 0),   "CENTER"),
+            ("VALIGN",        (0, 0), (0, 0),   "MIDDLE"),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+            ("TOPPADDING",    (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
+    else:
+        montre_tbl = Table([[
+            _html(info_html, base),
+            _html(right_html, base),
+        ]], colWidths=[13 * cm, 5 * cm])
+        montre_tbl.setStyle(TableStyle([
+            ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
+            ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
+            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+            ("TOPPADDING",    (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ]))
     story.append(montre_tbl)
     story.append(Spacer(1, 5 * mm))
 
