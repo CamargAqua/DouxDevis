@@ -6,6 +6,8 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+from pypdf import PdfReader as _PdfReader, PdfWriter as _PdfWriter
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
@@ -13,7 +15,6 @@ from reportlab.lib.units import cm, mm
 from reportlab.platypus import (
     Flowable,
     Image,
-
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -66,6 +67,72 @@ class _CheckboxField(Flowable):
         c.setFillColor(colors.black)
         text_y = y_box + (box - self._font_size) / 2 + 1
         c.drawString(box + 5, text_y, self._label)
+
+
+class _TotalField(Flowable):
+    """Champ texte AcroForm (lecture seule) pour le total TTC, mis à jour par JS."""
+
+    def __init__(self, value: str):
+        super().__init__()
+        self._value = value
+
+    def wrap(self, avail_w, avail_h):
+        self._w = avail_w
+        self._h = 15
+        return avail_w, self._h
+
+    def draw(self):
+        c = self.canv
+        m = c._currentMatrix
+        x_abs = m[0] * 0 + m[2] * 0 + m[4]
+        y_abs = m[1] * 0 + m[3] * 0 + m[5]
+        c.acroForm.textfield(
+            name="total_ttc",
+            value=self._value,
+            x=x_abs,
+            y=y_abs,
+            width=self._w,
+            height=self._h,
+            fontName="Helvetica-Bold",
+            fontSize=9,
+            fillColor=colors.white,
+            borderColor=colors.white,
+            textColor=colors.black,
+            borderWidth=0,
+            fieldFlags="readOnly",
+            forceBorder=False,
+        )
+
+
+def _inject_js(pdf_bytes: bytes, base_total: float, opt_prices: list[float]) -> bytes:
+    """Injecte le JavaScript AcroForm pour recalculer le total au clic sur les options."""
+    prices_js = "[" + ", ".join(f"{p:.2f}" for p in opt_prices) + "]"
+    js = (
+        "var _doc=this;"
+        f"var _base={float(base_total):.2f};"
+        f"var _opts={prices_js};"
+        "function recalcTotal(){"
+            "var t=_base;"
+            "for(var i=0;i<_opts.length;i++){"
+                'var f=_doc.getField("option_"+i);'
+                'if(f&&f.value==="Yes")t+=_opts[i];'
+            "}"
+            'var tf=_doc.getField("total_ttc");'
+            'if(tf)tf.value=t.toFixed(2).replace(".",",")+" €";'
+        "}"
+        "for(var i=0;i<_opts.length;i++){"
+            'var f=_doc.getField("option_"+i);'
+            'if(f)f.setAction("MouseUp","recalcTotal()");'
+        "}"
+    )
+    reader = _PdfReader(BytesIO(pdf_bytes))
+    writer = _PdfWriter()
+    writer.append(reader)
+    writer.add_js(js)
+    out = BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
 
 GOLD = colors.HexColor("#C8A028")
 DARK = colors.HexColor("#1A1814")
@@ -371,7 +438,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
 
     tot = Table([[
         _html("<b>TOTAL TTC EN EURO</b>", rb),
-        _html(f"<b>{total_str}</b>", rb),
+        _TotalField(total_str),
     ]], colWidths=[14 * cm, 4 * cm])
     tot.setStyle(TableStyle([
         ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
@@ -386,6 +453,13 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
 
     # ── TRAVAIL OPTIONNEL ─────────────────────────────────────────────────────
     optionnelles = data.get("interventions_optionnelles") or []
+    opt_prices: list[float] = []
+    for l in optionnelles:
+        try:
+            opt_prices.append(float(l.get("prix") or 0))
+        except (TypeError, ValueError):
+            opt_prices.append(0.0)
+
     if optionnelles:
         hdr_opt = Table([[
             _html('<font color="white"><b>OPTION</b></font>', bold),
@@ -445,7 +519,10 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     story.append(sig)
 
     doc.build(story, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
-    return buf.getvalue()
+    pdf_bytes = buf.getvalue()
+    if opt_prices:
+        pdf_bytes = _inject_js(pdf_bytes, float(total_ttc or 0), opt_prices)
+    return pdf_bytes
 
 
 # Alias pour compatibilité avec app.py
