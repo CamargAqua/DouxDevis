@@ -121,37 +121,52 @@
           {% endfor %}
         </div>
         <button type="button" class="btn-add" onclick="addLine('nec')">＋ Ajouter une intervention</button>
+      </div>
+    </div>
 
-        <!-- Total live -->
-        <div class="total-bar">
-          <div>
-            <div class="total-bar-label">Prix partenaire</div>
-            <div class="total-bar-value"><span>€</span><span id="total-display">0,00</span></div>
-          </div>
-          <div style="text-align:right">
-            <div class="total-bar-label">Facturé client</div>
-            <div class="total-bar-value" style="color:var(--gold-light)"><span>€</span><span id="total-final-display">0,00</span></div>
-          </div>
-        </div>
-
-        <!-- Marge % -->
-        <div class="marge-block">
-          <div class="marge-presets">
-            <span class="marge-label">Marge DOUX</span>
-            <button type="button" class="marge-pill" data-pct="0"  onclick="setMarge(0)">Sans marge</button>
-            <button type="button" class="marge-pill" data-pct="10" onclick="setMarge(10)">+10%</button>
-            <button type="button" class="marge-pill" data-pct="15" onclick="setMarge(15)">+15%</button>
-            <button type="button" class="marge-pill" data-pct="20" onclick="setMarge(20)">+20%</button>
-            <button type="button" class="marge-pill" data-pct="25" onclick="setMarge(25)">+25%</button>
-            <button type="button" class="marge-pill" data-pct="30" onclick="setMarge(30)">+30%</button>
-          </div>
-          <div class="marge-input-row">
-            <span class="marge-label">Personnalisé :</span>
-            <div class="marge-input-wrap">
-              <input type="number" id="marge-pct" min="0" max="200" step="1" value="0">
-              <span class="marge-unit">%</span>
+    <!-- ── TARIFICATION ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">💶</span>
+        <span class="section-title">Tarification</span>
+        <span class="section-badge nec" id="marge-header-badge">0 %</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <div class="pricing-card">
+          <div class="pricing-row">
+            <div class="pricing-col">
+              <span class="pricing-lbl">Prix partenaire</span>
+              <div class="pricing-val">€&nbsp;<span id="total-display">0,00</span></div>
             </div>
-            <span id="marge-result" class="marge-result"></span>
+            <div class="pricing-arrow-col">
+              <span class="pricing-pct-badge" id="marge-pct-badge">+0 %</span>
+              <svg class="pricing-arrow-svg" viewBox="0 0 48 14" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 7h44M36 1l8 6-8 6"/>
+              </svg>
+              <span id="marge-result" class="pricing-gain"></span>
+            </div>
+            <div class="pricing-col pricing-col--right">
+              <span class="pricing-lbl">Facturé client</span>
+              <div class="pricing-val pricing-val--gold">€&nbsp;<span id="total-final-display">0,00</span></div>
+            </div>
+          </div>
+          <hr class="pricing-divider">
+          <div class="pricing-seg-row">
+            <span class="pricing-seg-lbl">Marge</span>
+            <div class="seg-ctrl">
+              <button type="button" class="seg-btn" data-pct="0"  onclick="setMarge(0)">0 %</button>
+              <button type="button" class="seg-btn" data-pct="10" onclick="setMarge(10)">+10 %</button>
+              <button type="button" class="seg-btn" data-pct="15" onclick="setMarge(15)">+15 %</button>
+              <button type="button" class="seg-btn" data-pct="20" onclick="setMarge(20)">+20 %</button>
+              <button type="button" class="seg-btn" data-pct="25" onclick="setMarge(25)">+25 %</button>
+              <button type="button" class="seg-btn" data-pct="30" onclick="setMarge(30)">+30 %</button>
+            </div>
+            <div class="pricing-custom">
+              <span class="pricing-custom-lbl">Perso</span>
+              <input type="number" id="marge-pct" min="0" max="200" step="1" value="0">
+              <span class="pricing-custom-unit">%</span>
+            </div>
           </div>
         </div>
         <input type="hidden" name="total_ttc" id="total-override-input">
@@ -366,7 +381,11 @@ function updateTotal() {
   const gain = final - base;
   document.getElementById('marge-result').textContent = gain > 0 ? `+ ${fmt(gain)} € de marge` : '';
 
-  document.querySelectorAll('.marge-pill').forEach(p =>
+  const pctLabel = pct > 0 ? `+${pct} %` : '0 %';
+  document.getElementById('marge-pct-badge').textContent = pctLabel;
+  document.getElementById('marge-header-badge').textContent = pctLabel;
+
+  document.querySelectorAll('.seg-btn[data-pct]').forEach(p =>
     p.classList.toggle('active', parseInt(p.dataset.pct) === pct));
 }
 
