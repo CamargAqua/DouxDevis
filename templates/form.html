@@ -114,12 +114,6 @@
                    value="{{ base_val }}"
                    placeholder="0,00">
             <input type="hidden" name="nec_label[]" class="label-input" value="{{ 'OFFERT' if is_offert else ('INCL' if is_incl else '') }}">
-            <button type="button" class="toggle-incl {% if is_incl %}active{% endif %}" onclick="toggleIncl(this)">
-              <span class="dot"></span>INCL
-            </button>
-            <button type="button" class="toggle-offert {% if is_offert %}active{% endif %}" onclick="toggleOffert(this)">
-              <span class="dot"></span>OFFERT
-            </button>
             <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>
           </div>
           {% endfor %}
@@ -492,15 +486,10 @@ function addLine(prefix) {
   const cont = document.getElementById(prefix+'-lines');
   const div  = document.createElement('div');
   div.className = 'intervention-line';
-  const inclBtn = prefix === 'nec'
-    ? `<button type="button" class="toggle-incl" onclick="toggleIncl(this)"><span class="dot"></span>INCL</button>`
-    : '';
   div.innerHTML = `
     <input type="text" name="${prefix}_description[]" placeholder="Intitulé">
     <input type="text" name="${prefix}_prix[]" class="prix-input" data-base="" placeholder="0,00">
     <input type="hidden" name="${prefix}_label[]" class="label-input" value="">
-    ${inclBtn}
-    <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>
     <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>`;
   cont.appendChild(div);
   div.querySelector('.prix-input').focus();
