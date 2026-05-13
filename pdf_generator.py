@@ -251,23 +251,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     story.append(cl)
     story.append(Spacer(1, 4 * mm))
 
-    # ── Phrase d'introduction ─────────────────────────────────────────────────
-    intro_style = ParagraphStyle(
-        "intro_lettre", fontName="Helvetica-Oblique", fontSize=9,
-        leading=14, textColor=colors.HexColor("#3A3830"),
-    )
-    story.append(_p(
-        "Madame, Monsieur,\n"
-        "Après examen attentif de votre pièce, nous avons l'honneur de vous soumettre "
-        "ci-dessous le détail de nos préconisations de remise en état.",
-        intro_style,
-    ))
-    story.append(Spacer(1, 4 * mm))
-
-    # ── INFORMATIONS DE LA MONTRE ─────────────────────────────────────────────
-    story.append(_html("<b><u>INFORMATIONS DE LA MONTRE</u></b>", bold))
-    story.append(Spacer(1, 2 * mm))
-
+    # ── Phrase d'introduction (avec nom de la pièce si disponible) ───────────
     montre = data.get("montre") or {}
     etat = montre.get("etat") or []
     if isinstance(etat, str):
@@ -276,7 +260,28 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     serie       = montre.get("numero_serie", "")
     modele      = montre.get("modele", "").upper()
     metal       = (montre.get("metal") or "").upper()
+    taille      = (montre.get("taille") or "").upper()
     modele_full = f"{modele} — {metal}" if metal else (modele or "—")
+
+    _piece_parts = [p for p in [modele, taille, metal] if p]
+    _piece_label = " — ".join(_piece_parts) if _piece_parts else ""
+
+    intro_style = ParagraphStyle(
+        "intro_lettre", fontName="Helvetica-Oblique", fontSize=9,
+        leading=14, textColor=colors.HexColor("#3A3830"),
+    )
+    _votre = f"votre {_piece_label}" if _piece_label else "votre pièce"
+    story.append(_p(
+        f"Madame, Monsieur,\n"
+        f"Après examen attentif de {_votre}, nous avons l'honneur de vous soumettre "
+        f"ci-dessous le détail de nos préconisations de remise en état.",
+        intro_style,
+    ))
+    story.append(Spacer(1, 4 * mm))
+
+    # ── INFORMATIONS DE LA MONTRE ─────────────────────────────────────────────
+    story.append(_html("<b><u>INFORMATIONS DE LA MONTRE</u></b>", bold))
+    story.append(Spacer(1, 2 * mm))
     ref         = montre.get("reference", "")
 
     etat_html = "<br/>".join(f"• {l.upper()}" for l in etat) if etat else "<i>Néant</i>"

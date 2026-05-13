@@ -384,14 +384,22 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         date_lieu=f"Le {sav.get('date', '')} à {sav.get('lieu', 'Avignon')}",
     )
 
-    # Phrase d'introduction
+    # Phrase d'introduction dynamique (avec nom de la pièce si disponible)
+    _m = montre
+    _piece_parts = [p for p in [
+        (_m.get("modele") or "").upper(),
+        (_m.get("taille") or "").upper(),
+        (_m.get("metal") or "").upper(),
+    ] if p]
+    _votre = f"votre {' — '.join(_piece_parts)}" if _piece_parts else "votre pièce"
+
     intro_p = doc.add_paragraph()
     intro_p.paragraph_format.space_before = Pt(4)
     intro_p.paragraph_format.space_after = Pt(4)
     _add_run(intro_p,
-             "Madame, Monsieur,\n"
-             "Après examen attentif de votre pièce, nous avons l'honneur de vous soumettre "
-             "ci-dessous le détail de nos préconisations de remise en état.",
+             f"Madame, Monsieur,\n"
+             f"Après examen attentif de {_votre}, nous avons l'honneur de vous soumettre "
+             f"ci-dessous le détail de nos préconisations de remise en état.",
              italic=True, size=10)
 
     _add_section_title(doc, "INFORMATIONS DE LA MONTRE")
