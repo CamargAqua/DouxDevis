@@ -336,6 +336,15 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         date_lieu=f"Le {sav.get('date', '')} à {sav.get('lieu', 'Avignon')}",
     )
 
+    # Phrase d'introduction
+    intro_p = doc.add_paragraph()
+    intro_p.paragraph_format.space_before = Pt(4)
+    intro_p.paragraph_format.space_after = Pt(4)
+    _add_run(intro_p,
+             "Madame, Monsieur,\nSuite à l'examen attentif de votre montre, veuillez trouver "
+             "ci-dessous le détail des informations et des travaux de remise en état préconisés.",
+             italic=True, size=10)
+
     _add_section_title(doc, "INFORMATIONS DE LA MONTRE")
     _add_montre_table(doc, montre, photo_bytes, marque=marque)
 

@@ -249,7 +249,19 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.append(cl)
-    story.append(Spacer(1, 5 * mm))
+    story.append(Spacer(1, 4 * mm))
+
+    # ── Phrase d'introduction ─────────────────────────────────────────────────
+    intro_style = ParagraphStyle(
+        "intro_lettre", fontName="Helvetica-Oblique", fontSize=9,
+        leading=14, textColor=colors.HexColor("#3A3830"),
+    )
+    story.append(_p(
+        "Madame, Monsieur,\nSuite à l'examen attentif de votre montre, veuillez trouver "
+        "ci-dessous le détail des informations et des travaux de remise en état préconisés.",
+        intro_style,
+    ))
+    story.append(Spacer(1, 4 * mm))
 
     # ── INFORMATIONS DE LA MONTRE ─────────────────────────────────────────────
     story.append(_html("<b><u>INFORMATIONS DE LA MONTRE</u></b>", bold))
