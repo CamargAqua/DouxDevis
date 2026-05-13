@@ -198,14 +198,19 @@ textarea { resize: vertical; min-height: 90px; }
   background: var(--gold-ultra);
   border-color: var(--gold-light);
 }
-.intervention-line.is-offert input.prix-input {
+.intervention-line.is-offert input.prix-input,
+.intervention-line.is-incl input.prix-input {
   opacity: 0; pointer-events: none;
+}
+.intervention-line.is-incl {
+  background: #EEF4F8;
+  border-color: #9bbdd4;
 }
 @media(max-width: 640px) {
   .intervention-line { grid-template-columns: 1fr; }
 }
 
-.toggle-offert {
+.toggle-offert, .toggle-incl {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
   border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink-mid);
@@ -213,12 +218,18 @@ textarea { resize: vertical; min-height: 90px; }
   letter-spacing: .3px;
 }
 .toggle-offert:hover { border-color: var(--gold-light); color: var(--gold); }
-.toggle-offert.active {
-  background: var(--gold); border-color: var(--gold-deep); color: #fff;
-}
-.toggle-offert .dot {
+.toggle-offert.active { background: var(--gold); border-color: var(--gold-deep); color: #fff; }
+.toggle-incl:hover  { border-color: #9bbdd4; color: #4A7C9A; }
+.toggle-incl.active { background: #4A7C9A; border-color: #376480; color: #fff; }
+.toggle-offert .dot, .toggle-incl .dot {
   width: 6px; height: 6px; border-radius: 50%;
   background: currentColor; flex-shrink: 0;
+}
+
+.coeff-brand-hint {
+  font-size: 12px; color: var(--ink-mid); margin-top: 10px;
+  padding: 6px 10px; background: var(--gold-ultra);
+  border-radius: var(--r); border-left: 3px solid var(--gold);
 }
 
 .btn-remove {

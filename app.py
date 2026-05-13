@@ -97,7 +97,7 @@ def create_app() -> Flask:
             return redirect(url_for("index"))
 
         try:
-            data = extract_from_pdf(pdf_bytes, api_key=api_key)
+            data = extract_from_pdf(pdf_bytes, api_key=api_key, filename=pdf_file.filename)
         except Exception as exc:
             flash(f"Erreur lors de l'extraction : {exc}", "error")
             return redirect(url_for("index"))

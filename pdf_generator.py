@@ -216,7 +216,15 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         ("LINEBELOW",     (0, 0), (-1, -1), 1, colors.black),
     ]))
     story.append(hdr)
-    story.append(Spacer(1, 4 * mm))
+    story.append(Spacer(1, 3 * mm))
+
+    # ── Titre "DEVIS DE RÉPARATION" ───────────────────────────────────────────
+    titre_style = ParagraphStyle(
+        "titre_devis", fontName="Helvetica-Bold", fontSize=13,
+        alignment=1, leading=18, textColor=DARK,
+    )
+    story.append(_p("DEVIS DE RÉPARATION", titre_style))
+    story.append(Spacer(1, 3 * mm))
 
     # ── Ligne client ──────────────────────────────────────────────────────────
     client = data.get("client") or {}
@@ -256,16 +264,25 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     modele      = montre.get("modele", "").upper()
     metal       = (montre.get("metal") or "").upper()
     modele_full = f"{modele} — {metal}" if metal else modele
+    ref         = montre.get("reference", "")
 
-    etat_html  = "<br/>".join(f"• {l.upper()}" for l in etat)
-    info_html  = f"{serie}<br/><b>{modele_full}</b>"
-    if etat_html:
-        info_html += f"<br/><br/>{etat_html}"
+    etat_html   = "<br/>".join(f"• {l.upper()}" for l in etat)
 
-    ref        = montre.get("reference", "")
-    right_html = f"<b>Référence :</b><br/>{ref}"
-    if serie:
-        right_html += f"<br/><br/><b>N° de série :</b><br/>{serie}"
+    has_info = any([modele, ref, serie, etat])
+    if has_info:
+        info_html = f"<b>{modele_full}</b>"
+        if serie:
+            info_html = f"{serie}<br/>" + info_html
+        if etat_html:
+            info_html += f"<br/><br/>{etat_html}"
+        right_html = f"<b>Référence :</b><br/>{ref}"
+        if serie:
+            right_html += f"<br/><br/><b>N° de série :</b><br/>{serie}"
+    else:
+        # Aucune info montre dans le devis partenaire : phrase par défaut
+        default_label = f"{marque_raw.upper()} — {modele.upper()}" if modele else marque_raw.upper()
+        info_html  = f"<i>Montre {default_label}</i>"
+        right_html = ""
 
     if photo_bytes:
         try:
@@ -309,7 +326,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
 
     # ── TRAVAIL NÉCESSAIRE ────────────────────────────────────────────────────
     hdr_nec = Table([[
-        _html('<font color="white"><b>INTERVENTION</b></font>', bold),
+        _html('<font color="white"><b>TRAVAIL À RÉALISER</b></font>', bold),
         _html('<para align="right"><font color="white"><b>PRIX TTC EN EUR</b></font></para>', bold),
     ]], colWidths=[14 * cm, 4 * cm])
     hdr_nec.setStyle(TableStyle([
@@ -343,6 +360,10 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         if prix_txt == "OFFERT":
             cell_prix = _html(
                 '<para align="right"><font color="#C8A028"><b>OFFERT</b></font></para>', base
+            )
+        elif prix_txt == "INCL":
+            cell_prix = _html(
+                '<para align="right"><font color="#4A7C9A"><b>INCL</b></font></para>', base
             )
         else:
             cell_prix = _html(f'<para align="right">{prix_txt}</para>', base)

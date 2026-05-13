@@ -11,8 +11,6 @@ import anthropic
 
 MODEL = "claude-haiku-4-5-20251001"
 
-# Prompt en system pour que le cache_control s'applique dessus (statique),
-# et seul le document PDF (variable) est envoyé dans le message utilisateur.
 EXTRACTION_SYSTEM = """Tu es un assistant chargé d'extraire les informations d'un devis de service après-vente horloger envoyé par une marque partenaire à la bijouterie DOUX Joaillier (Avignon).
 
 Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc markdown) avec cette structure exacte :
@@ -48,14 +46,14 @@ Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc m
 }
 
 ═══ RECONNAISSANCE DE LA MARQUE ═══
-Identifie la marque à partir du logo, de l'en-tête ou du nom dans le document.
+Identifie la marque à partir du logo, de l'en-tête, du nom mentionné dans le document ou du nom de fichier fourni.
 Valeurs EXACTES attendues (respecter la casse) :
   "Breitling"   si le document provient de Breitling SA
   "Chanel"      si le document provient de Chanel Horlogerie
   "TAG Heuer"   si le document provient de TAG Heuer (ou LVMH Watch)
   "Rolex"       si le document provient de Rolex SA
   "March LA.B"  si le document provient de March LA.B
-  "Autre"       uniquement si la marque est illisible ou inconnue
+  "Autre"       uniquement si la marque est vraiment illisible ou inconnue
 
 ═══ NUMÉRO SAV DOUX ═══
 Le numéro SAV DOUX est un nombre à 6 chiffres, parfois suivi d'un suffixe à ignorer :
@@ -74,7 +72,8 @@ Chaque partenaire a plusieurs colonnes de prix — utilise UNIQUEMENT la colonne
 
 ═══ CONVERSION DES PRIX ═══
 - Nombre décimal : "705,50" → 705.50 | "310.00" → 310.0
-- Gratuit : "OFFERT" → 0.00 | "Incl." → 0.00 | "inclus au service" → 0.00 | "0,00" → 0.00
+- Gratuit : "OFFERT" → 0.00
+- Inclus dans le prix : "Incl." | "inclus" | "inclus au service" → mettre la valeur "INCL" (chaîne, pas un nombre)
 - Si le total TTC n'est pas explicite, additionner les prix des interventions nécessaires.
 
 ═══ ÉTAT DE LA MONTRE ═══
@@ -86,7 +85,7 @@ Pour Breitling : les constats sont dans le tableau "Diagnostic" (colonne gauche 
 Si la première intervention est un "service complet" ou "révision complète" avec sous-points :
 - interventions_necessaires[0].description = intitulé principal EN MAJUSCULES
 - service_complet_description = les sous-points, un par ligne, sans tirets ni puces
-- Les lignes suivantes (couronne, joints, etc.) avec prix 0 ou "Incl." → prix: 0.00
+- Les lignes suivantes (couronne, joints, etc.) avec prix 0 → prix: 0.00
 
 ═══ MODÈLE ═══
 Si le nom du modèle n'est pas écrit, l'inférer de la référence si possible :
@@ -100,19 +99,102 @@ Extraire uniquement la durée, format "X semaines" ou "X à Y semaines" :
 ═══ DATE ═══
 Format JJ.MM.AAAA. Si absente ou non trouvée, chaîne vide."""
 
-# Normalisation des variantes de marques renvoyées par le modèle
+
+# ── Normalisation des variantes de marques ──────────────────────────────────
 _BRAND_CANONICAL: dict[str, str] = {
     "breitling": "Breitling",
     "chanel": "Chanel",
     "tag heuer": "TAG Heuer",
     "tag-heuer": "TAG Heuer",
     "tagheuer": "TAG Heuer",
+    "tag_heuer": "TAG Heuer",
     "rolex": "Rolex",
     "march la.b": "March LA.B",
     "march lab": "March LA.B",
     "march l.a.b": "March LA.B",
     "march la.b.": "March LA.B",
+    "omega": "Omega",
+    "cartier": "Cartier",
+    "iwc": "IWC Schaffhausen",
+    "iwc schaffhausen": "IWC Schaffhausen",
+    "patek philippe": "Patek Philippe",
+    "patek": "Patek Philippe",
+    "audemars piguet": "Audemars Piguet",
+    "ap": "Audemars Piguet",
+    "vacheron constantin": "Vacheron Constantin",
+    "vacheron": "Vacheron Constantin",
+    "jaeger-lecoultre": "Jaeger-LeCoultre",
+    "jaeger lecoultre": "Jaeger-LeCoultre",
+    "jaeger": "Jaeger-LeCoultre",
+    "jlc": "Jaeger-LeCoultre",
+    "a. lange & söhne": "A. Lange & Söhne",
+    "a. lange & sohne": "A. Lange & Söhne",
+    "lange": "A. Lange & Söhne",
+    "hublot": "Hublot",
+    "tudor": "Tudor",
+    "longines": "Longines",
+    "panerai": "Panerai",
+    "zenith": "Zenith",
+    "blancpain": "Blancpain",
+    "girard-perregaux": "Girard-Perregaux",
+    "girard perregaux": "Girard-Perregaux",
+    "chopard": "Chopard",
+    "grand seiko": "Grand Seiko",
+    "piaget": "Piaget",
+    "bvlgari": "Bvlgari",
+    "bulgari": "Bvlgari",
+    "richard mille": "Richard Mille",
+    "breguet": "Breguet",
+    "frederique constant": "Frederique Constant",
+    "fred. constant": "Frederique Constant",
+    "hermes": "Hermès",
+    "hermès": "Hermès",
+    "louis vuitton": "Louis Vuitton",
+    "lv": "Louis Vuitton",
 }
+
+# ── Détection de marque depuis texte libre (nom de fichier, etc.) ────────────
+# Ordonné du plus spécifique au plus générique pour éviter les faux positifs
+_BRAND_DETECT: list[tuple[str, str]] = [
+    ("TAG Heuer",           r"tag[\s\-_]?heuer"),
+    ("Patek Philippe",      r"patek(?:[\s\-_]?philippe)?"),
+    ("Audemars Piguet",     r"audemars(?:[\s\-_]?piguet)?"),
+    ("Vacheron Constantin", r"vacheron(?:[\s\-_]?constantin)?"),
+    ("Jaeger-LeCoultre",    r"jaeger|lecoultre|j[\-\._]?l[\-\._]?c\b"),
+    ("A. Lange & Söhne",    r"a[\.\s]?lange"),
+    ("Richard Mille",       r"richard[\s\-_]?mille"),
+    ("March LA.B",          r"march[\s\-_]?la\.?b"),
+    ("Girard-Perregaux",    r"girard[\s\-_]?perregaux"),
+    ("Frederique Constant", r"frederique[\s\-_]?constant"),
+    ("Grand Seiko",         r"grand[\s\-_]?seiko"),
+    ("Breitling",           r"breitling"),
+    ("Chanel",              r"chanel"),
+    ("Rolex",               r"rolex"),
+    ("Omega",               r"omega"),
+    ("Cartier",             r"cartier"),
+    ("IWC Schaffhausen",    r"iwc"),
+    ("Longines",            r"longines"),
+    ("Tudor",               r"tudor"),
+    ("Hublot",              r"hublot"),
+    ("Panerai",             r"panerai"),
+    ("Zenith",              r"zenith"),
+    ("Blancpain",           r"blancpain"),
+    ("Chopard",             r"chopard"),
+    ("Piaget",              r"piaget"),
+    ("Bvlgari",             r"bvlgari|bulgari"),
+    ("Breguet",             r"breguet"),
+    ("Hermès",              r"herm[eè]s"),
+    ("Louis Vuitton",       r"louis[\s\-_]?vuitton"),
+]
+
+
+def _detect_brand_from_text(text: str) -> str | None:
+    """Détecte une marque dans un nom de fichier ou texte libre. Retourne None si rien trouvé."""
+    t = text.lower()
+    for brand, pattern in _BRAND_DETECT:
+        if re.search(pattern, t):
+            return brand
+    return None
 
 
 def _normalize_brand(brand: str) -> str:
@@ -132,8 +214,8 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
     sav["numero"] = num
     data["sav"] = sav
 
-    # Prix : normaliser "Incl.", "inclus", "OFFERT", "0,00" → 0.0
-    _ZERO_LABELS = {"incl.", "inclus", "offert", "0,00", "0.00", "0", ""}
+    _INCL_LABELS = {"incl.", "incl", "inclus", "included", "compris", "comprise"}
+    _ZERO_LABELS = {"offert", "0,00", "0.00", "0", ""}
 
     def _to_float(v: Any) -> float:
         if v is None:
@@ -141,7 +223,7 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
         if isinstance(v, (int, float)):
             return float(v)
         s = str(v).strip().lower().replace(",", ".")
-        if s in _ZERO_LABELS:
+        if s in _ZERO_LABELS or s in _INCL_LABELS:
             return 0.0
         try:
             return float(re.sub(r"[^\d.]", "", s))
@@ -151,7 +233,15 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
     for key in ("interventions_necessaires", "interventions_optionnelles"):
         lines = data.get(key) or []
         for line in lines:
-            line["prix"] = _to_float(line.get("prix"))
+            raw = line.get("prix")
+            raw_str = str(raw).strip().lower() if raw is not None else ""
+            if raw_str in _INCL_LABELS:
+                line["prix"] = 0.0
+                # Préserver comme label seulement si pas déjà labellisé
+                if not line.get("prix_label"):
+                    line["prix_label"] = "INCL"
+            else:
+                line["prix"] = _to_float(raw)
         data[key] = lines
 
     data["total_ttc"] = _to_float(data.get("total_ttc"))
@@ -173,8 +263,7 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
 def confidence_score(data: dict[str, Any]) -> tuple[int, list[str]]:
     """Retourne (score/10, liste des champs manquants ou invalides).
 
-    Appelé sur les données finales du formulaire (après correction manuelle),
-    pas sur l'extraction brute.
+    Appelé sur les données finales du formulaire (après correction manuelle).
     """
     sav = data.get("sav") or {}
     montre = data.get("montre") or {}
@@ -234,8 +323,15 @@ def confidence_score(data: dict[str, Any]) -> tuple[int, list[str]]:
     return score, missing
 
 
-def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, Any]:
-    """Envoie le PDF à Claude et renvoie un dict structuré."""
+def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
+                     filename: str | None = None) -> dict[str, Any]:
+    """Envoie le PDF à Claude et renvoie un dict structuré.
+
+    Args:
+        pdf_bytes: Contenu brut du PDF.
+        api_key: Clé API Anthropic (lit ANTHROPIC_API_KEY si omise).
+        filename: Nom du fichier PDF (aide à la reconnaissance de marque).
+    """
     api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         raise RuntimeError(
@@ -245,6 +341,22 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, 
 
     client = anthropic.Anthropic(api_key=api_key)
     pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
+
+    user_content: list[dict] = [
+        {
+            "type": "document",
+            "source": {
+                "type": "base64",
+                "media_type": "application/pdf",
+                "data": pdf_b64,
+            },
+        },
+    ]
+    if filename:
+        user_content.append({
+            "type": "text",
+            "text": f"Nom du fichier PDF : {filename}",
+        })
 
     response = client.messages.create(
         model=MODEL,
@@ -257,21 +369,7 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, 
                 "cache_control": {"type": "ephemeral"},
             }
         ],
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": pdf_b64,
-                        },
-                    },
-                ],
-            }
-        ],
+        messages=[{"role": "user", "content": user_content}],
     )
 
     raw = response.content[0].text.strip()
@@ -286,4 +384,12 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, 
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Réponse Claude non-JSON : {raw[:500]}") from exc
 
-    return _clean(data)
+    cleaned = _clean(data)
+
+    # Fallback brand detection depuis le nom de fichier si le modèle n'a pas trouvé
+    if cleaned.get("marque", "Autre").lower() in ("autre", "") and filename:
+        detected = _detect_brand_from_text(filename)
+        if detected:
+            cleaned["marque"] = detected
+
+    return cleaned

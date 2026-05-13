@@ -101,7 +101,8 @@ def _add_section_title(doc: Document, title: str) -> None:
     run.underline = True
 
 
-def _add_montre_table(doc: Document, montre: dict[str, Any], photo_bytes: bytes | None) -> None:
+def _add_montre_table(doc: Document, montre: dict[str, Any], photo_bytes: bytes | None,
+                      marque: str = "") -> None:
     table = doc.add_table(rows=2, cols=4)
     table.style = "Table Grid"
     table.autofit = False
@@ -149,7 +150,11 @@ def _add_montre_table(doc: Document, montre: dict[str, Any], photo_bytes: bytes 
 
     all_lines = first_lines + list(etat_lines)
     if not all_lines:
-        all_lines = [""]
+        # Aucune info montre : phrase par défaut avec marque et modèle
+        default = f"Montre {marque.upper()}"
+        if montre.get("modele"):
+            default += f" — {montre['modele'].upper()}"
+        all_lines = [default]
 
     first = True
     for line in all_lines:
@@ -316,6 +321,14 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     montre = data.get("montre") or {}
 
     _add_header(doc, marque)
+
+    # Titre "DEVIS DE RÉPARATION"
+    titre = doc.add_paragraph()
+    titre.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    titre.paragraph_format.space_before = Pt(4)
+    titre.paragraph_format.space_after = Pt(4)
+    _add_run(titre, "DEVIS DE RÉPARATION", bold=True, size=14)
+
     _add_client_row(
         doc,
         nom=(client.get("nom") or "").upper(),
@@ -324,7 +337,7 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     )
 
     _add_section_title(doc, "INFORMATIONS DE LA MONTRE")
-    _add_montre_table(doc, montre, photo_bytes)
+    _add_montre_table(doc, montre, photo_bytes, marque=marque)
 
     necessaires = data.get("interventions_necessaires") or []
     intro = (data.get("service_complet_description") or "").strip() or None
@@ -337,7 +350,7 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
 
     _add_work_table(
         doc,
-        "TRAVAIL NECESSAIRE",
+        "TRAVAIL À RÉALISER",
         necessaires,
         total_label="TOTAL TTC EN EURO",
         total_value=total_ttc,
