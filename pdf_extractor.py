@@ -11,12 +11,14 @@ import anthropic
 
 MODEL = "claude-haiku-4-5-20251001"
 
-EXTRACTION_PROMPT = """Tu es un assistant chargé d'extraire les informations d'un devis de service après-vente horloger envoyé par une marque partenaire à la bijouterie DOUX Joaillier (Avignon).
+# Prompt en system pour que le cache_control s'applique dessus (statique),
+# et seul le document PDF (variable) est envoyé dans le message utilisateur.
+EXTRACTION_SYSTEM = """Tu es un assistant chargé d'extraire les informations d'un devis de service après-vente horloger envoyé par une marque partenaire à la bijouterie DOUX Joaillier (Avignon).
 
 Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc markdown) avec cette structure exacte :
 
 {
-  "marque": "Breitling" | "Chanel" | "Tag Heuer" | "Rolex" | "March LA.B" | "Autre",
+  "marque": "Breitling" | "Chanel" | "TAG Heuer" | "Rolex" | "March LA.B" | "Autre",
   "client": {
     "nom": "NOM PRENOM en majuscules, ou chaîne vide si absent du document"
   },
@@ -45,10 +47,20 @@ Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc m
   "delai": "X à Y semaines"
 }
 
+═══ RECONNAISSANCE DE LA MARQUE ═══
+Identifie la marque à partir du logo, de l'en-tête ou du nom dans le document.
+Valeurs EXACTES attendues (respecter la casse) :
+  "Breitling"   si le document provient de Breitling SA
+  "Chanel"      si le document provient de Chanel Horlogerie
+  "TAG Heuer"   si le document provient de TAG Heuer (ou LVMH Watch)
+  "Rolex"       si le document provient de Rolex SA
+  "March LA.B"  si le document provient de March LA.B
+  "Autre"       uniquement si la marque est illisible ou inconnue
+
 ═══ NUMÉRO SAV DOUX ═══
 Le numéro SAV DOUX est un nombre à 6 chiffres, parfois suivi d'un suffixe à ignorer :
 - Breitling  → champ "Votre référence"   ex: "384054-1" → "384054"
-- Tag Heuer  → champ "VOTRE REFERENCE"   ex: "383954-1" → "383954"
+- TAG Heuer  → champ "VOTRE REFERENCE"   ex: "383954-1" → "383954"
 - Chanel     → champ "N° DEMANDE CLIENT" ex: "383750-1" → "383750"
 - Rolex/autres → chercher un numéro à 6 chiffres dans les références
 Supprime toujours le suffixe "-1", "-2", etc.
@@ -56,7 +68,7 @@ Supprime toujours le suffixe "-1", "-2", etc.
 ═══ COLONNE DE PRIX À UTILISER ═══
 Chaque partenaire a plusieurs colonnes de prix — utilise UNIQUEMENT la colonne TTC public :
 - Breitling  → colonne "Prix total TTC"       (ignorer "Total HT")
-- Tag Heuer  → colonne "PRIX PUBLIC TTC"       (ignorer "VOTRE PRIX HT" et "VOTRE PRIX TTC")
+- TAG Heuer  → colonne "PRIX PUBLIC TTC"       (ignorer "VOTRE PRIX HT" et "VOTRE PRIX TTC")
 - Chanel     → colonne "MONTANT TTC CONSEILLÉ" (ignorer "PRIX DE GROS HT")
 - Rolex / March LA.B / autres → prendre le prix TTC affiché
 
@@ -84,14 +96,34 @@ Si le nom du modèle n'est pas écrit, l'inférer de la référence si possible 
 Extraire uniquement la durée, format "X semaines" ou "X à Y semaines" :
 - "4 semaines après réception de votre accord" → "4 semaines"
 - "6 À 8 SEMAINES SOUS RÉSERVE..." → "6 à 8 semaines"
-- "4 à 6 semaines" → "4 à 6 semaines"
 
 ═══ DATE ═══
 Format JJ.MM.AAAA. Si absente ou non trouvée, chaîne vide."""
 
+# Normalisation des variantes de marques renvoyées par le modèle
+_BRAND_CANONICAL: dict[str, str] = {
+    "breitling": "Breitling",
+    "chanel": "Chanel",
+    "tag heuer": "TAG Heuer",
+    "tag-heuer": "TAG Heuer",
+    "tagheuer": "TAG Heuer",
+    "rolex": "Rolex",
+    "march la.b": "March LA.B",
+    "march lab": "March LA.B",
+    "march l.a.b": "March LA.B",
+    "march la.b.": "March LA.B",
+}
+
+
+def _normalize_brand(brand: str) -> str:
+    return _BRAND_CANONICAL.get(brand.strip().lower(), brand.strip())
+
 
 def _clean(data: dict[str, Any]) -> dict[str, Any]:
     """Post-traitement pour corriger les cas que le prompt rate parfois."""
+
+    # Marque : normaliser la casse / variantes
+    data["marque"] = _normalize_brand(data.get("marque") or "Autre")
 
     # SAV : supprimer le suffixe -1, -2, etc.
     sav = data.get("sav") or {}
@@ -138,8 +170,12 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def _confidence_score(data: dict[str, Any]) -> tuple[int, list[str]]:
-    """Retourne (score/10, liste des champs manquants ou invalides)."""
+def confidence_score(data: dict[str, Any]) -> tuple[int, list[str]]:
+    """Retourne (score/10, liste des champs manquants ou invalides).
+
+    Appelé sur les données finales du formulaire (après correction manuelle),
+    pas sur l'extraction brute.
+    """
     sav = data.get("sav") or {}
     montre = data.get("montre") or {}
     client = data.get("client") or {}
@@ -212,8 +248,15 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, 
 
     response = client.messages.create(
         model=MODEL,
-        max_tokens=2048,
+        max_tokens=1024,
         timeout=60.0,
+        system=[
+            {
+                "type": "text",
+                "text": EXTRACTION_SYSTEM,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
         messages=[
             {
                 "role": "user",
@@ -225,11 +268,6 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, 
                             "media_type": "application/pdf",
                             "data": pdf_b64,
                         },
-                    },
-                    {
-                        "type": "text",
-                        "text": EXTRACTION_PROMPT,
-                        "cache_control": {"type": "ephemeral"},
                     },
                 ],
             }
@@ -248,8 +286,4 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, 
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Réponse Claude non-JSON : {raw[:500]}") from exc
 
-    cleaned = _clean(data)
-    score, missing = _confidence_score(cleaned)
-    cleaned["confidence"] = score
-    cleaned["confidence_missing"] = missing
-    return cleaned
+    return _clean(data)

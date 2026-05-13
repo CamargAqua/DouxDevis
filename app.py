@@ -24,7 +24,7 @@ from flask_session import Session
 from werkzeug.utils import secure_filename
 
 from docx_generator import build_docx
-from pdf_extractor import extract_from_pdf
+from pdf_extractor import confidence_score, extract_from_pdf
 from pdf_generator import docx_to_pdf
 
 # Quand on tourne depuis l'exe PyInstaller, launcher.py pose ces vars
@@ -116,8 +116,6 @@ def create_app() -> Flask:
 
         session["token"] = token
         session["data"] = data
-        session["confidence"] = data.get("confidence", 5)
-        session["confidence_missing"] = data.get("confidence_missing", [])
         session["source_pdf"] = pdf_path.name
 
         return redirect(url_for("review"))
@@ -138,6 +136,7 @@ def create_app() -> Flask:
 
         form = request.form
         data = _form_to_data(form)
+        score, missing = confidence_score(data)
         session["data"] = data
 
         photo_bytes: bytes | None = None
@@ -172,8 +171,8 @@ def create_app() -> Flask:
             docx_name=docx_name,
             pdf_name=pdf_name,
             method=method,
-            confidence=session.get("confidence", None),
-            confidence_missing=session.get("confidence_missing", []),
+            confidence=score,
+            confidence_missing=missing,
         )
 
     @app.route("/download/<token>/<path:filename>")
