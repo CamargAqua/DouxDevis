@@ -117,6 +117,7 @@ def create_app() -> Flask:
         session["token"] = token
         session["data"] = data
         session["confidence"] = data.get("confidence", 5)
+        session["confidence_missing"] = data.get("confidence_missing", [])
         session["source_pdf"] = pdf_path.name
 
         return redirect(url_for("review"))
@@ -172,6 +173,7 @@ def create_app() -> Flask:
             pdf_name=pdf_name,
             method=method,
             confidence=session.get("confidence", None),
+            confidence_missing=session.get("confidence_missing", []),
         )
 
     @app.route("/download/<token>/<path:filename>")

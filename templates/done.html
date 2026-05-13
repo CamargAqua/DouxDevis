@@ -17,6 +17,13 @@
       </span>
       <span class="confidence-value">{{ confidence }}/10</span>
     </div>
+    {% if confidence_missing %}
+    <ul class="confidence-issues">
+      {% for issue in confidence_missing %}
+      <li>{{ issue }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
     {% endif %}
   </div>
 

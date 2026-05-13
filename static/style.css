@@ -292,6 +292,14 @@ textarea { resize: vertical; min-height: 90px; }
 .confidence-dot.filled.high { background: #4caf7d; }
 .confidence-value { font-weight: 600; color: var(--ink); min-width: 28px; }
 
+.confidence-issues {
+  list-style: none; margin: 8px auto 0; padding: 8px 14px;
+  background: #fff8f0; border: 1px solid #f0d9b5; border-radius: 6px;
+  font-size: 12px; color: #8a5a00; text-align: left; display: inline-block;
+}
+.confidence-issues li::before { content: "⚠ "; }
+.confidence-issues li + li { margin-top: 3px; }
+
 .downloads { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 28px 0; }
 @media(max-width: 520px) { .downloads { grid-template-columns: 1fr; } }
 

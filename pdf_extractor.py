@@ -138,35 +138,64 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def _confidence_score(data: dict[str, Any]) -> int:
-    """Calcule un indice de confiance sur 10 basé sur la complétude de l'extraction."""
-    score = 0
+def _confidence_score(data: dict[str, Any]) -> tuple[int, list[str]]:
+    """Retourne (score/10, liste des champs manquants ou invalides)."""
     sav = data.get("sav") or {}
     montre = data.get("montre") or {}
     client = data.get("client") or {}
+    missing: list[str] = []
 
-    if (data.get("marque") or "").lower() not in ("", "autre"):
-        score += 1
-    if (client.get("nom") or "").strip():
-        score += 1
-    if re.match(r"^\d{6}$", str(sav.get("numero") or "").strip()):
-        score += 1
-    if (sav.get("date") or "").strip():
-        score += 1
-    if (montre.get("modele") or "").strip():
-        score += 1
-    if (montre.get("reference") or "").strip():
-        score += 1
-    if (montre.get("numero_serie") or "").strip():
-        score += 1
-    if data.get("interventions_necessaires"):
-        score += 1
-    if (data.get("total_ttc") or 0) > 0:
-        score += 1
-    if (data.get("delai") or "").strip():
-        score += 1
+    checks = [
+        (
+            (data.get("marque") or "").lower() not in ("", "autre"),
+            "Marque non identifiée",
+        ),
+        (
+            bool((client.get("nom") or "").strip()),
+            "Nom client absent",
+        ),
+        (
+            bool(re.match(r"^\d{6}$", str(sav.get("numero") or "").strip())),
+            "N° SAV invalide ou absent",
+        ),
+        (
+            bool((sav.get("date") or "").strip()),
+            "Date SAV absente",
+        ),
+        (
+            bool((montre.get("modele") or "").strip()),
+            "Modèle montre absent",
+        ),
+        (
+            bool((montre.get("reference") or "").strip()),
+            "Référence boîtier absente",
+        ),
+        (
+            bool((montre.get("numero_serie") or "").strip()),
+            "Numéro de série absent",
+        ),
+        (
+            bool(montre.get("etat")),
+            "État / diagnostic absent",
+        ),
+        (
+            bool(data.get("interventions_necessaires")),
+            "Aucune intervention détectée",
+        ),
+        (
+            (data.get("total_ttc") or 0) > 0,
+            "Total TTC nul ou absent",
+        ),
+    ]
 
-    return score
+    score = 0
+    for ok, label in checks:
+        if ok:
+            score += 1
+        else:
+            missing.append(label)
+
+    return score, missing
 
 
 def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, Any]:
@@ -220,5 +249,7 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, 
         raise RuntimeError(f"Réponse Claude non-JSON : {raw[:500]}") from exc
 
     cleaned = _clean(data)
-    cleaned["confidence"] = _confidence_score(cleaned)
+    score, missing = _confidence_score(cleaned)
+    cleaned["confidence"] = score
+    cleaned["confidence_missing"] = missing
     return cleaned
