@@ -138,6 +138,37 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
+def _confidence_score(data: dict[str, Any]) -> int:
+    """Calcule un indice de confiance sur 10 basé sur la complétude de l'extraction."""
+    score = 0
+    sav = data.get("sav") or {}
+    montre = data.get("montre") or {}
+    client = data.get("client") or {}
+
+    if (data.get("marque") or "").lower() not in ("", "autre"):
+        score += 1
+    if (client.get("nom") or "").strip():
+        score += 1
+    if re.match(r"^\d{6}$", str(sav.get("numero") or "").strip()):
+        score += 1
+    if (sav.get("date") or "").strip():
+        score += 1
+    if (montre.get("modele") or "").strip():
+        score += 1
+    if (montre.get("reference") or "").strip():
+        score += 1
+    if (montre.get("numero_serie") or "").strip():
+        score += 1
+    if data.get("interventions_necessaires"):
+        score += 1
+    if (data.get("total_ttc") or 0) > 0:
+        score += 1
+    if (data.get("delai") or "").strip():
+        score += 1
+
+    return score
+
+
 def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, Any]:
     """Envoie le PDF à Claude et renvoie un dict structuré."""
     api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
@@ -188,4 +219,6 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None) -> dict[str, 
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Réponse Claude non-JSON : {raw[:500]}") from exc
 
-    return _clean(data)
+    cleaned = _clean(data)
+    cleaned["confidence"] = _confidence_score(cleaned)
+    return cleaned

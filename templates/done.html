@@ -7,6 +7,17 @@
     <div class="check">✅</div>
     <h1>Devis généré avec succès</h1>
     <p class="lead">Les deux fichiers sont prêts. Téléchargez-les ci-dessous.</p>
+    {% if confidence is not none %}
+    <div class="confidence-bar">
+      <span class="confidence-label">Indice de confiance extraction</span>
+      <span class="confidence-dots">
+        {% for i in range(1, 11) %}
+          <span class="confidence-dot{% if i <= confidence %} filled{% if confidence <= 4 %} low{% elif confidence <= 6 %} mid{% else %} high{% endif %}{% endif %}"></span>
+        {% endfor %}
+      </span>
+      <span class="confidence-value">{{ confidence }}/10</span>
+    </div>
+    {% endif %}
   </div>
 
   <div class="downloads">

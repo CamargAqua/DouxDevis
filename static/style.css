@@ -275,6 +275,23 @@ textarea { resize: vertical; min-height: 90px; }
 .done-hero h1 { font-family: Georgia, serif; font-size: 28px; font-weight: 400; margin-bottom: 6px; }
 .done-hero .lead { color: var(--ink-mid); }
 
+.confidence-bar {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-top: 16px; padding: 8px 16px;
+  background: var(--bg-card, #fafaf8); border: 1px solid var(--line);
+  border-radius: 8px; font-size: 13px;
+}
+.confidence-label { color: var(--ink-mid); white-space: nowrap; }
+.confidence-dots { display: flex; gap: 5px; }
+.confidence-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--line); transition: background 0.2s;
+}
+.confidence-dot.filled.low  { background: #e05252; }
+.confidence-dot.filled.mid  { background: #d4a017; }
+.confidence-dot.filled.high { background: #4caf7d; }
+.confidence-value { font-weight: 600; color: var(--ink); min-width: 28px; }
+
 .downloads { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 28px 0; }
 @media(max-width: 520px) { .downloads { grid-template-columns: 1fr; } }
 
