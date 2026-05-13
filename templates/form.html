@@ -114,11 +114,11 @@
                    value="{{ base_val }}"
                    placeholder="0,00">
             <input type="hidden" name="nec_label[]" class="label-input" value="{{ 'OFFERT' if is_offert else ('INCL' if is_incl else '') }}">
-            <button type="button" class="toggle-offert {% if is_offert %}active{% endif %}" onclick="toggleOffert(this)">
-              <span class="dot"></span>OFFERT
-            </button>
             <button type="button" class="toggle-incl {% if is_incl %}active{% endif %}" onclick="toggleIncl(this)">
               <span class="dot"></span>INCL
+            </button>
+            <button type="button" class="toggle-offert {% if is_offert %}active{% endif %}" onclick="toggleOffert(this)">
+              <span class="dot"></span>OFFERT
             </button>
             <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>
           </div>
@@ -137,26 +137,8 @@
         <span class="section-chevron">▾</span>
       </div>
       <div class="form-section-body">
-        <div class="pricing-card">
-          <div class="pricing-row">
-            <div class="pricing-col">
-              <span class="pricing-lbl">Prix partenaire</span>
-              <div class="pricing-val">€&nbsp;<span id="total-display">0,00</span></div>
-            </div>
-            <div class="pricing-arrow-col">
-              <span class="pricing-pct-badge" id="coeff-badge">×1,50</span>
-              <svg class="pricing-arrow-svg" viewBox="0 0 48 14" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M2 7h44M36 1l8 6-8 6"/>
-              </svg>
-              <span id="marge-result" class="pricing-gain"></span>
-            </div>
-            <div class="pricing-col pricing-col--right">
-              <span class="pricing-lbl">Facturé client</span>
-              <div class="pricing-val pricing-val--gold">€&nbsp;<span id="total-final-display">0,00</span></div>
-            </div>
-          </div>
-          <hr class="pricing-divider">
-          <div class="pricing-seg-row">
+        <div class="coeff-block">
+          <div class="coeff-main-row">
             <span class="pricing-seg-lbl">Coefficient</span>
             <div class="seg-ctrl" id="coeff-presets">
               <button type="button" class="seg-btn" data-coeff="1.30" onclick="setCoeff(1.30)">×1,30</button>
@@ -172,8 +154,14 @@
               <span class="pricing-custom-unit">×</span>
             </div>
           </div>
-          <p id="coeff-brand-hint" class="coeff-brand-hint" style="display:none"></p>
+          <div class="coeff-info-row" id="coeff-info-row" style="display:none">
+            <span id="coeff-brand-hint" class="coeff-brand-tag"></span>
+            <span class="coeff-sep">·</span>
+            <span id="coeff-calc" class="coeff-calc"></span>
+          </div>
         </div>
+        <span id="total-display" style="display:none"></span>
+        <span id="total-final-display" style="display:none"></span>
         <input type="hidden" name="total_ttc" id="total-override-input">
       </div>
     </div>
@@ -425,14 +413,17 @@ function updateTotal() {
   document.getElementById('total-final-display').textContent = fmt(final);
   document.getElementById('total-override-input').value = final.toFixed(2);
 
-  const gain = final - base;
-  const gainPct = base > 0 ? Math.round((coeff - 1) * 100) : 0;
-  document.getElementById('marge-result').textContent =
-    gain > 0.01 ? `+ ${fmt(gain)} € de marge (+${gainPct}%)` : '';
-
   const coeffLabel = `×${coeff.toFixed(2).replace('.',',')}`;
-  document.getElementById('coeff-badge').textContent = coeffLabel;
   document.getElementById('coeff-header-badge').textContent = coeffLabel;
+
+  const infoRow = document.getElementById('coeff-info-row');
+  const calcEl  = document.getElementById('coeff-calc');
+  if (base > 0) {
+    calcEl.textContent = `${fmt(base)} € × ${coeff.toFixed(2).replace('.',',')} = ${fmt(final)} €`;
+    infoRow.style.display = 'flex';
+  } else {
+    infoRow.style.display = 'none';
+  }
 
   document.querySelectorAll('#coeff-presets .seg-btn').forEach(b =>
     b.classList.toggle('active', Math.abs(parseFloat(b.dataset.coeff) - coeff) < 0.001));
@@ -460,8 +451,8 @@ window.selectMarque = function(val) {
   const coeff = BRAND_COEFFS[val] || DEFAULT_COEFF;
   document.getElementById('coeff-input').value = coeff;
   const hint = document.getElementById('coeff-brand-hint');
-  hint.textContent = `Coefficient par défaut ${val} : ×${coeff.toFixed(2).replace('.',',')}`;
-  hint.style.display = 'block';
+  hint.textContent = `Coefficient ${val} : ×${coeff.toFixed(2).replace('.',',')}`;
+  document.getElementById('coeff-info-row').style.display = 'flex';
   updateTotal();
 };
 
@@ -479,8 +470,8 @@ function addLine(prefix) {
     <input type="text" name="${prefix}_description[]" placeholder="Intitulé">
     <input type="text" name="${prefix}_prix[]" class="prix-input" data-base="" placeholder="0,00">
     <input type="hidden" name="${prefix}_label[]" class="label-input" value="">
-    <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>
     ${inclBtn}
+    <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>
     <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>`;
   cont.appendChild(div);
   div.querySelector('.prix-input').focus();

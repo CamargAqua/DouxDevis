@@ -103,64 +103,112 @@ def _add_section_title(doc: Document, title: str) -> None:
 
 def _add_montre_table(doc: Document, montre: dict[str, Any], photo_bytes: bytes | None,
                       marque: str = "") -> None:
-    table = doc.add_table(rows=2, cols=4)
-    table.style = "Table Grid"
-    table.autofit = False
-    widths = (Cm(5), Cm(4.5), Cm(4.5), Cm(4))
-    for col_idx, width in enumerate(widths):
-        for row in table.rows:
-            row.cells[col_idx].width = width
-
-    photo_cell = table.cell(0, 0)
-    photo_cell.merge(table.cell(1, 0))
-    photo_cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-    photo_p = photo_cell.paragraphs[0]
-    photo_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    if photo_bytes:
-        run = photo_p.add_run()
-        try:
-            run.add_picture(BytesIO(photo_bytes), width=Cm(4.5))
-        except Exception:
-            _add_run(photo_p, "[photo invalide]", italic=True, size=9)
-    else:
-        _add_run(photo_p, "", size=9)
-
-    for col, label in enumerate(("POIDS :", "METAL :", "TAILLE :"), start=1):
-        cell = table.cell(0, col)
-        cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
-        p = cell.paragraphs[0]
-        _add_run(p, f"{label} {montre.get(label.split()[0].lower(), '')}", size=10)
-
-    info_cell = table.cell(1, 1)
-    info_cell.merge(table.cell(1, 3))
-    info_cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
-    _clear_paragraph(info_cell.paragraphs[0])
-
-    first_lines: list[str] = []
-    if montre.get("modele"):
-        first_lines.append(montre["modele"].upper())
-    if montre.get("reference"):
-        first_lines.append(montre["reference"])
-    if montre.get("numero_serie"):
-        first_lines.append(f"N° SÉRIE : {montre['numero_serie']}")
+    """Tableau montre redesigné : en-tête sombre (modèle) + corps (état | ref/série)."""
+    modele_raw  = (montre.get("modele") or "").upper()
+    metal       = (montre.get("metal") or "").upper()
+    modele_full = f"{modele_raw} — {metal}" if (modele_raw and metal) else (modele_raw or "—")
+    ref         = montre.get("reference") or ""
+    serie       = montre.get("numero_serie") or ""
 
     etat_lines = montre.get("etat") or []
     if isinstance(etat_lines, str):
-        etat_lines = [line.strip() for line in etat_lines.splitlines() if line.strip()]
+        etat_lines = [l.strip() for l in etat_lines.splitlines() if l.strip()]
 
-    all_lines = first_lines + list(etat_lines)
-    if not all_lines:
-        # Aucune info montre : phrase par défaut avec marque et modèle
-        default = f"Montre {marque.upper()}"
-        if montre.get("modele"):
-            default += f" — {montre['modele'].upper()}"
-        all_lines = [default]
+    has_info = any([modele_raw, ref, serie, etat_lines])
 
+    # ── Cas sans info : ligne unique ─────────────────────────────────────────
+    if not has_info:
+        tbl = doc.add_table(rows=1, cols=1)
+        tbl.style = "Table Grid"
+        default = f"Montre {marque.upper()}" + (f" — {modele_raw}" if modele_raw else "")
+        _add_run(tbl.cell(0, 0).paragraphs[0], default, italic=True, size=10)
+        return
+
+    # ── Layout : 2 lignes × 2 cols (+ col photo optionnelle) ────────────────
+    DARK_HEX = "1A1814"
+    col_left  = Cm(12) if not photo_bytes else Cm(7.5)
+    col_right = Cm(6)
+    col_photo = Cm(4.5)
+
+    if photo_bytes:
+        tbl = doc.add_table(rows=2, cols=3)
+        tbl.style = "Table Grid"
+        tbl.autofit = False
+        for row in tbl.rows:
+            row.cells[0].width = col_photo
+            row.cells[1].width = col_left
+            row.cells[2].width = col_right
+    else:
+        tbl = doc.add_table(rows=2, cols=2)
+        tbl.style = "Table Grid"
+        tbl.autofit = False
+        for row in tbl.rows:
+            row.cells[0].width = col_left
+            row.cells[1].width = col_right
+
+    # Photo (merge rows 0-1 col 0)
+    if photo_bytes:
+        ph = tbl.cell(0, 0)
+        ph.merge(tbl.cell(1, 0))
+        ph.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        pp = ph.paragraphs[0]
+        pp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = pp.add_run()
+        try:
+            run.add_picture(BytesIO(photo_bytes), width=Cm(4))
+        except Exception:
+            _add_run(pp, "[photo]", italic=True, size=9)
+        off = 1
+    else:
+        off = 0  # offset col index
+
+    # Ligne 0 : en-tête sombre — MODÈLE | MARQUE
+    hdr_l = tbl.cell(0, off)
+    hdr_r = tbl.cell(0, off + 1)
+    _set_cell_bg(hdr_l, DARK_HEX)
+    _set_cell_bg(hdr_r, DARK_HEX)
+    hdr_l.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    hdr_r.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    p_ml = hdr_l.paragraphs[0]
+    _add_run(p_ml, modele_full, bold=True, size=11, color=RGBColor(0xFF, 0xFF, 0xFF))
+    p_mr = hdr_r.paragraphs[0]
+    p_mr.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    _add_run(p_mr, marque.upper(), size=8, color=RGBColor(0xAA, 0xAA, 0xAA))
+
+    # Ligne 1 : corps — ÉTAT (gauche) | RÉFÉRENCE + SÉRIE (droite)
+    body_l = tbl.cell(1, off)
+    body_r = tbl.cell(1, off + 1)
+    body_l.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+    body_r.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+
+    # État
+    if etat_lines:
+        first = True
+        for line in etat_lines:
+            p = body_l.paragraphs[0] if first else body_l.add_paragraph()
+            first = False
+            _add_run(p, f"• {line.upper()}", size=10)
+    else:
+        _add_run(body_l.paragraphs[0], "—", italic=True, size=10)
+
+    # Référence + N° série (une seule fois, à droite)
     first = True
-    for line in all_lines:
-        para = info_cell.paragraphs[0] if first else info_cell.add_paragraph()
+    if ref:
+        p = body_r.paragraphs[0]
         first = False
-        _add_run(para, line.upper() if line else "", size=10)
+        _add_run(p, "RÉFÉRENCE :", bold=True, size=9)
+        p2 = body_r.add_paragraph()
+        _add_run(p2, ref, size=10)
+    if serie:
+        if not first:
+            body_r.add_paragraph()  # espace
+        p = body_r.paragraphs[0] if first else body_r.add_paragraph()
+        first = False
+        _add_run(p, "N° DE SÉRIE :", bold=True, size=9)
+        p2 = body_r.add_paragraph()
+        _add_run(p2, serie, size=10)
+    if first:
+        _add_run(body_r.paragraphs[0], "—", italic=True, size=10)
 
 
 def _add_work_table(doc: Document, title: str, lines: list[dict[str, Any]],
@@ -341,8 +389,9 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     intro_p.paragraph_format.space_before = Pt(4)
     intro_p.paragraph_format.space_after = Pt(4)
     _add_run(intro_p,
-             "Madame, Monsieur,\nSuite à l'examen attentif de votre montre, veuillez trouver "
-             "ci-dessous le détail des informations et des travaux de remise en état préconisés.",
+             "Madame, Monsieur,\n"
+             "Après examen attentif de votre pièce, nous avons l'honneur de vous soumettre "
+             "ci-dessous le détail de nos préconisations de remise en état.",
              italic=True, size=10)
 
     _add_section_title(doc, "INFORMATIONS DE LA MONTRE")

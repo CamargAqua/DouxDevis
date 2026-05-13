@@ -257,8 +257,9 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         leading=14, textColor=colors.HexColor("#3A3830"),
     )
     story.append(_p(
-        "Madame, Monsieur,\nSuite à l'examen attentif de votre montre, veuillez trouver "
-        "ci-dessous le détail des informations et des travaux de remise en état préconisés.",
+        "Madame, Monsieur,\n"
+        "Après examen attentif de votre pièce, nous avons l'honneur de vous soumettre "
+        "ci-dessous le détail de nos préconisations de remise en état.",
         intro_style,
     ))
     story.append(Spacer(1, 4 * mm))
@@ -275,64 +276,85 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     serie       = montre.get("numero_serie", "")
     modele      = montre.get("modele", "").upper()
     metal       = (montre.get("metal") or "").upper()
-    modele_full = f"{modele} — {metal}" if metal else modele
+    modele_full = f"{modele} — {metal}" if metal else (modele or "—")
     ref         = montre.get("reference", "")
 
-    etat_html   = "<br/>".join(f"• {l.upper()}" for l in etat)
+    etat_html = "<br/>".join(f"• {l.upper()}" for l in etat) if etat else "<i>Néant</i>"
+
+    # Colonne droite : référence + N° série (une seule fois)
+    right_parts = []
+    if ref:
+        right_parts.append(f'<b>Référence :</b><br/>{ref}')
+    if serie:
+        right_parts.append(f'<b>N° de série :</b><br/>{serie}')
+    if metal and not modele:
+        right_parts.append(f'<b>Métal :</b><br/>{metal}')
+    right_html = "<br/><br/>".join(right_parts) if right_parts else ""
 
     has_info = any([modele, ref, serie, etat])
-    if has_info:
-        info_html = f"<b>{modele_full}</b>"
-        if serie:
-            info_html = f"{serie}<br/>" + info_html
-        if etat_html:
-            info_html += f"<br/><br/>{etat_html}"
-        right_html = f"<b>Référence :</b><br/>{ref}"
-        if serie:
-            right_html += f"<br/><br/><b>N° de série :</b><br/>{serie}"
-    else:
-        # Aucune info montre dans le devis partenaire : phrase par défaut
-        default_label = f"{marque_raw.upper()} — {modele.upper()}" if modele else marque_raw.upper()
-        info_html  = f"<i>Montre {default_label}</i>"
-        right_html = ""
 
-    if photo_bytes:
+    # Styles
+    hdr_bold  = ParagraphStyle("mhdr", fontName="Helvetica-Bold",  fontSize=10,
+                               leading=14, textColor=colors.white)
+    hdr_small = ParagraphStyle("mhdr_s", fontName="Helvetica", fontSize=8,
+                               leading=12, textColor=colors.HexColor("#AAAAAA"), alignment=2)
+
+    def _montre_style():
+        return TableStyle([
+            ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
+            ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
+            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+            ("TOPPADDING",    (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ])
+
+    if not has_info:
+        default_label = marque_raw.upper() + (f" — {modele.upper()}" if modele else "")
+        montre_tbl = Table(
+            [[_html(f"<i>Montre {default_label}</i>", base)]],
+            colWidths=[18 * cm],
+        )
+        montre_tbl.setStyle(_montre_style())
+
+    elif photo_bytes:
         try:
             photo_img = Image(BytesIO(photo_bytes))
             photo_img._restrictSize(4 * cm, 5 * cm)
         except Exception:
             photo_img = _p("", base)
 
-        montre_tbl = Table([[
-            photo_img,
-            _html(info_html, base),
-            _html(right_html, base),
-        ]], colWidths=[4.5 * cm, 8.5 * cm, 5 * cm])
-        montre_tbl.setStyle(TableStyle([
-            ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
-            ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
-            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-            ("ALIGN",         (0, 0), (0, 0),   "CENTER"),
-            ("VALIGN",        (0, 0), (0, 0),   "MIDDLE"),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
-            ("TOPPADDING",    (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ]))
+        # 3 cols : photo (span 2 rows) | modele header | marque
+        #          photo               | état           | ref+série
+        montre_tbl = Table([
+            [photo_img,
+             _html(f'<font color="white"><b>{modele_full}</b></font>', hdr_bold),
+             _html(f'<para align="right"><font color="#AAAAAA" size="8">{marque_up}</font></para>', base)],
+            ["",
+             _html(etat_html, base),
+             _html(right_html, base)],
+        ], colWidths=[4.5 * cm, 8.5 * cm, 5 * cm])
+        ts = _montre_style()
+        ts.add("SPAN",          (0, 0), (0, 1))
+        ts.add("BACKGROUND",    (1, 0), (2, 0), DARK)
+        ts.add("BACKGROUND",    (0, 0), (0, 1), colors.HexColor("#F2F0EC"))
+        ts.add("ALIGN",         (0, 0), (0, 1), "CENTER")
+        ts.add("VALIGN",        (0, 0), (0, 1), "MIDDLE")
+        montre_tbl.setStyle(ts)
+
     else:
-        montre_tbl = Table([[
-            _html(info_html, base),
-            _html(right_html, base),
-        ]], colWidths=[13 * cm, 5 * cm])
-        montre_tbl.setStyle(TableStyle([
-            ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
-            ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
-            ("VALIGN",        (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
-            ("TOPPADDING",    (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ]))
+        # 2 rows × 2 cols : en-tête sombre (modele | marque) + corps (état | ref+série)
+        montre_tbl = Table([
+            [_html(f'<font color="white"><b>{modele_full}</b></font>', hdr_bold),
+             _html(f'<para align="right"><font color="#AAAAAA" size="8">{marque_up}</font></para>', base)],
+            [_html(etat_html, base),
+             _html(right_html, base)],
+        ], colWidths=[13 * cm, 5 * cm])
+        ts = _montre_style()
+        ts.add("BACKGROUND",    (0, 0), (-1, 0), DARK)
+        ts.add("LINEBELOW",     (0, 0), (-1, 0), 0.5, colors.HexColor("#444"))
+        montre_tbl.setStyle(ts)
     story.append(montre_tbl)
     story.append(Spacer(1, 5 * mm))
 
