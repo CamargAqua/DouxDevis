@@ -120,6 +120,35 @@ def create_app() -> Flask:
 
         return redirect(url_for("review"))
 
+    @app.route("/dev-preview")
+    def dev_preview():
+        """Route de test locale uniquement — injecte des données de démo."""
+        import uuid
+        session["token"] = uuid.uuid4().hex
+        session["data"] = {
+            "marque": "Chanel",
+            "client": {"nom": "DUPONT MARIE"},
+            "sav": {"numero": "383750", "date": "13.05.2026", "lieu": "Avignon"},
+            "montre": {
+                "modele": "J12", "reference": "H2569 - UNI P",
+                "numero_serie": "SS17159", "poids": "", "metal": "", "taille": "",
+                "etat": ["RAYURES SUR LA BOITE", "USURE DU BRACELET"],
+            },
+            "service_complet_description": "Démontage complet\nNettoyage ultrason\nHuilage et réglage",
+            "interventions_necessaires": [
+                {"description": "REVISION COMPLETE - CHRONO QUARTZ", "prix": 830.00},
+                {"description": "REMPLACEMENT BRACELET", "prix": 216.25},
+                {"description": "POLISSAGE BOITE", "prix": 95.00, "prix_label": "INCL"},
+                {"description": "REMPLACEMENT VERRE SAPHIR", "prix": 0.00},
+            ],
+            "interventions_optionnelles": [
+                {"description": "DORURE OR JAUNE 18K", "prix": 320.00},
+            ],
+            "total_ttc": 1046.25,
+            "delai": "6 à 8 semaines",
+        }
+        return redirect(url_for("review"))
+
     @app.route("/review", methods=["GET"])
     def review():
         data = session.get("data")

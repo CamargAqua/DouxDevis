@@ -261,7 +261,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     modele      = montre.get("modele", "").upper()
     metal       = (montre.get("metal") or "").upper()
     taille      = (montre.get("taille") or "").upper()
-    modele_full = f"{modele} — {metal}" if metal else (modele or "—")
+    modele_full = f"{modele} — {metal}" if metal else modele
 
     intro_style = ParagraphStyle(
         "intro_lettre", fontName="Helvetica-Oblique", fontSize=9,
@@ -312,10 +312,12 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
 
     # Cellule gauche : marque (petit) + modèle (gras) + état si présent
     marque_line = f'<font size="8" color="#888888">{marque_up}</font>'
-    model_line  = f'<b>{modele_full}</b>'
-    left_html   = f"{marque_line}<br/>{model_line}"
+    left_parts  = [marque_line]
+    if modele_full:
+        left_parts.append(f'<b>{modele_full}</b>')
     if etat_html and etat_html != "<i>Néant</i>":
-        left_html += f"<br/><br/>{etat_html}"
+        left_parts.append(f"<br/>{etat_html}")
+    left_html = "<br/>".join(left_parts)
 
     if photo_bytes:
         try:
