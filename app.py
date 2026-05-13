@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+import json
 from dotenv import load_dotenv
 from flask import (
     Flask,
@@ -48,6 +49,13 @@ ALLOWED_IMG = {"jpg", "jpeg", "png", "webp", "gif"}
 MAX_CONTENT_LENGTH = 25 * 1024 * 1024
 
 MARQUES = ["Chanel", "Tag Heuer", "Breitling", "Rolex", "Autre"]
+
+def _load_coefficients() -> dict:
+    path = BASE_DIR / "coefficients.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
 
 
 def _has_extension(filename: str, allowed: set[str]) -> bool:
@@ -154,7 +162,8 @@ def create_app() -> Flask:
         data = session.get("data")
         if not data:
             return redirect(url_for("index"))
-        return render_template("form.html", data=data, marques=MARQUES)
+        return render_template("form.html", data=data, marques=MARQUES,
+                               coefficients_json=json.dumps(_load_coefficients(), ensure_ascii=False))
 
     @app.route("/generate", methods=["POST"])
     def generate():

@@ -174,6 +174,7 @@
             <div class="coeff-price-item coeff-price-item--gold">
               <span class="coeff-price-lbl">Prix client</span>
               <span class="coeff-price-val coeff-price-val--gold">€&nbsp;<span id="total-final-display">0,00</span></span>
+              <span class="coeff-gain" id="coeff-gain"></span>
             </div>
           </div>
 
@@ -355,19 +356,8 @@ function selectDelai(el, val) {
 document.getElementById('delai-input').addEventListener('input', () =>
   document.querySelectorAll('.delai-pill').forEach(p => p.classList.remove('selected')));
 
-/* ── Coefficients par marque ── */
-const BRAND_COEFFS = {
-  'Rolex': 1.60, 'Patek Philippe': 1.80, 'Audemars Piguet': 1.75,
-  'Richard Mille': 1.90, 'Vacheron Constantin': 1.70, 'A. Lange & Söhne': 1.75,
-  'Breguet': 1.65, 'Jaeger-LeCoultre': 1.55, 'Cartier': 1.65,
-  'Piaget': 1.65, 'Chopard': 1.65, 'Blancpain': 1.60,
-  'Chanel': 1.70, 'Breitling': 1.50, 'TAG Heuer': 1.45,
-  'Hublot': 1.55, 'Omega': 1.45, 'IWC Schaffhausen': 1.50,
-  'Panerai': 1.50, 'Zenith': 1.45, 'Girard-Perregaux': 1.55,
-  'Grand Seiko': 1.45, 'Bvlgari': 1.60, 'Hermès': 1.60,
-  'Louis Vuitton': 1.55, 'Tudor': 1.40, 'Longines': 1.35,
-  'March LA.B': 1.40, 'Frederique Constant': 1.35,
-};
+/* ── Coefficients par marque (lus depuis coefficients.json) ── */
+const BRAND_COEFFS = {{ coefficients_json | safe }};
 const DEFAULT_COEFF = 1.50;
 
 /* ── Toggle OFFERT ── */
@@ -444,6 +434,11 @@ function refreshTotals() {
 
   const pricesRow = document.getElementById('coeff-prices-row');
   pricesRow.style.display = base > 0 ? 'flex' : 'none';
+
+  const gain = final - base;
+  const gainEl = document.getElementById('coeff-gain');
+  gainEl.textContent = gain > 0.01 ? `+ ${fmt(gain)} €` : '';
+  gainEl.style.color = gain > 0.01 ? '#4CAF7D' : 'transparent';
 
   const coeffLabel = `×${coeff.toFixed(2).replace('.',',')}`;
   document.getElementById('coeff-header-badge').textContent = coeffLabel;

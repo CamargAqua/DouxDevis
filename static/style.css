@@ -280,7 +280,11 @@ textarea { resize: vertical; min-height: 90px; }
 }
 .coeff-price-val--gold { color: var(--gold); }
 .coeff-price-sep {
-  font-size: 20px; color: var(--ink-soft); padding: 0 4px; margin-top: 12px;
+  font-size: 20px; color: var(--ink-soft); padding: 0 8px; margin-top: 12px;
+}
+.coeff-gain {
+  font-size: 12px; font-weight: 700; white-space: nowrap; display: block;
+  margin-top: 4px; color: #4CAF7D;
 }
 .coeff-price-item--gold { margin-left: auto; text-align: right; }
 
