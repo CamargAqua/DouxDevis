@@ -106,7 +106,7 @@ def _add_montre_table(doc: Document, montre: dict[str, Any], photo_bytes: bytes 
     """Tableau montre redesigné : en-tête sombre (modèle) + corps (état | ref/série)."""
     modele_raw  = (montre.get("modele") or "").upper()
     metal       = (montre.get("metal") or "").upper()
-    modele_full = f"{modele_raw} — {metal}" if (modele_raw and metal) else (modele_raw or "—")
+    modele_full = f"{modele_raw} — {metal}" if (modele_raw and metal) else modele_raw
     ref         = montre.get("reference") or ""
     serie       = montre.get("numero_serie") or ""
 
@@ -144,10 +144,9 @@ def _add_montre_table(doc: Document, montre: dict[str, Any], photo_bytes: bytes 
         tbl.rows[0].cells[0].width = col_left
         tbl.rows[0].cells[1].width = col_right
 
-    # Photo (merge rows 0-1 col 0)
+    # Photo (col 0, ligne unique)
     if photo_bytes:
         ph = tbl.cell(0, 0)
-        ph.merge(tbl.cell(1, 0))
         ph.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         pp = ph.paragraphs[0]
         pp.alignment = WD_ALIGN_PARAGRAPH.CENTER
