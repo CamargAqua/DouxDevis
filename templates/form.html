@@ -138,8 +138,15 @@
       </div>
       <div class="form-section-body">
         <div class="coeff-block">
-          <div class="coeff-main-row">
-            <span class="pricing-seg-lbl">Coefficient</span>
+
+          <!-- Ligne 1 : label + nom de marque -->
+          <div class="coeff-top-row">
+            <span class="coeff-title">Coefficient</span>
+            <span id="coeff-brand-tag" class="coeff-brand-tag" style="display:none"></span>
+          </div>
+
+          <!-- Ligne 2 : presets + champ perso -->
+          <div class="coeff-controls">
             <div class="seg-ctrl" id="coeff-presets">
               <button type="button" class="seg-btn" data-coeff="1.30" onclick="setCoeff(1.30)">×1,30</button>
               <button type="button" class="seg-btn" data-coeff="1.40" onclick="setCoeff(1.40)">×1,40</button>
@@ -148,20 +155,27 @@
               <button type="button" class="seg-btn" data-coeff="1.70" onclick="setCoeff(1.70)">×1,70</button>
               <button type="button" class="seg-btn" data-coeff="1.80" onclick="setCoeff(1.80)">×1,80</button>
             </div>
-            <div class="pricing-custom">
-              <span class="pricing-custom-lbl">Perso</span>
+            <label class="coeff-perso-wrap">
+              <span class="coeff-perso-lbl">Perso</span>
               <input type="number" id="coeff-input" min="1" max="5" step="0.05" value="1.50">
-              <span class="pricing-custom-unit">×</span>
+              <span class="coeff-perso-unit">×</span>
+            </label>
+          </div>
+
+          <!-- Ligne 3 : prix partenaire → prix client -->
+          <div class="coeff-prices-row" id="coeff-prices-row" style="display:none">
+            <div class="coeff-price-item">
+              <span class="coeff-price-lbl">Prix partenaire</span>
+              <span class="coeff-price-val">€&nbsp;<span id="total-display">0,00</span></span>
+            </div>
+            <div class="coeff-price-sep">→</div>
+            <div class="coeff-price-item coeff-price-item--gold">
+              <span class="coeff-price-lbl">Prix client</span>
+              <span class="coeff-price-val coeff-price-val--gold">€&nbsp;<span id="total-final-display">0,00</span></span>
             </div>
           </div>
-          <div class="coeff-info-row" id="coeff-info-row" style="display:none">
-            <span id="coeff-brand-hint" class="coeff-brand-tag"></span>
-            <span class="coeff-sep">·</span>
-            <span id="coeff-calc" class="coeff-calc"></span>
-          </div>
+
         </div>
-        <span id="total-display" style="display:none"></span>
-        <span id="total-final-display" style="display:none"></span>
         <input type="hidden" name="total_ttc" id="total-override-input">
       </div>
     </div>
@@ -394,39 +408,52 @@ function toggleIncl(btn) {
   updateTotal();
 }
 
-/* ── Total live + coefficient ── */
+/* ── Coefficient : calcul et distribution par ligne ── */
 function fmt(n) { return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
-function updateTotal() {
-  const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
-  let base = 0;
+function applyCoeffToLines(coeff) {
   document.querySelectorAll('#nec-lines .intervention-line').forEach(line => {
     const lbl = line.querySelector('.label-input').value;
     if (lbl === 'OFFERT' || lbl === 'INCL') return;
-    const src = line.querySelector('.prix-input');
-    const v = parseFloat((src.dataset.base || src.value || '0').replace(',','.'));
-    if (!isNaN(v)) base += v;
+    const inp = line.querySelector('.prix-input');
+    if (!inp.dataset.base && inp.value) inp.dataset.base = inp.value;
+    const base = parseFloat((inp.dataset.base || '0').replace(',','.'));
+    if (!isNaN(base) && base > 0)
+      inp.value = (base * coeff).toFixed(2);
+  });
+}
+
+function refreshTotals() {
+  const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+  let base = 0, final = 0;
+  document.querySelectorAll('#nec-lines .intervention-line').forEach(line => {
+    const lbl = line.querySelector('.label-input').value;
+    if (lbl === 'OFFERT' || lbl === 'INCL') return;
+    const inp = line.querySelector('.prix-input');
+    const b = parseFloat((inp.dataset.base || '0').replace(',','.'));
+    const v = parseFloat((inp.value || '0').replace(',','.'));
+    if (!isNaN(b)) base  += b;
+    if (!isNaN(v)) final += v;
   });
 
-  const final = base * coeff;
   document.getElementById('total-display').textContent = fmt(base);
   document.getElementById('total-final-display').textContent = fmt(final);
   document.getElementById('total-override-input').value = final.toFixed(2);
 
+  const pricesRow = document.getElementById('coeff-prices-row');
+  pricesRow.style.display = base > 0 ? 'flex' : 'none';
+
   const coeffLabel = `×${coeff.toFixed(2).replace('.',',')}`;
   document.getElementById('coeff-header-badge').textContent = coeffLabel;
 
-  const infoRow = document.getElementById('coeff-info-row');
-  const calcEl  = document.getElementById('coeff-calc');
-  if (base > 0) {
-    calcEl.textContent = `${fmt(base)} € × ${coeff.toFixed(2).replace('.',',')} = ${fmt(final)} €`;
-    infoRow.style.display = 'flex';
-  } else {
-    infoRow.style.display = 'none';
-  }
-
   document.querySelectorAll('#coeff-presets .seg-btn').forEach(b =>
     b.classList.toggle('active', Math.abs(parseFloat(b.dataset.coeff) - coeff) < 0.001));
+}
+
+function updateTotal() {
+  const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+  applyCoeffToLines(coeff);
+  refreshTotals();
 }
 
 function setCoeff(val) {
@@ -436,23 +463,25 @@ function setCoeff(val) {
 
 document.getElementById('coeff-input').addEventListener('input', updateTotal);
 
-// Quand l'utilisateur modifie un prix manuellement → mettre à jour data-base
+// Quand l'utilisateur modifie un prix manuellement → recalculer la base
 document.getElementById('nec-lines').addEventListener('input', e => {
   if (e.target.classList.contains('prix-input')) {
-    e.target.dataset.base = e.target.value;
-    updateTotal();
+    const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+    const v = parseFloat(e.target.value || '0');
+    e.target.dataset.base = (coeff > 1 ? v / coeff : v).toFixed(2);
+    refreshTotals();
   }
 });
 
-// Appliquer le coefficient marque quand une marque est sélectionnée
+// Coefficient marque auto à la sélection de marque
 const _origSelectMarque = window.selectMarque;
 window.selectMarque = function(val) {
   _origSelectMarque(val);
   const coeff = BRAND_COEFFS[val] || DEFAULT_COEFF;
   document.getElementById('coeff-input').value = coeff;
-  const hint = document.getElementById('coeff-brand-hint');
-  hint.textContent = `Coefficient ${val} : ×${coeff.toFixed(2).replace('.',',')}`;
-  document.getElementById('coeff-info-row').style.display = 'flex';
+  const tag = document.getElementById('coeff-brand-tag');
+  tag.textContent = `${val} — ×${coeff.toFixed(2).replace('.',',')}`;
+  tag.style.display = 'inline-flex';
   updateTotal();
 };
 

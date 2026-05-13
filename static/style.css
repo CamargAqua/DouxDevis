@@ -226,28 +226,63 @@ textarea { resize: vertical; min-height: 90px; }
   background: currentColor; flex-shrink: 0;
 }
 
+/* ── Bloc coefficient ── */
 .coeff-block {
-  padding: 16px 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  background: var(--surface);
+  padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;
+  border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface);
 }
-.coeff-main-row {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+.coeff-top-row {
+  display: flex; align-items: center; gap: 10px;
 }
-.coeff-info-row {
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 12px; padding-top: 10px;
-  border-top: 1px solid var(--line);
-  font-size: 13px;
+.coeff-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .4px;
+  color: var(--ink-mid); text-transform: uppercase;
 }
 .coeff-brand-tag {
-  font-weight: 600; color: var(--gold-deep);
-  background: var(--gold-ultra); padding: 2px 8px;
-  border-radius: 20px; font-size: 12px;
+  display: inline-flex; align-items: center;
+  font-size: 12px; font-weight: 600; color: var(--gold-deep);
+  background: var(--gold-ultra); padding: 3px 10px;
+  border-radius: 20px; border: 1px solid var(--gold-light);
 }
-.coeff-sep { color: var(--ink-soft); }
-.coeff-calc { color: var(--ink-mid); font-variant-numeric: tabular-nums; }
+.coeff-controls {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.coeff-perso-wrap {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 5px 10px; cursor: text;
+}
+.coeff-perso-lbl {
+  font-size: 12px; color: var(--ink-soft); white-space: nowrap;
+}
+.coeff-perso-wrap input {
+  width: 56px; border: none; background: transparent;
+  font-size: 14px; font-weight: 600; color: var(--ink);
+  text-align: center; outline: none;
+}
+.coeff-perso-unit {
+  font-size: 13px; font-weight: 700; color: var(--ink-mid);
+}
+.coeff-prices-row {
+  display: flex; align-items: center; gap: 16px;
+  padding-top: 14px; border-top: 1px solid var(--line);
+}
+.coeff-price-item {
+  display: flex; flex-direction: column; gap: 3px;
+}
+.coeff-price-lbl {
+  font-size: 11px; font-weight: 600; letter-spacing: .3px;
+  color: var(--ink-soft); text-transform: uppercase;
+}
+.coeff-price-val {
+  font-size: 22px; font-weight: 700; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.coeff-price-val--gold { color: var(--gold); }
+.coeff-price-sep {
+  font-size: 20px; color: var(--ink-soft); padding: 0 4px; margin-top: 12px;
+}
+.coeff-price-item--gold { margin-left: auto; text-align: right; }
 
 .btn-remove {
   width: 30px; height: 30px; border-radius: var(--r);

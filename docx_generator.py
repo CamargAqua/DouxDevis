@@ -285,7 +285,12 @@ def _add_work_table(doc: Document, title: str, lines: list[dict[str, Any]],
         _add_run(p, total_label, italic=True, bold=True, size=10)
         p2 = tr.paragraphs[0]
         p2.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        _add_run(p2, _format_price(total_value), bold=True, size=10)
+        try:
+            _tv = float(total_value or 0)
+            _total_str = f"{_tv:,.2f}".replace(",", " ").replace(".", ",") + " €"
+        except (TypeError, ValueError):
+            _total_str = "0,00 €"
+        _add_run(p2, _total_str, bold=True, size=10)
 
 
 def _format_price(value: Any) -> str:
@@ -386,20 +391,13 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
 
     # Phrase d'introduction dynamique (avec nom de la pièce si disponible)
     _m = montre
-    _piece_parts = [p for p in [
-        (_m.get("modele") or "").upper(),
-        (_m.get("taille") or "").upper(),
-        (_m.get("metal") or "").upper(),
-    ] if p]
-    _votre = f"votre {' — '.join(_piece_parts)}" if _piece_parts else "votre pièce"
-
     intro_p = doc.add_paragraph()
     intro_p.paragraph_format.space_before = Pt(4)
     intro_p.paragraph_format.space_after = Pt(4)
     _add_run(intro_p,
-             f"Madame, Monsieur,\n"
-             f"Après examen attentif de {_votre}, nous avons l'honneur de vous soumettre "
-             f"ci-dessous le détail de nos préconisations de remise en état.",
+             "Madame, Monsieur,\n"
+             "Suite à l'examen de votre montre, veuillez trouver ci-dessous "
+             "nos préconisations de remise en état.",
              italic=True, size=10)
 
     _add_section_title(doc, "INFORMATIONS DE LA MONTRE")

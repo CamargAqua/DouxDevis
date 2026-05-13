@@ -263,18 +263,14 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     taille      = (montre.get("taille") or "").upper()
     modele_full = f"{modele} — {metal}" if metal else (modele or "—")
 
-    _piece_parts = [p for p in [modele, taille, metal] if p]
-    _piece_label = " — ".join(_piece_parts) if _piece_parts else ""
-
     intro_style = ParagraphStyle(
         "intro_lettre", fontName="Helvetica-Oblique", fontSize=9,
         leading=14, textColor=colors.HexColor("#3A3830"),
     )
-    _votre = f"votre {_piece_label}" if _piece_label else "votre pièce"
     story.append(_p(
-        f"Madame, Monsieur,\n"
-        f"Après examen attentif de {_votre}, nous avons l'honneur de vous soumettre "
-        f"ci-dessous le détail de nos préconisations de remise en état.",
+        "Madame, Monsieur,\n"
+        "Suite à l'examen de votre montre, veuillez trouver ci-dessous "
+        "nos préconisations de remise en état.",
         intro_style,
     ))
     story.append(Spacer(1, 4 * mm))
@@ -431,9 +427,11 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
             total_ttc = sum(float(l.get("prix") or 0) for l in necessaires)
         except (TypeError, ValueError):
             total_ttc = 0
-    total_str = _fmt(total_ttc)
-    if total_str and total_str != "OFFERT":
-        total_str += " €"
+    try:
+        _t = float(total_ttc or 0)
+        total_str = f"{_t:,.2f}".replace(",", " ").replace(".", ",") + " €"
+    except (TypeError, ValueError):
+        total_str = "0,00 €"
 
     tot = Table([[
         _html("<b>TOTAL TTC EN EURO</b>", rb),
