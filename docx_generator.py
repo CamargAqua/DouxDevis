@@ -131,20 +131,18 @@ def _add_montre_table(doc: Document, montre: dict[str, Any], photo_bytes: bytes 
     col_photo = Cm(4.5)
 
     if photo_bytes:
-        tbl = doc.add_table(rows=2, cols=3)
+        tbl = doc.add_table(rows=1, cols=3)
         tbl.style = "Table Grid"
         tbl.autofit = False
-        for row in tbl.rows:
-            row.cells[0].width = col_photo
-            row.cells[1].width = col_left
-            row.cells[2].width = col_right
+        tbl.rows[0].cells[0].width = col_photo
+        tbl.rows[0].cells[1].width = col_left
+        tbl.rows[0].cells[2].width = col_right
     else:
-        tbl = doc.add_table(rows=2, cols=2)
+        tbl = doc.add_table(rows=1, cols=2)
         tbl.style = "Table Grid"
         tbl.autofit = False
-        for row in tbl.rows:
-            row.cells[0].width = col_left
-            row.cells[1].width = col_right
+        tbl.rows[0].cells[0].width = col_left
+        tbl.rows[0].cells[1].width = col_right
 
     # Photo (merge rows 0-1 col 0)
     if photo_bytes:
@@ -162,34 +160,24 @@ def _add_montre_table(doc: Document, montre: dict[str, Any], photo_bytes: bytes 
     else:
         off = 0  # offset col index
 
-    # Ligne 0 : en-tête sombre — MODÈLE | MARQUE
-    hdr_l = tbl.cell(0, off)
-    hdr_r = tbl.cell(0, off + 1)
-    _set_cell_bg(hdr_l, DARK_HEX)
-    _set_cell_bg(hdr_r, DARK_HEX)
-    hdr_l.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-    hdr_r.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-    p_ml = hdr_l.paragraphs[0]
-    _add_run(p_ml, modele_full, bold=True, size=11, color=RGBColor(0xFF, 0xFF, 0xFF))
-    p_mr = hdr_r.paragraphs[0]
-    p_mr.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    _add_run(p_mr, marque.upper(), size=8, color=RGBColor(0xAA, 0xAA, 0xAA))
-
-    # Ligne 1 : corps — ÉTAT (gauche) | RÉFÉRENCE + SÉRIE (droite)
-    body_l = tbl.cell(1, off)
-    body_r = tbl.cell(1, off + 1)
+    # Ligne unique : gauche = marque + modèle + état | droite = réf + série
+    body_l = tbl.cell(0, off)
+    body_r = tbl.cell(0, off + 1)
     body_l.vertical_alignment = WD_ALIGN_VERTICAL.TOP
     body_r.vertical_alignment = WD_ALIGN_VERTICAL.TOP
 
-    # État
+    # Marque (petit) + Modèle (gras)
+    p_marque = body_l.paragraphs[0]
+    _add_run(p_marque, marque.upper(), size=8, color=RGBColor(0x88, 0x88, 0x88))
+    p_modele = body_l.add_paragraph()
+    _add_run(p_modele, modele_full, bold=True, size=11)
+
+    # État si présent
     if etat_lines:
-        first = True
+        body_l.add_paragraph()  # espace
         for line in etat_lines:
-            p = body_l.paragraphs[0] if first else body_l.add_paragraph()
-            first = False
+            p = body_l.add_paragraph()
             _add_run(p, f"• {line.upper()}", size=10)
-    else:
-        _add_run(body_l.paragraphs[0], "—", italic=True, size=10)
 
     # Référence + N° série (une seule fois, à droite)
     first = True
