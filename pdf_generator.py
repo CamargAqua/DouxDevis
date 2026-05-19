@@ -70,6 +70,40 @@ class _CheckboxField(Flowable):
 GOLD = colors.HexColor("#C8A028")
 DARK = colors.HexColor("#1A1814")
 
+
+class _FormTextField(Flowable):
+    """Champ texte AcroForm remplissable (date ou signature)."""
+
+    def __init__(self, name: str, width: float, height: float,
+                 tooltip: str = "", font_size: int = 10):
+        super().__init__()
+        self._name    = name
+        self._w       = width
+        self._h       = height
+        self._tooltip = tooltip
+        self._fs      = font_size
+
+    def wrap(self, avail_w, avail_h):
+        return self._w, self._h
+
+    def draw(self):
+        c = self.canv
+        m = c._currentMatrix
+        x_abs = m[4]
+        y_abs = m[5]
+        c.acroForm.textfield(
+            name=self._name,
+            x=x_abs, y=y_abs,
+            width=self._w, height=self._h,
+            fontSize=self._fs,
+            borderColor=colors.HexColor("#888888"),
+            fillColor=colors.HexColor("#FAFAF8"),
+            textColor=colors.black,
+            borderWidth=0.5,
+            tooltip=self._tooltip,
+            forceBorder=True,
+        )
+
 # Dossier des logos (static/logos/)
 LOGOS_DIR = Path(__file__).parent / "static" / "logos"
 
@@ -509,16 +543,35 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     ))
     story.append(Spacer(1, 3 * mm))
 
+    # Cellule droite : titre + champ date + champ signature
+    from reportlab.platypus import KeepTogether
+    lbl_date = ParagraphStyle("lbl", fontName="Helvetica", fontSize=7,
+                              textColor=colors.HexColor("#888888"), leading=10)
+    sig_right = Table([
+        [_html("<b>DATE ET SIGNATURE :</b>", bold)],
+        [_html("Date :", lbl_date)],
+        [_FormTextField("date_signature", width=6*cm, height=0.55*cm,
+                        tooltip="Date (JJ/MM/AAAA)", font_size=9)],
+        [_html("Signature :", lbl_date)],
+        [_FormTextField("signature_client", width=6*cm, height=1.0*cm,
+                        tooltip="Cliquez ici pour signer", font_size=10)],
+    ], colWidths=[6.5 * cm])
+    sig_right.setStyle(TableStyle([
+        ("TOPPADDING",    (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 5),
+    ]))
+
     sig = Table([
-        [_CheckboxField("accord", "ACCORD AU DEVIS"),  _html("<b>DATE ET SIGNATURE :</b>", bold)],
+        [_CheckboxField("accord", "ACCORD AU DEVIS"),  sig_right],
         [_CheckboxField("refus",  "REFUS DU DEVIS"),   ""],
-    ], colWidths=[11 * cm, 7 * cm], rowHeights=[1.2 * cm, 1.2 * cm])
+    ], colWidths=[11 * cm, 7 * cm], rowHeights=[3.2 * cm, 1.0 * cm])
     sig.setStyle(TableStyle([
         ("BOX",          (1, 0), (1, 1), 0.5, colors.black),
         ("SPAN",         (1, 0), (1, 1)),
         ("VALIGN",       (0, 0), (-1, -1), "TOP"),
         ("LEFTPADDING",  (0, 0), (-1, -1), 5),
-        ("TOPPADDING",   (0, 0), (-1, -1), 8),
+        ("TOPPADDING",   (0, 0), (-1, -1), 6),
     ]))
     story.append(sig)
 
