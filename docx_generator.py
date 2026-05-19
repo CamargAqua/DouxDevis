@@ -403,14 +403,21 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         doc,
         "TRAVAIL À RÉALISER",
         necessaires,
-        total_label="TOTAL TTC EN EURO",
+        total_label="TOTAL TTC EN EURO HORS OPTIONS",
         total_value=total_ttc,
         intro=intro,
     )
 
     optionnelles = data.get("interventions_optionnelles") or []
     if optionnelles:
-        _add_work_table(doc, "TRAVAIL OPTIONNEL", optionnelles)
+        total_opt = sum(
+            float(l.get("prix") or 0) for l in optionnelles
+            if l.get("prix_label") not in ("OFFERT", "INCL")
+        )
+        total_avec_opt = float(total_ttc or 0) + total_opt
+        _add_work_table(doc, "TRAVAIL OPTIONNEL", optionnelles,
+                        total_label="TOTAL TTC EN EURO OPTIONS INCLUSES",
+                        total_value=total_avec_opt)
 
     _add_footer_block(doc, delai=data.get("delai") or "4 à 6 semaines")
 

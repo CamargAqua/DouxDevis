@@ -420,7 +420,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         total_str = "0,00 €"
 
     tot = Table([[
-        _html("<b>TOTAL TTC EN EURO</b>", rb),
+        _html("<b>TOTAL TTC EN EURO HORS OPTIONS</b>", rb),
         _html(f"<b>{total_str}</b>", rb),
     ]], colWidths=[14 * cm, 4 * cm])
     tot.setStyle(TableStyle([
@@ -471,6 +471,28 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
             ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
         ]))
         story.append(opt_tbl)
+
+        # Total options incluses
+        total_opt = sum(float(l.get("prix") or 0) for l in optionnelles
+                        if l.get("prix_label") not in ("OFFERT", "INCL"))
+        total_avec_opt = (float(total_ttc or 0)) + total_opt
+        try:
+            total_opt_str = f"{total_avec_opt:,.2f}".replace(",", " ").replace(".", ",") + " €"
+        except Exception:
+            total_opt_str = "0,00 €"
+        tot_opt = Table([[
+            _html("<b>TOTAL TTC EN EURO OPTIONS INCLUSES</b>", rb),
+            _html(f"<b>{total_opt_str}</b>", rb),
+        ]], colWidths=[14 * cm, 4 * cm])
+        tot_opt.setStyle(TableStyle([
+            ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
+            ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
+            ("TOPPADDING",    (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
+        ]))
+        story.append(tot_opt)
         story.append(Spacer(1, 5 * mm))
 
     # ── Pied de page ─────────────────────────────────────────────────────────
