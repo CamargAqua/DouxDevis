@@ -419,15 +419,18 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     except (TypeError, ValueError):
         total_str = "0,00 €"
 
+    tot_style_base = ParagraphStyle("tot_b", fontName="Helvetica-Bold", fontSize=9,
+                                    alignment=2, leading=13, textColor=colors.white)
     tot = Table([[
-        _html("<b>TOTAL TTC EN EURO HORS OPTIONS</b>", rb),
-        _html(f"<b>{total_str}</b>", rb),
+        _html("<b>TOTAL TTC EN EURO HORS OPTIONS</b>", tot_style_base),
+        _html(f"<b>{total_str}</b>", tot_style_base),
     ]], colWidths=[14 * cm, 4 * cm])
     tot.setStyle(TableStyle([
+        ("BACKGROUND",    (0, 0), (-1, -1), DARK),
         ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
         ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
-        ("TOPPADDING",    (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING",    (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
         ("LEFTPADDING",   (0, 0), (-1, -1), 6),
         ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
     ]))
@@ -480,15 +483,18 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
             total_opt_str = f"{total_avec_opt:,.2f}".replace(",", " ").replace(".", ",") + " €"
         except Exception:
             total_opt_str = "0,00 €"
+        tot_opt_style = ParagraphStyle("tot_opt", fontName="Helvetica-Bold", fontSize=9,
+                                        alignment=2, leading=13, textColor=colors.white)
         tot_opt = Table([[
-            _html("<b>TOTAL TTC EN EURO OPTIONS INCLUSES</b>", rb),
-            _html(f"<b>{total_opt_str}</b>", rb),
+            _html("<b>TOTAL TTC EN EURO OPTIONS INCLUSES</b>", tot_opt_style),
+            _html(f"<b>{total_opt_str}</b>", tot_opt_style),
         ]], colWidths=[14 * cm, 4 * cm])
         tot_opt.setStyle(TableStyle([
+            ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#B8962E")),
             ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
             ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
-            ("TOPPADDING",    (0, 0), (-1, -1), 5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING",    (0, 0), (-1, -1), 7),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
             ("LEFTPADDING",   (0, 0), (-1, -1), 6),
             ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
         ]))
