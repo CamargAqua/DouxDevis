@@ -517,19 +517,19 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
             total_opt_str = f"{total_avec_opt:,.2f}".replace(",", " ").replace(".", ",") + " €"
         except Exception:
             total_opt_str = "0,00 €"
-        tot_opt_style = ParagraphStyle("tot_opt", fontName="Helvetica-Oblique", fontSize=8,
-                                        alignment=2, leading=12,
-                                        textColor=colors.HexColor("#555555"))
+        tot_opt_style = ParagraphStyle("tot_opt", fontName="Helvetica-Oblique", fontSize=9,
+                                        alignment=2, leading=13,
+                                        textColor=colors.HexColor("#444444"))
         tot_opt = Table([[
             _html("<i>Si toutes les options sont retenues : </i>", tot_opt_style),
             _html(f"<i>{total_opt_str}</i>", tot_opt_style),
         ]], colWidths=[14 * cm, 4 * cm])
         tot_opt.setStyle(TableStyle([
             ("BACKGROUND",    (0, 0), (-1, -1), colors.HexColor("#F2F0EC")),
-            ("BOX",           (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
-            ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
-            ("TOPPADDING",    (0, 0), (-1, -1), 5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("BOX",           (0, 0), (-1, -1), 0.5, colors.black),
+            ("INNERGRID",     (0, 0), (-1, -1), 0.5, colors.black),
+            ("TOPPADDING",    (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
             ("LEFTPADDING",   (0, 0), (-1, -1), 6),
             ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
         ]))
