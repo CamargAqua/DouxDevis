@@ -12,8 +12,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm, mm
 from reportlab.platypus import (
     Flowable,
+    HRFlowable,
     Image,
-
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -543,29 +543,26 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     ))
     story.append(Spacer(1, 3 * mm))
 
-    # Cellule droite : titre + champ date + champ signature
-    from reportlab.platypus import KeepTogether
-    lbl_date = ParagraphStyle("lbl", fontName="Helvetica", fontSize=7,
-                              textColor=colors.HexColor("#888888"), leading=10)
+    lbl_sm = ParagraphStyle("lbl_sm", fontName="Helvetica", fontSize=7,
+                            textColor=colors.HexColor("#888888"), leading=9)
     sig_right = Table([
         [_html("<b>DATE ET SIGNATURE :</b>", bold)],
-        [_html("Date :", lbl_date)],
-        [_FormTextField("date_signature", width=6*cm, height=0.55*cm,
-                        tooltip="Date (JJ/MM/AAAA)", font_size=9)],
-        [_html("Signature :", lbl_date)],
-        [_FormTextField("signature_client", width=6*cm, height=1.0*cm,
-                        tooltip="Cliquez ici pour signer", font_size=10)],
+        [_html("Date :", lbl_sm)],
+        [HRFlowable(width="90%", thickness=0.5, color=colors.black, spaceAfter=4)],
+        [_html("Signature :", lbl_sm)],
+        [HRFlowable(width="90%", thickness=0.5, color=colors.black, spaceAfter=2)],
+        [HRFlowable(width="90%", thickness=0.5, color=colors.black)],
     ], colWidths=[6.5 * cm])
     sig_right.setStyle(TableStyle([
-        ("TOPPADDING",    (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("LEFTPADDING",   (0, 0), (-1, -1), 5),
+        ("TOPPADDING",    (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("LEFTPADDING",   (0, 0), (-1, -1), 6),
     ]))
 
     sig = Table([
         [_CheckboxField("accord", "ACCORD AU DEVIS"),  sig_right],
         [_CheckboxField("refus",  "REFUS DU DEVIS"),   ""],
-    ], colWidths=[11 * cm, 7 * cm], rowHeights=[3.2 * cm, 1.0 * cm])
+    ], colWidths=[11 * cm, 7 * cm], rowHeights=[3.0 * cm, 1.0 * cm])
     sig.setStyle(TableStyle([
         ("BOX",          (1, 0), (1, 1), 0.5, colors.black),
         ("SPAN",         (1, 0), (1, 1)),
