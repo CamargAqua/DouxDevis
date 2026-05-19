@@ -563,7 +563,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     sig = Table([
         [_CheckboxField("accord", "ACCORD AU DEVIS"),  sig_right],
         [_CheckboxField("refus",  "REFUS DU DEVIS"),   ""],
-    ], colWidths=[11 * cm, 7 * cm], rowHeights=[3.0 * cm, 1.0 * cm])
+    ], colWidths=[11 * cm, 7 * cm], rowHeights=[2.4 * cm, 0.8 * cm])
     sig.setStyle(TableStyle([
         ("BOX",          (1, 0), (1, 1), 0.5, colors.black),
         ("SPAN",         (1, 0), (1, 1)),
