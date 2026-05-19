@@ -453,10 +453,19 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     except (TypeError, ValueError):
         total_str = "0,00 €"
 
+    # ── INTERVENTIONS OPTIONNELLES ────────────────────────────────────────────────
+    optionnelles = data.get("interventions_optionnelles") or []
+
+    # Render totals section (label depends on whether there are options)
     tot_style_base = ParagraphStyle("tot_b", fontName="Helvetica-Bold", fontSize=9,
                                     alignment=2, leading=13, textColor=colors.white)
+    if optionnelles:
+        total_label = "<b>TOTAL TTC EN EURO HORS OPTIONS</b>"
+    else:
+        total_label = "<b>TOTAL TTC EN EURO</b>"
+    
     tot = Table([[
-        _html("<b>TOTAL TTC EN EURO HORS OPTIONS</b>", tot_style_base),
+        _html(total_label, tot_style_base),
         _html(f"<b>{total_str}</b>", tot_style_base),
     ]], colWidths=[14 * cm, 4 * cm])
     tot.setStyle(TableStyle([
@@ -471,8 +480,9 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     story.append(tot)
     story.append(Spacer(1, 5 * mm))
 
-    # ── TRAVAIL OPTIONNEL ─────────────────────────────────────────────────────
-    optionnelles = data.get("interventions_optionnelles") or []
+
+    # ── TRAVAIL OPTIONNEL ────────────────────────────────────────────────
+
     if optionnelles:
         hdr_opt = Table([[
             _html('<font color="white"><b>OPTION</b></font>', bold),
