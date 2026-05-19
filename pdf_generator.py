@@ -549,10 +549,10 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     sig_right = Table([
         [_html("<b>DATE ET SIGNATURE :</b>", bold)],
         [_html("Date :", lbl_sm)],
-        [HRFlowable(width="90%", thickness=0.5, color=colors.black, spaceAfter=4)],
+        [Spacer(1, 10)],
+        [HRFlowable(width="90%", thickness=0.5, color=colors.black, spaceAfter=6)],
         [_html("Signature :", lbl_sm)],
-        [HRFlowable(width="90%", thickness=0.5, color=colors.black, spaceAfter=2)],
-        [HRFlowable(width="90%", thickness=0.5, color=colors.black)],
+        [Spacer(1, 18)],
     ], colWidths=[6.5 * cm])
     sig_right.setStyle(TableStyle([
         ("TOPPADDING",    (0, 0), (-1, -1), 3),
