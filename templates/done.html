@@ -4,7 +4,12 @@
 <section class="card card-success">
 
   <div class="done-hero">
-    <div class="check">✅</div>
+    <div class="check">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="24" cy="24" r="22" stroke="#B8962E" stroke-width="1.5"/>
+        <path d="M14 24.5L21 31.5L34 17" stroke="#B8962E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
     <h1>Devis généré avec succès</h1>
     <p class="lead">Les deux fichiers sont prêts. Téléchargez-les ci-dessous.</p>
     {% if confidence is not none %}
