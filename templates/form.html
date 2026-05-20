@@ -456,18 +456,18 @@ function refreshTotals() {
     if (!isNaN(v)) clientBrut += v;
   });
 
-  // Pour Omega (HT) : prix client TTC = somme des prix HT × coeff × 1.20
-  const clientTTC = coeffBase === 'ht' ? clientBrut * 1.20 : clientBrut;
+  // Pour Omega (HT) : prix_HT × coeff = prix_TTC_client directement (pas de ×1.20 supplémentaire)
+  // Le coefficient intègre déjà la conversion HT→TTC
+  const clientTTC = clientBrut;
 
   const pLblEl = document.querySelector('.coeff-price-item:first-child .coeff-price-lbl');
   const cLblEl = document.querySelector('.coeff-price-item--gold .coeff-price-lbl');
   if (pLblEl) pLblEl.textContent = coeffBase === 'ht' ? 'Prix partenaire (HT)' : 'Prix partenaire';
-  if (cLblEl) cLblEl.textContent = coeffBase === 'ht' ? 'Prix client (TTC)' : 'Prix client';
+  if (cLblEl) cLblEl.textContent = 'Prix client (TTC)';
 
   document.getElementById('total-display').textContent = fmt(base);
   document.getElementById('total-final-display').textContent = fmt(clientTTC);
-  // total-override-input = somme brute des inputs (HT pour Omega, TTC sinon) — le backend convertit
-  document.getElementById('total-override-input').value = clientBrut.toFixed(2);
+  document.getElementById('total-override-input').value = clientTTC.toFixed(2);
   document.getElementById('coeff-hidden').value = coeff.toFixed(4);
 
   const pricesRow = document.getElementById('coeff-prices-row');

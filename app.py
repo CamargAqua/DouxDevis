@@ -448,16 +448,13 @@ def _form_to_data(form) -> dict:
         if lbl in ("OFFERT", "INCL"):
             line["prix_client"] = 0.0
             continue
-        prix_input = float(line.get("prix") or 0)  # Prix client (HT pour Omega, TTC sinon)
-        if coeff_base == "ht":
-            # Convertir HT→TTC pour le document final
-            prix_ttc = round(prix_input * 1.20, 2)
-            line["prix_client"] = prix_ttc
-            line["prix"] = prix_ttc          # Le docx affiche toujours en TTC
-        else:
-            line["prix_client"] = prix_input
-            line["prix"] = prix_input
-        total_client += line["prix_client"]
+        prix_input = float(line.get("prix") or 0)  # Prix client TTC (HT×coeff pour Omega, TTC×coeff sinon)
+        # Omega : prix_HT_fournisseur × coeff = prix_TTC_client (le coeff intègre la conversion HT→TTC)
+        # Autres : prix_TTC_fournisseur × coeff = prix_TTC_client
+        # Dans les deux cas, l'input contient déjà le prix TTC final — pas de conversion supplémentaire
+        line["prix_client"] = prix_input
+        line["prix"] = prix_input
+        total_client += prix_input
 
     total_client = round(total_client, 2)
 
