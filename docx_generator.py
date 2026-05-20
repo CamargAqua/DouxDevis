@@ -211,15 +211,18 @@ def _add_montre_table(doc: Document, montre: dict[str, Any], photo_bytes: bytes 
 def _add_work_table(doc: Document, title: str, lines: list[dict[str, Any]],
                     *, total_label: str | None = None, total_value: float | None = None,
                     intro: str | None = None) -> None:
+    COL_DESC  = Cm(13.5)
+    COL_PRICE = Cm(4)
+
     header = doc.add_table(rows=1, cols=2)
     header.style = "Table Grid"
     header.autofit = False
-    header.columns[0].width = Cm(14)
-    header.columns[1].width = Cm(4)
+    header.columns[0].width = COL_DESC
+    header.columns[1].width = COL_PRICE
     h_left = header.cell(0, 0)
     h_right = header.cell(0, 1)
-    h_left.width = Cm(14)
-    h_right.width = Cm(4)
+    h_left.width = COL_DESC
+    h_right.width = COL_PRICE
     _set_cell_bg(h_left, GREY_BG)
     _set_cell_bg(h_right, GREY_BG)
     p_left = h_left.paragraphs[0]
@@ -235,14 +238,14 @@ def _add_work_table(doc: Document, title: str, lines: list[dict[str, Any]],
     body = doc.add_table(rows=body_rows, cols=2)
     body.style = "Table Grid"
     body.autofit = False
-    body.columns[0].width = Cm(14)
-    body.columns[1].width = Cm(4)
+    body.columns[0].width = COL_DESC
+    body.columns[1].width = COL_PRICE
 
     for i, line in enumerate(lines):
         desc_cell = body.cell(i, 0)
         price_cell = body.cell(i, 1)
-        desc_cell.width = Cm(14)
-        price_cell.width = Cm(4)
+        desc_cell.width = COL_DESC
+        price_cell.width = COL_PRICE
         _clear_paragraph(desc_cell.paragraphs[0])
 
         description = (line.get("description") or "").strip()
@@ -272,12 +275,12 @@ def _add_work_table(doc: Document, title: str, lines: list[dict[str, Any]],
         total = doc.add_table(rows=1, cols=2)
         total.style = "Table Grid"
         total.autofit = False
-        total.columns[0].width = Cm(14)
-        total.columns[1].width = Cm(4)
+        total.columns[0].width = COL_DESC
+        total.columns[1].width = COL_PRICE
         tl = total.cell(0, 0)
         tr = total.cell(0, 1)
-        tl.width = Cm(14)
-        tr.width = Cm(4)
+        tl.width = COL_DESC
+        tr.width = COL_PRICE
         p = tl.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         _add_run(p, total_label, italic=True, bold=True, size=10)
@@ -309,13 +312,6 @@ def _add_footer_block(doc: Document, delai: str, frais_refus: int | None = None)
     _add_run(p, f"DELAIS APRES ACCORD {delai.upper()} SOUS RESERVE DE DISPONIBILITE DES PIECES",
              size=9)
 
-    # Phrase frais de refus (uniquement pour certaines marques)
-    if frais_refus is not None:
-        p_frais = doc.add_paragraph()
-        _add_run(p_frais,
-                 f"Merci de noter qu'un refus du devis entraînera des frais de {frais_refus} €.",
-                 italic=True, size=9)
-
     table = doc.add_table(rows=2, cols=2)
     table.autofit = False
     table.columns[0].width = Cm(11)
@@ -334,12 +330,15 @@ def _add_footer_block(doc: Document, delai: str, frais_refus: int | None = None)
                 borders.append(b)
 
     accord = table.cell(0, 0)
-    refus = table.cell(1, 0)
+    refus  = table.cell(1, 0)
     _add_run(accord.paragraphs[0], "☐  ACCORD AU DEVIS", size=10)
-    p_refus = refus.paragraphs[0]
-    _add_run(p_refus, "☐  REFUS DU DEVIS", size=10)
+    _add_run(refus.paragraphs[0],  "☐  REFUS DU DEVIS",  size=10)
+    # Frais de refus affichés sous la ligne REFUS dans la même cellule
     if frais_refus is not None:
-        _add_run(p_refus, f"    ({frais_refus}€ FRAIS DE REFUS)", bold=True, size=9)
+        p_frais = refus.add_paragraph()
+        _add_run(p_frais,
+                 f"Merci de noter qu'un refus du devis entraînera des frais de {frais_refus} €.",
+                 italic=True, size=9)
 
     sig_cell = table.cell(0, 1)
     sig_cell.merge(table.cell(1, 1))

@@ -21,6 +21,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from docx_generator import FRAIS_REFUS
+
 
 class _CheckboxField(Flowable):
     """Case à cocher PDF interactive (AcroForm) avec libellé à droite."""
@@ -570,17 +572,41 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         ("LEFTPADDING",   (0, 0), (-1, -1), 6),
     ]))
 
-    sig = Table([
-        [_CheckboxField("accord", "ACCORD AU DEVIS"),  sig_right],
-        [_CheckboxField("refus",  "REFUS DU DEVIS"),   ""],
-    ], colWidths=[11 * cm, 7 * cm], rowHeights=[2.4 * cm, 0.8 * cm])
-    sig.setStyle(TableStyle([
-        ("BOX",          (1, 0), (1, 1), 0.5, colors.black),
-        ("SPAN",         (1, 0), (1, 1)),
-        ("VALIGN",       (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING",  (0, 0), (-1, -1), 5),
-        ("TOPPADDING",   (0, 0), (-1, -1), 6),
-    ]))
+    frais_refus = FRAIS_REFUS.get(marque_raw.lower())
+
+    frais_style = ParagraphStyle(
+        "frais_refus", fontName="Helvetica-Oblique", fontSize=7.5,
+        leading=10, textColor=colors.HexColor("#555555"),
+    )
+
+    if frais_refus is not None:
+        frais_phrase = (
+            f"Merci de noter qu'un refus du devis entraînera des frais de {frais_refus} €."
+        )
+        sig = Table([
+            [_CheckboxField("accord", "ACCORD AU DEVIS"), sig_right],
+            [_CheckboxField("refus",  "REFUS DU DEVIS"),  ""],
+            [_p(frais_phrase, frais_style),               ""],
+        ], colWidths=[11 * cm, 7 * cm], rowHeights=[2.4 * cm, 0.8 * cm, 0.65 * cm])
+        sig.setStyle(TableStyle([
+            ("BOX",          (1, 0), (1, 2), 0.5, colors.black),
+            ("SPAN",         (1, 0), (1, 2)),
+            ("VALIGN",       (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING",  (0, 0), (-1, -1), 5),
+            ("TOPPADDING",   (0, 0), (-1, -1), 6),
+        ]))
+    else:
+        sig = Table([
+            [_CheckboxField("accord", "ACCORD AU DEVIS"), sig_right],
+            [_CheckboxField("refus",  "REFUS DU DEVIS"),  ""],
+        ], colWidths=[11 * cm, 7 * cm], rowHeights=[2.4 * cm, 0.8 * cm])
+        sig.setStyle(TableStyle([
+            ("BOX",          (1, 0), (1, 1), 0.5, colors.black),
+            ("SPAN",         (1, 0), (1, 1)),
+            ("VALIGN",       (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING",  (0, 0), (-1, -1), 5),
+            ("TOPPADDING",   (0, 0), (-1, -1), 6),
+        ]))
     story.append(sig)
 
     doc.build(story, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
