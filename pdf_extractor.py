@@ -63,9 +63,17 @@ Le numéro SAV DOUX est un nombre à 6 chiffres, parfois suivi d'un suffixe à i
 - Rolex/autres → chercher un numéro à 6 chiffres dans les références
 Supprime toujours le suffixe "-1", "-2", etc.
 
+═══ ⚠️ OMEGA — RÈGLE ABSOLUE (NE PAS IGNORER) ⚠️ ═══
+Si la marque est OMEGA :
+  → Tu DOIS utiliser UNIQUEMENT les colonnes "PU HT" ou "Total HT"
+  → Les colonnes "PU TTC" et "Total TTC" sont STRICTEMENT INTERDITES
+  → Le coefficient appliqué par DOUX convertit directement HT → TTC : ne pas faire cette conversion toi-même
+  → EXEMPLE CONCRET : si le tableau Omega affiche PU HT = 1 021,00 € et PU TTC = 1 225,20 €
+    tu retournes 1021.00 — PAS 1225.20
+
 ═══ COLONNE DE PRIX À UTILISER ═══
 Chaque partenaire a ses propres colonnes de prix — respecte strictement ces règles :
-- Omega       → colonne "PU HT" ou "Total HT"    (ignorer "PU TTC" et "Total TTC") — PRIX HT OBLIGATOIRE
+- Omega       → colonne "PU HT" ou "Total HT"    (INTERDICTION d'utiliser "PU TTC" ou "Total TTC")
 - Breitling   → colonne "Prix total TTC"          (ignorer "Total HT")
 - TAG Heuer   → colonne "PRIX PUBLIC TTC"         (ignorer "VOTRE PRIX HT" et "VOTRE PRIX TTC")
 - Chanel      → colonne "MONTANT TTC CONSEILLÉ"   (ignorer "PRIX DE GROS HT")
@@ -392,5 +400,10 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
         detected = _detect_brand_from_text(filename)
         if detected:
             cleaned["marque"] = detected
+
+    # Omega : forcer coeff_base="ht" pour que le formulaire et le générateur
+    # sachent que les prix extraits sont en HT (jamais en TTC)
+    if cleaned.get("marque", "").lower() == "omega":
+        cleaned["coeff_base"] = "ht"
 
     return cleaned
