@@ -439,23 +439,25 @@ def _form_to_data(form) -> dict:
         coeff = 1.0
     coeff_base = (form.get("coeff_base") or "ttc").lower()  # "ht" ou "ttc"
 
-    # Calcul du prix client par ligne :
-    # - prix stocké dans la ligne = prix PARTENAIRE (tel que saisi)
-    # - prix_client = prix_partenaire × coeff  (puis × 1.20 si base HT)
+    # Les inputs soumettent déjà les prix clients appliqués dans le JS :
+    # - marques TTC : inp.value = prix_partenaire_TTC × coeff
+    # - Omega (HT)  : inp.value = prix_partenaire_HT  × coeff  → doit être converti en TTC ici
     total_client = 0.0
     for line in necessaires:
         lbl = line.get("prix_label") or ""
         if lbl in ("OFFERT", "INCL"):
             line["prix_client"] = 0.0
             continue
-        prix_partenaire = float(line.get("prix") or 0)
-        prix_client_ht  = round(prix_partenaire * coeff, 2)
+        prix_input = float(line.get("prix") or 0)  # Prix client (HT pour Omega, TTC sinon)
         if coeff_base == "ht":
-            prix_client_ttc = round(prix_client_ht * 1.20, 2)
+            # Convertir HT→TTC pour le document final
+            prix_ttc = round(prix_input * 1.20, 2)
+            line["prix_client"] = prix_ttc
+            line["prix"] = prix_ttc          # Le docx affiche toujours en TTC
         else:
-            prix_client_ttc = prix_client_ht
-        line["prix_client"] = prix_client_ttc
-        total_client += prix_client_ttc
+            line["prix_client"] = prix_input
+            line["prix"] = prix_input
+        total_client += line["prix_client"]
 
     total_client = round(total_client, 2)
 
