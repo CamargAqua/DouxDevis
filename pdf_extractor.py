@@ -9,7 +9,7 @@ from typing import Any
 
 import anthropic
 
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = "claude-sonnet-4-5-20251001"
 
 EXTRACTION_SYSTEM = """Tu es un assistant chargé d'extraire les informations d'un devis de service après-vente horloger envoyé par une marque partenaire à la bijouterie DOUX Joaillier (Avignon).
 

@@ -448,12 +448,12 @@ def _form_to_data(form) -> dict:
         if lbl in ("OFFERT", "INCL"):
             line["prix_client"] = 0.0
             continue
-        prix_input = float(line.get("prix") or 0)  # Prix client TTC (HT×coeff pour Omega, TTC×coeff sinon)
-        # Omega : prix_HT_fournisseur × coeff = prix_TTC_client (le coeff intègre la conversion HT→TTC)
-        # Autres : prix_TTC_fournisseur × coeff = prix_TTC_client
-        # Dans les deux cas, l'input contient déjà le prix TTC final — pas de conversion supplémentaire
+        prix_input = float(line.get("prix") or 0)  # prix soumis = prix_partenaire × coeff
         line["prix_client"] = prix_input
-        line["prix"] = prix_input
+        # Reconstituer le prix partenaire original (= prix_client / coeff) pour que
+        # "Modifier le devis" affiche les prix partenaires, pas les prix clients
+        prix_partenaire = round(prix_input / coeff, 2) if coeff and coeff != 0 else prix_input
+        line["prix"] = prix_partenaire
         total_client += prix_input
 
     total_client = round(total_client, 2)
