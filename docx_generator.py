@@ -15,6 +15,16 @@ from docx.shared import Cm, Pt, RGBColor
 GREY_BG = "D9D9D9"
 DOUX_GOLD = RGBColor(0xC8, 0xA8, 0x55)
 
+# Frais de refus par marque (case-insensitive). Absent = pas de mention.
+FRAIS_REFUS: dict[str, int] = {
+    "dinh van":       25,
+    "breitling":      30,
+    "baume & mercier": 30,
+    "panerai":        80,
+    "zénith":        100,
+    "zenith":        100,   # alias sans accent
+}
+
 
 def _set_cell_bg(cell, color_hex: str) -> None:
     tc_pr = cell._tc.get_or_add_tcPr()
@@ -294,10 +304,17 @@ def _format_price(value: Any) -> str:
     return f"{value:,.2f}".replace(",", " ").replace(".", ",").replace(" ", " ")
 
 
-def _add_footer_block(doc: Document, delai: str) -> None:
+def _add_footer_block(doc: Document, delai: str, frais_refus: int | None = None) -> None:
     p = doc.add_paragraph()
     _add_run(p, f"DELAIS APRES ACCORD {delai.upper()} SOUS RESERVE DE DISPONIBILITE DES PIECES",
              size=9)
+
+    # Phrase frais de refus (uniquement pour certaines marques)
+    if frais_refus is not None:
+        p_frais = doc.add_paragraph()
+        _add_run(p_frais,
+                 f"Merci de noter qu'un refus du devis entraînera des frais de {frais_refus} €.",
+                 italic=True, size=9)
 
     table = doc.add_table(rows=2, cols=2)
     table.autofit = False
@@ -320,8 +337,9 @@ def _add_footer_block(doc: Document, delai: str) -> None:
     refus = table.cell(1, 0)
     _add_run(accord.paragraphs[0], "☐  ACCORD AU DEVIS", size=10)
     p_refus = refus.paragraphs[0]
-    _add_run(p_refus, "☐  REFUS DU DEVIS    ", size=10)
-    _add_run(p_refus, "(30€ FRAIS DE REFUS)", bold=True, size=9)
+    _add_run(p_refus, "☐  REFUS DU DEVIS", size=10)
+    if frais_refus is not None:
+        _add_run(p_refus, f"    ({frais_refus}€ FRAIS DE REFUS)", bold=True, size=9)
 
     sig_cell = table.cell(0, 1)
     sig_cell.merge(table.cell(1, 1))
@@ -426,7 +444,8 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
                         total_label="TOTAL TTC EN EURO OPTIONS INCLUSES",
                         total_value=total_avec_opt)
 
-    _add_footer_block(doc, delai=data.get("delai") or "4 à 6 semaines")
+    frais_refus = FRAIS_REFUS.get((marque or "").lower())
+    _add_footer_block(doc, delai=data.get("delai") or "4 à 6 semaines", frais_refus=frais_refus)
 
     buf = BytesIO()
     doc.save(buf)
