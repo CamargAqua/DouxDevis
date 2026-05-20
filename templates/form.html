@@ -371,6 +371,17 @@ Object.entries(BRAND_COEFFS_RAW).forEach(([brand, data]) => {
 });
 const DEFAULT_COEFF = 1.50;
 
+// Helper pour trouver la clé de marque indépendamment de la casse
+function findBrandKey(query) {
+  const lowerQuery = query.toLowerCase();
+  for (const key of Object.keys(BRAND_COEFFS_RAW)) {
+    if (key.toLowerCase() === lowerQuery) {
+      return key;
+    }
+  }
+  return null;
+}
+
 /* ── Toggle OFFERT ── */
 function toggleOffert(btn) {
   const line   = btn.closest('.intervention-line');
@@ -485,7 +496,8 @@ document.getElementById('nec-lines').addEventListener('input', e => {
 const _origSelectMarque = window.selectMarque;
 window.selectMarque = function(val) {
   _origSelectMarque(val);
-  const coeff = BRAND_COEFFS[val] || DEFAULT_COEFF;
+  const brandKey = findBrandKey(val) || val; // Cherche la clé réelle, sinon utilise val
+  const coeff = BRAND_COEFFS[brandKey] || DEFAULT_COEFF;
   const tag = document.getElementById('coeff-brand-tag');
   tag.textContent = `${val} → ×${coeff.toFixed(2).replace('.',',')}`;
   tag.style.display = 'inline-flex';
