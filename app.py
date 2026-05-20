@@ -429,14 +429,35 @@ def _form_to_data(form) -> dict:
     etat_raw = form.get("etat", "")
     etat_lines = [line.strip() for line in etat_raw.splitlines() if line.strip()]
 
-    necessaires = _collect_lines(form, "nec")
+    necessaires  = _collect_lines(form, "nec")
     optionnelles = _collect_lines(form, "opt")
 
-    total_raw = form.get("total_ttc", "").strip()
-    if total_raw:
-        total = _parse_price(total_raw)
-    else:
-        total = sum(line.get("prix") or 0 for line in necessaires)
+    # Coefficient et base tarifaire transmis par le formulaire
+    try:
+        coeff = float((form.get("coeff") or "1.0").replace(",", "."))
+    except (ValueError, TypeError):
+        coeff = 1.0
+    coeff_base = (form.get("coeff_base") or "ttc").lower()  # "ht" ou "ttc"
+
+    # Calcul du prix client par ligne :
+    # - prix stocké dans la ligne = prix PARTENAIRE (tel que saisi)
+    # - prix_client = prix_partenaire × coeff  (puis × 1.20 si base HT)
+    total_client = 0.0
+    for line in necessaires:
+        lbl = line.get("prix_label") or ""
+        if lbl in ("OFFERT", "INCL"):
+            line["prix_client"] = 0.0
+            continue
+        prix_partenaire = float(line.get("prix") or 0)
+        prix_client_ht  = round(prix_partenaire * coeff, 2)
+        if coeff_base == "ht":
+            prix_client_ttc = round(prix_client_ht * 1.20, 2)
+        else:
+            prix_client_ttc = prix_client_ht
+        line["prix_client"] = prix_client_ttc
+        total_client += prix_client_ttc
+
+    total_client = round(total_client, 2)
 
     return {
         "marque": (form.get("marque_custom") or form.get("marque") or "Autre").strip(),
@@ -458,7 +479,9 @@ def _form_to_data(form) -> dict:
         "service_complet_description": form.get("service_complet", "").strip(),
         "interventions_necessaires": necessaires,
         "interventions_optionnelles": optionnelles,
-        "total_ttc": total,
+        "total_ttc": total_client,
+        "coeff": coeff,
+        "coeff_base": coeff_base,
         "delai": form.get("delai", "4 à 6 semaines").strip() or "4 à 6 semaines",
     }
 

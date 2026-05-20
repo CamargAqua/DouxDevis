@@ -179,7 +179,9 @@
           </div>
 
         </div>
-        <input type="hidden" name="total_ttc" id="total-override-input">
+        <input type="hidden" name="total_ttc"   id="total-override-input">
+        <input type="hidden" name="coeff"        id="coeff-hidden"        value="1.00">
+        <input type="hidden" name="coeff_base"   id="coeff-base-hidden"   value="ttc">
       </div>
     </div>
 
@@ -422,37 +424,39 @@ function toggleIncl(btn) {
   updateTotal();
 }
 
-/* ── Coefficient : calcul et distribution par ligne ── */
+/* ── Coefficient : calcul sur le total, les lignes restent au prix partenaire ── */
 function fmt(n) { return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
-function applyCoeffToLines(coeff) {
-  document.querySelectorAll('#nec-lines .intervention-line').forEach(line => {
-    const lbl = line.querySelector('.label-input').value;
-    if (lbl === 'OFFERT' || lbl === 'INCL') return;
-    const inp = line.querySelector('.prix-input');
-    if (!inp.dataset.base && inp.value) inp.dataset.base = inp.value;
-    const base = parseFloat((inp.dataset.base || '0').replace(',','.'));
-    if (!isNaN(base) && base > 0)
-      inp.value = (base * coeff).toFixed(2);
-  });
-}
-
 function refreshTotals() {
-  const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
-  let base = 0, final = 0;
+  const coeff     = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+  const coeffBase = document.getElementById('coeff-base-hidden').value || 'ttc';
+
+  // Base = somme des prix partenaires tels qu'ils sont dans les inputs
+  let base = 0;
   document.querySelectorAll('#nec-lines .intervention-line').forEach(line => {
     const lbl = line.querySelector('.label-input').value;
     if (lbl === 'OFFERT' || lbl === 'INCL') return;
-    const inp = line.querySelector('.prix-input');
-    const b = parseFloat((inp.dataset.base || '0').replace(',','.'));
-    const v = parseFloat((inp.value || '0').replace(',','.'));
-    if (!isNaN(b)) base  += b;
-    if (!isNaN(v)) final += v;
+    const v = parseFloat((line.querySelector('.prix-input').value || '0').replace(',','.'));
+    if (!isNaN(v)) base += v;
   });
+
+  // Prix client = base × coeff (si HT, le backend ajoutera la TVA ; ici on affiche en HT×coeff pour info)
+  const final = base * coeff;
+
+  // Libellés adaptés selon la base
+  const lbl_partenaire = coeffBase === 'ht' ? 'Prix partenaire (HT)' : 'Prix partenaire';
+  const lbl_client     = coeffBase === 'ht' ? 'Prix client (HT → TTC +20%)' : 'Prix client';
+
+  const pLblEl = document.querySelector('.coeff-price-item:first-child .coeff-price-lbl');
+  const cLblEl = document.querySelector('.coeff-price-item--gold .coeff-price-lbl');
+  if (pLblEl) pLblEl.textContent = lbl_partenaire;
+  if (cLblEl) cLblEl.textContent = lbl_client;
 
   document.getElementById('total-display').textContent = fmt(base);
   document.getElementById('total-final-display').textContent = fmt(final);
-  document.getElementById('total-override-input').value = final.toFixed(2);
+  // Le total soumis au backend : prix partenaires bruts — le backend fait le vrai calcul
+  document.getElementById('total-override-input').value = base.toFixed(2);
+  document.getElementById('coeff-hidden').value = coeff.toFixed(4);
 
   const pricesRow = document.getElementById('coeff-prices-row');
   pricesRow.style.display = base > 0 ? 'flex' : 'none';
@@ -469,41 +473,39 @@ function refreshTotals() {
     b.classList.toggle('active', Math.abs(parseFloat(b.dataset.coeff) - coeff) < 0.001));
 }
 
-function updateTotal() {
-  const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
-  applyCoeffToLines(coeff);
-  refreshTotals();
-}
+function updateTotal() { refreshTotals(); }
 
 function setCoeff(val) {
   document.getElementById('coeff-input').value = val;
-  updateTotal();
+  document.getElementById('coeff-hidden').value = parseFloat(val).toFixed(4);
+  refreshTotals();
 }
 
-document.getElementById('coeff-input').addEventListener('input', updateTotal);
+document.getElementById('coeff-input').addEventListener('input', refreshTotals);
 
-// Quand l'utilisateur modifie un prix manuellement → recalculer la base
+// Quand l'utilisateur modifie un prix partenaire → recalculer les totaux
 document.getElementById('nec-lines').addEventListener('input', e => {
-  if (e.target.classList.contains('prix-input')) {
-    const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
-    const v = parseFloat(e.target.value || '0');
-    e.target.dataset.base = (coeff > 1 ? v / coeff : v).toFixed(2);
-    refreshTotals();
-  }
+  if (e.target.classList.contains('prix-input')) refreshTotals();
 });
 
 // Coefficient marque à la sélection de marque
 const _origSelectMarque = window.selectMarque;
 window.selectMarque = function(val) {
   _origSelectMarque(val);
-  const brandKey = findBrandKey(val) || val; // Cherche la clé réelle, sinon utilise val
-  const coeff = BRAND_COEFFS[brandKey] || DEFAULT_COEFF;
+  const brandKey  = findBrandKey(val) || val;
+  const brandData = BRAND_COEFFS_RAW[brandKey] || {};
+  const coeff     = typeof brandData === 'object' ? (brandData.coeff || DEFAULT_COEFF) : (brandData || DEFAULT_COEFF);
+  const base      = typeof brandData === 'object' ? (brandData.base  || 'ttc')        : 'ttc';
+
   const tag = document.getElementById('coeff-brand-tag');
-  tag.textContent = `${val} → ×${coeff.toFixed(2).replace('.',',')}`;
+  tag.textContent = base === 'ht'
+    ? `${val} → ×${coeff.toFixed(2).replace('.',',')} (base HT)`
+    : `${val} → ×${coeff.toFixed(2).replace('.',',')}`;
   tag.style.display = 'inline-flex';
 
-  // Mettre à jour automatiquement le coefficient
-  document.getElementById('coeff-input').value = coeff;
+  document.getElementById('coeff-input').value      = coeff;
+  document.getElementById('coeff-hidden').value     = coeff.toFixed(4);
+  document.getElementById('coeff-base-hidden').value = base;
   updateTotal();
 };
 

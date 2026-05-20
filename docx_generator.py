@@ -249,7 +249,8 @@ def _add_work_table(doc: Document, title: str, lines: list[dict[str, Any]],
 
         price_p = price_cell.paragraphs[0]
         price_p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        prix = line.get("prix", 0)
+        # Utiliser prix_client (calculé par le backend) si disponible, sinon prix partenaire
+        prix = line.get("prix_client") if line.get("prix_client") is not None else line.get("prix", 0)
         prix_text = line.get("prix_label") or _format_price(prix)
         _add_run(price_p, prix_text, size=10)
 
@@ -395,7 +396,12 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     total_ttc = data.get("total_ttc")
     if total_ttc in (None, "", 0) and necessaires:
         try:
-            total_ttc = sum(float(line.get("prix") or 0) for line in necessaires)
+            # Utiliser prix_client si disponible, sinon prix partenaire brut
+            total_ttc = sum(
+                float(line.get("prix_client") if line.get("prix_client") is not None else line.get("prix") or 0)
+                for line in necessaires
+                if (line.get("prix_label") or "") not in ("OFFERT", "INCL")
+            )
         except (TypeError, ValueError):
             total_ttc = 0
 
@@ -411,7 +417,8 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     optionnelles = data.get("interventions_optionnelles") or []
     if optionnelles:
         total_opt = sum(
-            float(l.get("prix") or 0) for l in optionnelles
+            float(l.get("prix_client") if l.get("prix_client") is not None else l.get("prix") or 0)
+            for l in optionnelles
             if l.get("prix_label") not in ("OFFERT", "INCL")
         )
         total_avec_opt = float(total_ttc or 0) + total_opt
