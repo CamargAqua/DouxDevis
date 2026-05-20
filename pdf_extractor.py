@@ -64,10 +64,11 @@ Le numéro SAV DOUX est un nombre à 6 chiffres, parfois suivi d'un suffixe à i
 Supprime toujours le suffixe "-1", "-2", etc.
 
 ═══ COLONNE DE PRIX À UTILISER ═══
-Chaque partenaire a plusieurs colonnes de prix — utilise UNIQUEMENT la colonne TTC public :
-- Breitling  → colonne "Prix total TTC"       (ignorer "Total HT")
-- TAG Heuer  → colonne "PRIX PUBLIC TTC"       (ignorer "VOTRE PRIX HT" et "VOTRE PRIX TTC")
-- Chanel     → colonne "MONTANT TTC CONSEILLÉ" (ignorer "PRIX DE GROS HT")
+Chaque partenaire a ses propres colonnes de prix — respecte strictement ces règles :
+- Omega       → colonne "PU HT" ou "Total HT"    (ignorer "PU TTC" et "Total TTC") — PRIX HT OBLIGATOIRE
+- Breitling   → colonne "Prix total TTC"          (ignorer "Total HT")
+- TAG Heuer   → colonne "PRIX PUBLIC TTC"         (ignorer "VOTRE PRIX HT" et "VOTRE PRIX TTC")
+- Chanel      → colonne "MONTANT TTC CONSEILLÉ"   (ignorer "PRIX DE GROS HT")
 - Rolex / March LA.B / autres → prendre le prix TTC affiché
 
 ═══ CONVERSION DES PRIX ═══
