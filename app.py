@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 import json
+import requests
 from dotenv import load_dotenv
 from flask import (
     Flask,
@@ -20,6 +21,7 @@ from flask import (
     send_from_directory,
     session,
     url_for,
+    jsonify,
 )
 from flask_session import Session
 from werkzeug.utils import secure_filename
@@ -49,6 +51,137 @@ ALLOWED_IMG = {"jpg", "jpeg", "png", "webp", "gif"}
 MAX_CONTENT_LENGTH = 25 * 1024 * 1024
 
 MARQUES = ["Chanel", "Tag Heuer", "Breitling", "Rolex", "Autre"]
+
+def _create_yousign_signature_request(pdf_bytes: bytes, client_email: str, devis_name: str) -> dict | None:
+    """Crée une signature request Yousign et retourne le lien."""
+    api_key = os.environ.get("YOUSIGN_API_KEY")
+    if not api_key:
+        print("ERROR: YOUSIGN_API_KEY not found")
+        return None
+
+    try:
+        base_url = "https://api-sandbox.yousign.app/v3"
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        # Crée la signature request
+        sr_data = {
+            "name": f"Devis {devis_name}",
+            "delivery_mode": "email",
+            "timezone": "Europe/Paris"
+        }
+
+        print(f"Creating Signature Request: {sr_data}")
+        resp = requests.post(
+            f"{base_url}/signature_requests",
+            headers=headers,
+            json=sr_data,
+            timeout=10,
+        )
+
+        print(f"SR Status: {resp.status_code}, Response: {resp.text[:300]}")
+        if resp.status_code not in (200, 201):
+            return None
+
+        sr = resp.json()
+        sr_id = sr.get("id")
+
+        # Upload le PDF
+        pdf_tmp = RUNTIME_DIR / f"tmp_{devis_name}.pdf"
+        pdf_tmp.write_bytes(pdf_bytes)
+
+        with open(pdf_tmp, "rb") as f:
+            files = {"file": f, "nature": (None, "signable_document")}
+            headers_doc = {"Authorization": f"Bearer {api_key}"}
+            resp2 = requests.post(
+                f"{base_url}/signature_requests/{sr_id}/documents",
+                headers=headers_doc,
+                files=files,
+                timeout=10,
+            )
+
+        print(f"Doc Status: {resp2.status_code}, Response: {resp2.text[:300]}")
+        if resp2.status_code not in (200, 201):
+            return None
+
+        doc = resp2.json()
+        doc_id = doc.get("id")
+
+        # Ajoute le signataire avec fields
+        signer_data = {
+            "info": {
+                "first_name": "Client",
+                "last_name": "Doux",
+                "email": client_email,
+                "locale": "fr"
+            },
+            "signature_authentication_mode": "no_otp",
+            "signature_level": "electronic_signature",
+            "fields": [
+                {
+                    "document_id": doc_id,
+                    "type": "signature",
+                    "height": 40,
+                    "width": 85,
+                    "page": 1,
+                    "x": 100,
+                    "y": 100
+                }
+            ]
+        }
+
+        resp3 = requests.post(
+            f"{base_url}/signature_requests/{sr_id}/signers",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=signer_data,
+            timeout=10,
+        )
+
+        print(f"Signer Status: {resp3.status_code}, Response: {resp3.text[:300]}")
+        if resp3.status_code not in (200, 201):
+            return None
+
+        signer = resp3.json()
+
+        # Active la signature request
+        resp4 = requests.post(
+            f"{base_url}/signature_requests/{sr_id}/activate",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=10,
+        )
+
+        print(f"Activate Status: {resp4.status_code}")
+        if resp4.status_code not in (200, 201, 204):
+            return None
+
+        # Récupère la signature request mise à jour pour obtenir le lien
+        resp5 = requests.get(
+            f"{base_url}/signature_requests/{sr_id}",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=10,
+        )
+
+        if resp5.status_code == 200:
+            sr_updated = resp5.json()
+            signers = sr_updated.get("signers", [])
+            if signers:
+                signer_id = signers[0].get("id")
+                # Essaie d'obtenir le lien depuis la réponse
+                sign_url = signers[0].get("signature_link")
+                # Si null, construis le lien manuellement
+                if not sign_url:
+                    sign_url = f"https://sandbox.yousign.app/sign/{signer_id}"
+                print(f"Sign URL: {sign_url}")
+                return {
+                    "signature_request_id": sr_id,
+                    "signer_id": signer_id,
+                    "sign_url": sign_url,
+                }
+
+        return None
+    except Exception as e:
+        print(f"Exception: {e}")
+        return None
+
 
 def _load_coefficients() -> dict:
     path = BASE_DIR / "coefficients.json"
@@ -223,6 +356,33 @@ def create_app() -> Flask:
         if not (directory / safe_name).is_file():
             abort(404)
         return send_from_directory(directory, safe_name, as_attachment=True)
+
+    @app.route("/prepare-signature", methods=["POST"])
+    def prepare_signature():
+        token = session.get("token")
+        client_email = request.json.get("email") if request.json else None
+
+        if not token or not client_email:
+            return jsonify({"error": "Missing token or email"}), 400
+
+        safe_token = secure_filename(token)
+        directory = GENERATED_DIR / safe_token
+
+        # Cherche le PDF généré
+        pdf_files = list(directory.glob("*.pdf"))
+        if not pdf_files:
+            return jsonify({"error": "No PDF found"}), 404
+
+        pdf_path = pdf_files[0]
+        pdf_bytes = pdf_path.read_bytes()
+        devis_name = pdf_path.stem
+
+        # Crée la signature request Yousign
+        result = _create_yousign_signature_request(pdf_bytes, client_email, devis_name)
+        if not result:
+            return jsonify({"error": "Failed to create Yousign procedure"}), 500
+
+        return jsonify(result)
 
     @app.errorhandler(413)
     def too_large(_):

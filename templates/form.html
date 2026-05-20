@@ -288,7 +288,13 @@ const MARQUES_DB = [
 
   // Init si marque déjà définie
   const init = inp.value.trim();
-  if (init) { showBadge(init); inp.value = ''; inp.placeholder = init; }
+  if (init) {
+    showBadge(init);
+    inp.value = '';
+    inp.placeholder = init;
+    // Appeller selectMarque après que l'override soit appliqué
+    setTimeout(() => { selectMarque(init); }, 0);
+  }
 
   inp.addEventListener('input', () => {
     const q = inp.value.trim().toLowerCase();
@@ -357,7 +363,12 @@ document.getElementById('delai-input').addEventListener('input', () =>
   document.querySelectorAll('.delai-pill').forEach(p => p.classList.remove('selected')));
 
 /* ── Coefficients par marque (lus depuis coefficients.json) ── */
-const BRAND_COEFFS = {{ coefficients_json | safe }};
+const BRAND_COEFFS_RAW = {{ coefficients_json | safe }};
+const BRAND_COEFFS = {};
+// Extraire les coefficients (compatibilité ancienne et nouvelle structure)
+Object.entries(BRAND_COEFFS_RAW).forEach(([brand, data]) => {
+  BRAND_COEFFS[brand] = typeof data === 'object' ? data.coeff : data;
+});
 const DEFAULT_COEFF = 1.50;
 
 /* ── Toggle OFFERT ── */
@@ -470,15 +481,17 @@ document.getElementById('nec-lines').addEventListener('input', e => {
   }
 });
 
-// Coefficient marque auto à la sélection de marque
+// Coefficient marque à la sélection de marque
 const _origSelectMarque = window.selectMarque;
 window.selectMarque = function(val) {
   _origSelectMarque(val);
   const coeff = BRAND_COEFFS[val] || DEFAULT_COEFF;
-  document.getElementById('coeff-input').value = coeff;
   const tag = document.getElementById('coeff-brand-tag');
-  tag.textContent = `${val} — ×${coeff.toFixed(2).replace('.',',')}`;
+  tag.textContent = `${val} → ×${coeff.toFixed(2).replace('.',',')}`;
   tag.style.display = 'inline-flex';
+
+  // Mettre à jour automatiquement le coefficient
+  document.getElementById('coeff-input').value = coeff;
   updateTotal();
 };
 
