@@ -1,5 +1,32 @@
 # Lessons — DouxDevis
 
+## 2026-05-21 — Prix partenaire affiché au lieu de prix client dans PDF
+**Erreur :** `pdf_generator.py` lisait `line.get("prix")` (prix partenaire recalculé = prix_client / coeff) au lieu de `line.get("prix_client")` pour les lignes du devis.
+**Conséquence :** Le PDF affichait les prix partenaires sur les lignes, mais le total affichait les prix client. Incohérence visuelle.
+**Règle :** Toujours lire `prix_client` EN PRIORITÉ dans le PDF. Fallback sur `prix` seulement si `prix_client` n'existe pas.
+```python
+# ❌ Avant
+prix_val = line.get("prix", 0)
+
+# ✅ Après
+prix_val = line.get("prix_client") if "prix_client" in line else line.get("prix", 0)
+```
+
+## 2026-05-21 — Coefficient non appliqué aux options
+**Erreur :** `form.html` — `applyCoeffToLines()` ciblait uniquement `#nec-lines`, ignorant `#opt-lines`. Les options ne recevaient jamais le coefficient du formulaire JS.
+**Conséquence :** Les options conservaient le prix partenaire brut, sans coefficient. Incohérence dans le calcul du total client.
+**Règle :** Tout ce qui est un "prix utilisateur" (necessaires OU options) DOIT passer par `applyCoeffToLines()`. Utiliser une boucle `.forEach()` sur un array de sélecteurs.
+```javascript
+// ❌ Avant
+document.querySelectorAll('#nec-lines .intervention-line').forEach(...)
+
+// ✅ Après
+['#nec-lines', '#opt-lines'].forEach(selector => {
+  document.querySelectorAll(selector + ' .intervention-line').forEach(...)
+});
+```
+**Aussi:** `app.py` ligne 460+ — ajouter le même bloc de traitement coefficient aux options qu'aux nécessaires.
+
 ## 2026-05-20 — Coefficient init sur brand pré-sélectionnée
 **Erreur :** `selectMarque` override défini après le code d'init, donc le coefficient ne se mettait pas à jour au chargement.
 **Règle :** Utiliser `setTimeout(() => fn(), 0)` pour différer un appel qui dépend d'un override défini plus bas dans le script.
