@@ -402,7 +402,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     rows_nec = []
     for i, line in enumerate(necessaires):
         desc     = (line.get("description") or "").upper()
-        prix_val = line.get("prix", 0)
+        prix_val = line.get("prix_client") if "prix_client" in line else line.get("prix", 0)
         prix_txt = line.get("prix_label") or _fmt(prix_val)
 
         if i == 0 and intro:
@@ -504,7 +504,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         opt_rows = []
         for i, l in enumerate(optionnelles):
             desc     = (l.get("description") or "").upper()
-            prix_txt = l.get("prix_label") or _fmt(l.get("prix"))
+            prix_txt = l.get("prix_label") or _fmt(l.get("prix_client") if "prix_client" in l else l.get("prix"))
             opt_rows.append([
                 _CheckboxField(f"option_{i}", desc, font="Helvetica-Bold", font_size=9),
                 _html(f'<para align="right"><b>{prix_txt}</b></para>', bold),
@@ -522,7 +522,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         story.append(opt_tbl)
 
         # Total options incluses
-        total_opt = sum(float(l.get("prix") or 0) for l in optionnelles
+        total_opt = sum(float(l.get("prix_client") or l.get("prix") or 0) for l in optionnelles
                         if l.get("prix_label") not in ("OFFERT", "INCL"))
         total_avec_opt = (float(total_ttc or 0)) + total_opt
         try:

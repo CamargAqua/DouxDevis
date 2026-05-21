@@ -239,6 +239,8 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
         except ValueError:
             return 0.0
 
+    _INCL_DESC_KEYWORDS = ("inclus", "included", "compris", "comprise")
+
     for key in ("interventions_necessaires", "interventions_optionnelles"):
         lines = data.get(key) or []
         for line in lines:
@@ -246,11 +248,15 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
             raw_str = str(raw).strip().lower() if raw is not None else ""
             if raw_str in _INCL_LABELS:
                 line["prix"] = 0.0
-                # Préserver comme label seulement si pas déjà labellisé
                 if not line.get("prix_label"):
                     line["prix_label"] = "INCL"
             else:
                 line["prix"] = _to_float(raw)
+                # Si prix == 0 et description contient un mot-clé "inclus"
+                if line["prix"] == 0.0 and not line.get("prix_label"):
+                    desc_lower = (line.get("description") or "").lower()
+                    if any(kw in desc_lower for kw in _INCL_DESC_KEYWORDS):
+                        line["prix_label"] = "INCL"
         data[key] = lines
 
     data["total_ttc"] = _to_float(data.get("total_ttc"))

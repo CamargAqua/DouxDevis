@@ -458,6 +458,16 @@ def _form_to_data(form) -> dict:
 
     total_client = round(total_client, 2)
 
+    for line in optionnelles:
+        lbl = line.get("prix_label") or ""
+        if lbl in ("OFFERT", "INCL"):
+            line["prix_client"] = 0.0
+            continue
+        prix_input = float(line.get("prix") or 0)
+        line["prix_client"] = prix_input
+        prix_partenaire = round(prix_input / coeff, 2) if coeff and coeff != 0 else prix_input
+        line["prix"] = prix_partenaire
+
     return {
         "marque": (form.get("marque_custom") or form.get("marque") or "Autre").strip(),
         "client": {"nom": form.get("client_nom", "").strip()},

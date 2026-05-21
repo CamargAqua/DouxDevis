@@ -430,14 +430,16 @@ function fmt(n) { return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maxim
 // Applique le coefficient sur chaque ligne (répartition proportionnelle du delta = x coeff)
 // Pour Omega (base HT) : inp.value = prix_HT × coeff ; pour les autres : prix_TTC × coeff
 function applyCoeffToLines(coeff) {
-  document.querySelectorAll('#nec-lines .intervention-line').forEach(line => {
-    const lbl = line.querySelector('.label-input').value;
-    if (lbl === 'OFFERT' || lbl === 'INCL') return;
-    const inp = line.querySelector('.prix-input');
-    if (!inp.dataset.base && inp.value) inp.dataset.base = inp.value;
-    const base = parseFloat((inp.dataset.base || '0').replace(',','.'));
-    if (!isNaN(base) && base > 0)
-      inp.value = (base * coeff).toFixed(2);
+  ['#nec-lines', '#opt-lines'].forEach(selector => {
+    document.querySelectorAll(selector + ' .intervention-line').forEach(line => {
+      const lbl = line.querySelector('.label-input').value;
+      if (lbl === 'OFFERT' || lbl === 'INCL') return;
+      const inp = line.querySelector('.prix-input');
+      if (!inp.dataset.base && inp.value) inp.dataset.base = inp.value;
+      const base = parseFloat((inp.dataset.base || '0').replace(',','.'));
+      if (!isNaN(base) && base > 0)
+        inp.value = (base * coeff).toFixed(2);
+    });
   });
 }
 
