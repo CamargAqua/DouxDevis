@@ -11,12 +11,14 @@ import anthropic
 
 MODEL = "claude-sonnet-4-5"
 
-EXTRACTION_SYSTEM = """Tu es un assistant chargé d'extraire les informations d'un devis de service après-vente horloger envoyé par une marque partenaire à la bijouterie DOUX Joaillier (Avignon).
+EXTRACTION_SYSTEM = """Tu es un assistant chargé d'extraire les informations d'un devis de service après-vente (horlogerie ou joaillerie) envoyé par une marque partenaire à la bijouterie DOUX Joaillier (Avignon).
+
+Le document peut être un PDF structuré ou un email en texte libre.
 
 Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc markdown) avec cette structure exacte :
 
 {
-  "marque": "Breitling" | "Chanel" | "TAG Heuer" | "Rolex" | "March LA.B" | "Autre",
+  "marque": "Nom exact de la marque",
   "client": {
     "nom": "NOM PRENOM en majuscules, ou chaîne vide si absent du document"
   },
@@ -26,9 +28,9 @@ Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc m
     "lieu": "Avignon"
   },
   "montre": {
-    "modele": "nom du modèle en majuscules",
-    "reference": "référence boîtier",
-    "numero_serie": "numéro de série ou matricule",
+    "modele": "nom du modèle ou du bijou en majuscules (ex: NAVITIMER, BAGUE FORCE10, PENDENTIF HAPPY DIAMONDS)",
+    "reference": "référence boîtier ou référence article",
+    "numero_serie": "numéro de série, matricule ou gravure",
     "poids": "",
     "metal": "",
     "taille": "",
@@ -45,15 +47,13 @@ Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc m
   "delai": "X à Y semaines"
 }
 
+
 ═══ RECONNAISSANCE DE LA MARQUE ═══
-Identifie la marque à partir du logo, de l'en-tête, du nom mentionné dans le document ou du nom de fichier fourni.
-Valeurs EXACTES attendues (respecter la casse) :
-  "Breitling"   si le document provient de Breitling SA
-  "Chanel"      si le document provient de Chanel Horlogerie
-  "TAG Heuer"   si le document provient de TAG Heuer (ou LVMH Watch)
-  "Rolex"       si le document provient de Rolex SA
-  "March LA.B"  si le document provient de March LA.B
-  "Autre"       uniquement si la marque est vraiment illisible ou inconnue
+Identifie la marque à partir du logo, de l'en-tête, du nom mentionné dans le document, de l'expéditeur de l'email, ou du nom de fichier.
+Exemples de valeurs attendues (respecter la casse) :
+  Horlogerie : "Breitling", "Chanel", "TAG Heuer", "Rolex", "March LA.B", "Omega", "IWC Schaffhausen", "Audemars Piguet", "Patek Philippe", "Cartier", "Tudor", "Longines"
+  Joaillerie  : "Pomellato", "Fred", "Ginette NY", "Chopard", "Van Cleef & Arpels", "Boucheron", "Chaumet", "Mauboussin", "Dior Joaillerie"
+  "Autre"     uniquement si la marque est vraiment illisible ou inconnue
 
 ═══ NUMÉRO SAV DOUX ═══
 Le numéro SAV DOUX est un nombre à 6 chiffres, parfois suivi d'un suffixe à ignorer :
@@ -61,6 +61,7 @@ Le numéro SAV DOUX est un nombre à 6 chiffres, parfois suivi d'un suffixe à i
 - TAG Heuer  → champ "VOTRE REFERENCE"   ex: "383954-1" → "383954"
 - Chanel     → champ "N° DEMANDE CLIENT" ex: "383750-1" → "383750"
 - Rolex/autres → chercher un numéro à 6 chiffres dans les références
+- Emails → chercher dans l'objet ou le corps : "SAV 330624-1" → "330624"
 Supprime toujours le suffixe "-1", "-2", etc.
 
 ═══ ⚠️ OMEGA — RÈGLE ABSOLUE (NE PAS IGNORER) ⚠️ ═══
@@ -71,7 +72,15 @@ Si la marque est OMEGA :
   → EXEMPLE CONCRET : si le tableau Omega affiche PU HT = 1 021,00 € et PU TTC = 1 225,20 €
     tu retournes 1021.00 — PAS 1225.20
 
-═══ COLONNE DE PRIX À UTILISER ═══
+═══ ⚠️ EMAILS AVEC PRIX HT — RÈGLE ABSOLUE ⚠️ ═══
+Si le document est un email et que les prix sont exprimés en HT (ex: "28€HT", "270 €HT", "42€") :
+  → Extraire le prix HT tel quel (ne PAS ajouter la TVA)
+  → Le prix public recommandé TTC (entre parenthèses) est à IGNORER
+  → EXEMPLE : "270 €HT (prix public recommandé 530 €TTC)" → total_ttc: 270.00
+  → EXEMPLE : "DEVIS 1: ECHANGE PENDENTIF A NEUF: 42€" → interventions_necessaires[0].prix: 42.00, total_ttc: 42.00
+Pour les emails avec plusieurs options (séparées par //// ou numsrotées) : la première est interventions_necessaires, les suivantes sont interventions_optionnelles.
+
+═══ COLONNE DE PRIX À UTILISER (PDFs) ═══
 Chaque partenaire a ses propres colonnes de prix — respecte strictement ces règles :
 - Omega       → colonne "PU HT" ou "Total HT"    (INTERDICTION d'utiliser "PU TTC" ou "Total TTC")
 - Breitling   → colonne "Prix total TTC"          (ignorer "Total HT")
@@ -85,10 +94,11 @@ Chaque partenaire a ses propres colonnes de prix — respecte strictement ces r�
 - Inclus dans le prix : "Incl." | "inclus" | "inclus au service" → mettre la valeur "INCL" (chaîne, pas un nombre)
 - Si le total TTC n'est pas explicite, additionner les prix des interventions nécessaires.
 
-═══ ÉTAT DE LA MONTRE ═══
+═══ ÉTAT DE LA MONTRE OU DU BIJOU ═══
 Lister les constats du diagnostic (rayures, chocs, défauts, usure...) EN MAJUSCULES, un par entrée.
 Ne pas inclure le contenu du service (démontage, nettoyage...) dans l'état.
 Pour Breitling : les constats sont dans le tableau "Diagnostic" (colonne gauche du modèle).
+Si le diagnostic est dans le corps d'un email (tirets, liste) : extraire chaque point.
 
 ═══ SERVICE COMPLET ═══
 Si la première intervention est un "service complet" ou "révision complète" avec sous-points :
@@ -99,14 +109,17 @@ Si la première intervention est un "service complet" ou "révision complète" a
 ═══ MODÈLE ═══
 Si le nom du modèle n'est pas écrit, l'inférer de la référence si possible :
 - H2569 → J12 | A3535016 → NAVITIMER HERITAGE | CJF7110 → FORMULA 1
+Pour un bijou : utiliser la description complète (ex: "BAGUE FORCE10 RUBAN PM OR ROSE").
 
 ═══ DÉLAI ═══
 Extraire uniquement la durée, format "X semaines" ou "X à Y semaines" :
 - "4 semaines après réception de votre accord" → "4 semaines"
 - "6 À 8 SEMAINES SOUS RÉSERVE..." → "6 à 8 semaines"
+- "10 jours" → "10 jours"
 
 ═══ DATE ═══
 Format JJ.MM.AAAA. Si absente ou non trouvée, chaîne vide."""
+
 
 
 # ── Normalisation des variantes de marques ──────────────────────────────────
@@ -160,6 +173,19 @@ _BRAND_CANONICAL: dict[str, str] = {
     "hermès": "Hermès",
     "louis vuitton": "Louis Vuitton",
     "lv": "Louis Vuitton",
+    "pomellato": "Pomellato",
+    "ginette ny": "Ginette NY",
+    "ginette-ny": "Ginette NY",
+    "fred": "Fred",
+    "fred joaillier": "Fred",
+    "van cleef": "Van Cleef & Arpels",
+    "van cleef & arpels": "Van Cleef & Arpels",
+    "boucheron": "Boucheron",
+    "chaumet": "Chaumet",
+    "mauboussin": "Mauboussin",
+    "dior joaillerie": "Dior Joaillerie",
+    "dior fine jewelry": "Dior Joaillerie",
+
 }
 
 # ── Détection de marque depuis texte libre (nom de fichier, etc.) ────────────
@@ -194,6 +220,15 @@ _BRAND_DETECT: list[tuple[str, str]] = [
     ("Breguet",             r"breguet"),
     ("Hermès",              r"herm[eè]s"),
     ("Louis Vuitton",       r"louis[\s\-_]?vuitton"),
+    ("Pomellato",          r"pomellato"),
+    ("Ginette NY",          r"ginette[\s\-_]?ny"),
+    ("Fred",                r"\bfred(?:\s+joaillier)?\b"),
+    ("Van Cleef & Arpels",  r"van[\s\-_]?cleef"),
+    ("Boucheron",           r"boucheron"),
+    ("Chaumet",             r"chaumet"),
+    ("Mauboussin",          r"mauboussin"),
+    ("Dior Joaillerie",     r"dior(?:[\s\-_]?joaillerie|[\s\-_]?fine[\s\-_]?jewelry)?"),
+
 ]
 
 
@@ -413,3 +448,105 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
         cleaned["coeff_base"] = "ht"
 
     return cleaned
+
+
+
+def _parse_claude_response(raw: str) -> dict[str, Any]:
+    """Parse la réponse texte de Claude en dict JSON."""
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```", 2)[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip().rstrip("`").strip()
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Réponse Claude non-JSON : {raw[:500]}") from exc
+
+
+def _extract_from_text(text: str, api_key: str | None = None,
+                       hint: str | None = None) -> dict[str, Any]:
+    """Envoie un texte brut à Claude pour extraction structurée (emails, etc.)."""
+    api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError("Clé API Anthropic manquante.")
+
+    client = anthropic.Anthropic(api_key=api_key)
+    user_content: list[dict] = [{"type": "text", "text": text}]
+    if hint:
+        user_content.append({"type": "text", "text": f"Contexte : {hint}"})
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=1024,
+        timeout=60.0,
+        system=[{
+            "type": "text",
+            "text": EXTRACTION_SYSTEM,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=[{"role": "user", "content": user_content}],
+    )
+    return _clean(_parse_claude_response(response.content[0].text))
+
+
+def extract_from_eml(eml_bytes: bytes, api_key: str | None = None,
+                     filename: str | None = None) -> dict[str, Any]:
+    """Extrait les donnees structurees depuis un email .eml.
+
+    Si le mail contient un PDF en piece jointe, delegue a extract_from_pdf.
+    Sinon extrait le corps texte et l'envoie au LLM.
+    """
+
+    import email as _email_lib
+
+    msg = _email_lib.message_from_bytes(eml_bytes)
+    subject = msg.get("Subject") or ""
+    sender  = msg.get("From") or ""
+
+    # 1. Chercher un PDF joint
+    for part in msg.walk():
+        if part.get_content_type() == "application/pdf":
+            pdf_bytes = part.get_payload(decode=True)
+            if pdf_bytes:
+                pdf_fn = part.get_filename() or filename or "attachment.pdf"
+                return extract_from_pdf(pdf_bytes, api_key=api_key, filename=pdf_fn)
+
+    # 2. Extraire le corps texte
+    body = ""
+    for part in msg.walk():
+        if part.get_content_type() == "text/plain":
+            payload = part.get_payload(decode=True)
+            if payload:
+                for enc in ("utf-8", "latin-1", "cp1252"):
+                    try:
+                        body = payload.decode(enc)
+                        break
+                    except (UnicodeDecodeError, AttributeError):
+                        continue
+            if body:
+                break
+
+    if not body.strip():
+        raise RuntimeError("Aucun contenu extractible dans l'email (ni PDF, ni texte).")
+
+    # Construire le contexte complet pour le LLM
+    email_context = f"Expéditeur : {sender}\nObjet : {subject}\n\n{body}"
+    hint = f"Nom du fichier : {filename}" if filename else None
+
+    data = _extract_from_text(email_context, api_key=api_key, hint=hint)
+
+    # Détection HT : si le corps contient des prix en HT → coeff_base = "ht"
+    if re.search(r"\d[\s ]*[€$]?\s*HT\b|\bHT\s*[:=]\s*\d", body, re.IGNORECASE):
+        data["coeff_base"] = "ht"
+
+    # Fallback marque depuis expéditeur / objet si non détecté
+    if data.get("marque", "Autre").lower() in ("autre", ""):
+        for txt in (sender, subject, body[:300]):
+            detected = _detect_brand_from_text(txt)
+            if detected:
+                data["marque"] = detected
+                break
+
+    return data

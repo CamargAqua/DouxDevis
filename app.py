@@ -27,7 +27,8 @@ from flask_session import Session
 from werkzeug.utils import secure_filename
 
 from docx_generator import build_docx
-from pdf_extractor import confidence_score, extract_from_pdf
+from pdf_extractor import confidence_score, extract_from_eml, extract_from_pdf
+
 from pdf_generator import docx_to_pdf
 
 # Quand on tourne depuis l'exe PyInstaller, launcher.py pose ces vars
@@ -46,7 +47,8 @@ GENERATED_DIR = RUNTIME_DIR / "generated"
 UPLOAD_DIR.mkdir(exist_ok=True)
 GENERATED_DIR.mkdir(exist_ok=True)
 
-ALLOWED_PDF = {"pdf"}
+ALLOWED_DOC = {"pdf", "eml"}
+
 ALLOWED_IMG = {"jpg", "jpeg", "png", "webp", "gif"}
 MAX_CONTENT_LENGTH = 25 * 1024 * 1024
 
@@ -224,23 +226,27 @@ def create_app() -> Flask:
             flash("Clé API manquante — contactez l'administrateur.", "error")
             return redirect(url_for("index"))
 
-        pdf_file = request.files.get("pdf")
-        if not pdf_file or not pdf_file.filename:
-            flash("Veuillez sélectionner un PDF.", "error")
+        upload_file = request.files.get("pdf")
+        if not upload_file or not upload_file.filename:
+            flash("Veuillez sélectionner un fichier.", "error")
             return redirect(url_for("index"))
-        if not _has_extension(pdf_file.filename, ALLOWED_PDF):
-            flash("Le fichier doit être un PDF.", "error")
-            return redirect(url_for("index"))
-
-        pdf_bytes = pdf_file.read()
-        if not pdf_bytes:
-            flash("Le PDF est vide.", "error")
+        if not _has_extension(upload_file.filename, ALLOWED_DOC):
+            flash("Le fichier doit être un PDF ou un email (.eml).", "error")
             return redirect(url_for("index"))
 
+        file_bytes = upload_file.read()
+        if not file_bytes:
+            flash("Le fichier est vide.", "error")
+            return redirect(url_for("index"))
+
+        ext = upload_file.filename.rsplit(".", 1)[-1].lower()
         try:
-            data = extract_from_pdf(pdf_bytes, api_key=api_key, filename=pdf_file.filename)
+            if ext == "eml":
+                data = extract_from_eml(file_bytes, api_key=api_key, filename=upload_file.filename)
+            else:
+                data = extract_from_pdf(file_bytes, api_key=api_key, filename=upload_file.filename)
         except Exception as exc:
-            flash(f"Erreur lors de l'extraction : {exc}", "error")
+            flash(f"Erreur lors de l'extraction : {exc}", "error")
             return redirect(url_for("index"))
 
         # Date du jour si absente ou vide
@@ -252,14 +258,15 @@ def create_app() -> Flask:
         token = uuid.uuid4().hex
         session_dir = UPLOAD_DIR / token
         session_dir.mkdir(parents=True, exist_ok=True)
-        pdf_path = session_dir / secure_filename(pdf_file.filename)
-        pdf_path.write_bytes(pdf_bytes)
+        file_path = session_dir / secure_filename(upload_file.filename)
+        file_path.write_bytes(file_bytes)
 
         session["token"] = token
         session["data"] = data
-        session["source_pdf"] = pdf_path.name
+        session["source_pdf"] = file_path.name
 
         return redirect(url_for("review"))
+
 
     @app.route("/dev-preview")
     def dev_preview():
