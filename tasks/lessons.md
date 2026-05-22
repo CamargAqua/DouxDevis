@@ -42,3 +42,12 @@ document.querySelectorAll('#nec-lines .intervention-line').forEach(...)
 ## 2026-05-20 — Frais de refus — placement
 **Erreur :** Phrase frais de refus placée avant le tableau footer ET dans la cellule REFUS, créant un doublon.
 **Règle :** Placer la phrase uniquement dans la cellule REFUS via `cell.add_paragraph()`, jamais en dehors du tableau.
+
+
+## 2026-05-22 — service_complet_description affiché sur toute première intervention
+**Erreur :** `pdf_generator.py` et `docx_generator.py` affichaient les sous-points `service_complet_description` sous la première intervention quelle qu'elle soit. Pour un devis Chopard avec "ECHANGE DU FERMOIR" en premier, les sous-points du POLISSAGE apparaissaient sous l'échange du fermoir.
+**Règle :** Afficher `service_complet_description` uniquement si la description contient SERVICE, RÉVISION, OVERHAUL ou ENTRETIEN. Un échange de fermoir ou une réparation de pendentif ne doit jamais avoir de sous-points.
+
+## 2026-05-22 — Emails : prix HT vs TTC
+**Règle :** Les partenaires envoient leurs prix en HT dans les emails (prix revendeur). Détecter `\d HT` dans le corps → poser `coeff_base="ht"`. Le coefficient DOUX convertit directement HT → prix client TTC, sans ajouter la TVA en plus.
+**Attention :** Le prix public TTC entre parenthèses (ex: "prix public recommandé 530€TTC") est à ignorer complètement.
