@@ -249,7 +249,9 @@ def _add_work_table(doc: Document, title: str, lines: list[dict[str, Any]],
         _clear_paragraph(desc_cell.paragraphs[0])
 
         description = (line.get("description") or "").strip()
-        if i == 0 and intro:
+        _SERVICE_KEYWORDS = ("SERVICE", "RÉVISION", "REVISION", "OVERHAUL", "GENERAL SERVICE", "ENTRETIEN")
+        is_service = any(kw in (description or "").upper() for kw in _SERVICE_KEYWORDS)
+        if i == 0 and intro and is_service:
             p = desc_cell.paragraphs[0]
             _add_run(p, description.upper() if description else "", bold=True, size=10)
             for intro_line in intro.split("\n"):
@@ -261,6 +263,7 @@ def _add_work_table(doc: Document, title: str, lines: list[dict[str, Any]],
             _add_run(p, description.upper(), size=10)
 
         price_p = price_cell.paragraphs[0]
+
         price_p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         # Utiliser prix_client (calculé par le backend) si disponible, sinon prix partenaire
         prix = line.get("prix_client") if line.get("prix_client") is not None else line.get("prix", 0)

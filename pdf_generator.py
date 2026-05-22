@@ -405,7 +405,9 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         prix_val = line.get("prix_client") if "prix_client" in line else line.get("prix", 0)
         prix_txt = line.get("prix_label") or _fmt(prix_val)
 
-        if i == 0 and intro:
+        _SERVICE_KEYWORDS = ("SERVICE", "RÉVISION", "REVISION", "OVERHAUL", "GENERAL SERVICE", "ENTRETIEN")
+        is_service = any(kw in desc for kw in _SERVICE_KEYWORDS)
+        if i == 0 and intro and is_service:
             intro_lines = "<br/>".join(
                 f'. <font size="8" face="Helvetica-Oblique">{l.strip()}</font>'
                 for l in intro.split("\n") if l.strip()
@@ -415,6 +417,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
             cell_desc = _p(desc, base)
 
         if prix_txt == "OFFERT":
+
             cell_prix = _html(
                 '<para align="right"><font color="#C8A028"><b>OFFERT</b></font></para>', base
             )
