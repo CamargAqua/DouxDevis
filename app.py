@@ -397,7 +397,6 @@ def create_app() -> Flask:
     @app.route("/feedback", methods=["POST"])
     def feedback():
         payload = request.get_json(silent=True) or {}
-        # Extraction JSON stockée côté serveur dans la session — jamais exposée au frontend
         extracted = session.get("data") or {}
         extraction_snapshot = {
             "marque": extracted.get("marque", ""),
@@ -415,11 +414,19 @@ def create_app() -> Flask:
             "comment": str(payload.get("comment", "")).strip(),
             "extraction": extraction_snapshot,
         }
-        try:
-            with FEEDBACK_FILE.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
-        except Exception as exc:
-            return jsonify({"error": str(exc)}), 500
+        sb = _supabase_client()
+        if sb:
+            try:
+                sb.table("feedback").insert(entry).execute()
+            except Exception as exc:
+                return jsonify({"error": str(exc)}), 500
+        else:
+            # Fallback local
+            try:
+                with FEEDBACK_FILE.open("a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            except Exception as exc:
+                return jsonify({"error": str(exc)}), 500
         return jsonify({"status": "ok"})
 
     @app.route("/stats-auth", methods=["POST"])
@@ -438,7 +445,14 @@ def create_app() -> Flask:
             abort(403)
 
         entries: list[dict] = []
-        if FEEDBACK_FILE.exists():
+        sb = _supabase_client()
+        if sb:
+            try:
+                result = sb.table("feedback").select("*").order("ts", desc=True).execute()
+                entries = result.data or []
+            except Exception:
+                entries = []
+        elif FEEDBACK_FILE.exists():
             for line in FEEDBACK_FILE.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
                 if line:
@@ -451,8 +465,7 @@ def create_app() -> Flask:
         ok_count = sum(1 for e in entries if e.get("ok"))
         ko_count = total - ok_count
         pct = round(ok_count / total * 100) if total else None
-        kos = [e for e in entries if not e.get("ok")]
-        kos_recent = list(reversed(kos))[:20]
+        kos = [e for e in entries if not e.get("ok")][:20]
 
         return render_template(
             "stats.html",
@@ -460,7 +473,7 @@ def create_app() -> Flask:
             ok_count=ok_count,
             ko_count=ko_count,
             pct=pct,
-            kos=kos_recent,
+            kos=kos,
         )
 
     @app.errorhandler(413)
@@ -469,6 +482,19 @@ def create_app() -> Flask:
         return redirect(url_for("index"))
 
     return app
+
+
+def _supabase_client():
+    """Retourne un client Supabase si les vars d'env sont configurées, sinon None."""
+    url = os.environ.get("SUPABASE_URL", "")
+    key = os.environ.get("SUPABASE_KEY", "")
+    if not url or not key:
+        return None
+    try:
+        from supabase import create_client
+        return create_client(url, key)
+    except Exception:
+        return None
 
 
 def _parse_price(value: str | None) -> float:
