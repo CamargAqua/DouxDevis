@@ -48,11 +48,73 @@
   </div>
 
 
+  <!-- ── Feedback fidélité ─────────────────────────────────────── -->
+  <div id="feedback-wrap" style="display:none;margin-top:20px;padding:18px 20px;border:1px solid var(--line);border-radius:8px;background:var(--card-bg, #fff)">
+    <div id="fb-question">
+      <p style="margin:0 0 14px;font-weight:600;color:var(--ink)">Le devis généré est-il fidèle au document original ?</p>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-gold" onclick="submitFeedback(true)">✅ Oui, c'est correct</button>
+        <button class="btn btn-ghost" onclick="fbShowComment()">❌ Non, il y a un problème</button>
+      </div>
+    </div>
+    <div id="fb-comment" style="display:none;">
+      <p style="margin:0 0 10px;font-weight:600;color:var(--ink)">Qu'est-ce qui n'est pas fidèle ?</p>
+      <textarea id="fb-text" rows="3" placeholder="Ex : mauvais prix sur la ligne 2, marque incorrecte…" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;resize:vertical;font-family:inherit"></textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+        <button class="btn btn-gold" onclick="submitFeedback(false)">Envoyer le retour</button>
+      </div>
+    </div>
+    <div id="fb-thanks" style="display:none;color:var(--ink-soft);font-size:14px;">
+      Merci pour ton retour — ça aide à améliorer le système.
+    </div>
+  </div>
+
   <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--line);margin-top:8px">
     <a href="{{ url_for('review') }}" class="btn btn-ghost">← Modifier le devis</a>
     <a href="{{ url_for('index') }}" class="btn btn-gold">Nouveau devis</a>
   </div>
 
 </section>
+
+<script>
+(function () {
+  var shown = false;
+
+  function showFeedback() {
+    if (shown) return;
+    shown = true;
+    var wrap = document.getElementById('feedback-wrap');
+    if (wrap) wrap.style.display = 'block';
+  }
+
+  document.querySelectorAll('.download-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      setTimeout(showFeedback, 900);
+    });
+  });
+
+  window.fbShowComment = function () {
+    document.getElementById('fb-question').style.display = 'none';
+    document.getElementById('fb-comment').style.display = 'block';
+  };
+
+  window.submitFeedback = function (ok) {
+    var comment = ok ? '' : (document.getElementById('fb-text').value || '');
+    fetch('/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ok: ok,
+        comment: comment,
+        marque: {{ marque | tojson }},
+        sav: {{ sav_num | tojson }}
+      })
+    });
+    document.getElementById('fb-question').style.display = 'none';
+    document.getElementById('fb-comment').style.display = 'none';
+    document.getElementById('fb-thanks').style.display = 'block';
+  };
+})();
+</script>
 
 {% endblock %}

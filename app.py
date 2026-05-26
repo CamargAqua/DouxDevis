@@ -44,6 +44,7 @@ RUNTIME_DIR = Path(_runtime) if _runtime else BASE_DIR
 
 UPLOAD_DIR = RUNTIME_DIR / "uploads"
 GENERATED_DIR = RUNTIME_DIR / "generated"
+FEEDBACK_FILE = RUNTIME_DIR / "feedback.jsonl"
 UPLOAD_DIR.mkdir(exist_ok=True)
 GENERATED_DIR.mkdir(exist_ok=True)
 
@@ -351,6 +352,8 @@ def create_app() -> Flask:
             method=method,
             confidence=score,
             confidence_missing=missing,
+            marque=data.get("marque", ""),
+            sav_num=(data.get("sav") or {}).get("numero", ""),
         )
 
     @app.route("/download/<token>/<path:filename>")
@@ -390,6 +393,56 @@ def create_app() -> Flask:
             return jsonify({"error": "Failed to create Yousign procedure"}), 500
 
         return jsonify(result)
+
+    @app.route("/feedback", methods=["POST"])
+    def feedback():
+        payload = request.get_json(silent=True) or {}
+        entry = {
+            "ts": datetime.utcnow().isoformat(),
+            "marque": str(payload.get("marque", "")),
+            "sav": str(payload.get("sav", "")),
+            "ok": bool(payload.get("ok", True)),
+            "comment": str(payload.get("comment", "")).strip(),
+        }
+        try:
+            with FEEDBACK_FILE.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+        return jsonify({"status": "ok"})
+
+    @app.route("/stats")
+    def stats():
+        key = request.args.get("key", "")
+        expected = os.environ.get("STATS_KEY", "doux2026")
+        if key != expected:
+            abort(403)
+
+        entries: list[dict] = []
+        if FEEDBACK_FILE.exists():
+            for line in FEEDBACK_FILE.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line:
+                    try:
+                        entries.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        pass
+
+        total = len(entries)
+        ok_count = sum(1 for e in entries if e.get("ok"))
+        ko_count = total - ok_count
+        pct = round(ok_count / total * 100) if total else None
+        kos = [e for e in entries if not e.get("ok")]
+        kos_recent = list(reversed(kos))[:20]
+
+        return render_template(
+            "stats.html",
+            total=total,
+            ok_count=ok_count,
+            ko_count=ko_count,
+            pct=pct,
+            kos=kos_recent,
+        )
 
     @app.errorhandler(413)
     def too_large(_):
