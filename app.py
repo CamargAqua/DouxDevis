@@ -397,12 +397,23 @@ def create_app() -> Flask:
     @app.route("/feedback", methods=["POST"])
     def feedback():
         payload = request.get_json(silent=True) or {}
+        # Extraction JSON stockée côté serveur dans la session — jamais exposée au frontend
+        extracted = session.get("data") or {}
+        extraction_snapshot = {
+            "marque": extracted.get("marque", ""),
+            "sav": (extracted.get("sav") or {}).get("numero", ""),
+            "montre": extracted.get("montre", {}),
+            "interventions_necessaires": extracted.get("interventions_necessaires", []),
+            "interventions_optionnelles": extracted.get("interventions_optionnelles", []),
+            "total_ttc": extracted.get("total_ttc", 0),
+        }
         entry = {
             "ts": datetime.utcnow().isoformat(),
             "marque": str(payload.get("marque", "")),
             "sav": str(payload.get("sav", "")),
             "ok": bool(payload.get("ok", True)),
             "comment": str(payload.get("comment", "")).strip(),
+            "extraction": extraction_snapshot,
         }
         try:
             with FEEDBACK_FILE.open("a", encoding="utf-8") as fh:
@@ -411,11 +422,19 @@ def create_app() -> Flask:
             return jsonify({"error": str(exc)}), 500
         return jsonify({"status": "ok"})
 
+    @app.route("/stats-auth", methods=["POST"])
+    def stats_auth():
+        payload = request.get_json(silent=True) or {}
+        password = str(payload.get("password", ""))
+        expected = os.environ.get("STATS_KEY", "")
+        if not expected or password != expected:
+            return jsonify({"ok": False}), 403
+        session["stats_auth"] = True
+        return jsonify({"ok": True})
+
     @app.route("/stats")
     def stats():
-        key = request.args.get("key", "")
-        expected = os.environ.get("STATS_KEY", "doux2026")
-        if key != expected:
+        if not session.get("stats_auth"):
             abort(403)
 
         entries: list[dict] = []
