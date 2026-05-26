@@ -25,6 +25,14 @@
 - [x] Prompt étendu bijoux : champ montre accepte bagues, pendentifs, etc.
 - [x] Fix service_complet_description : sous-points affichés uniquement pour RÉVISION/SERVICE/OVERHAUL
 
+## Session 2026-05-26
+
+- [x] Règle HT universelle : coefficients.json → tous en base "ht"
+- [x] form.html : coeff-base-hidden default → "ht"
+- [x] pdf_extractor.py : prompt universel HT (toutes variantes FR/EN/DE)
+- [x] pdf_extractor.py : _clean() force coeff_base="ht" pour toutes les marques
+- [x] app.py : _form_to_data → prix_client = prix_input, prix = prix_input / coeff (HT)
+
 ## Backlog
 - [ ] Section signature (Yousign) — à ajouter plus tard
 - [ ] Tests unitaires pdf_extractor

@@ -1,54 +1,210 @@
 {
-  "Rolex": {"coeff": 1.2, "base": "ttc"},
-  "Patek Philippe": {"coeff": 2.1, "base": "ttc"},
-  "Audemars Piguet": {"coeff": 2.1, "base": "ttc"},
-  "Richard Mille": {"coeff": 1.2, "base": "ttc"},
-  "Cartier": {"coeff": 2.1, "base": "ttc"},
-  "Omega": {"coeff": 1.6, "base": "ht"},
-  "IWC Schaffhausen": {"coeff": 2.1, "base": "ttc"},
-  "Jaeger-LeCoultre": {"coeff": 2.1, "base": "ttc"},
-  "Vacheron Constantin": {"coeff": 2.1, "base": "ttc"},
-  "Breguet": {"coeff": 2.1, "base": "ttc"},
-  "A. Lange & Söhne": {"coeff": 2.1, "base": "ttc"},
-  "Hublot": {"coeff": 1.2, "base": "ttc"},
-  "TAG Heuer": {"coeff": 2.1, "base": "ttc"},
-  "Breitling": {"coeff": 1.333, "base": "ttc"},
-  "Chanel": {"coeff": 2.1, "base": "ttc"},
-  "Bvlgari": {"coeff": 2.1, "base": "ttc"},
-  "Chopard": {"coeff": 2.1, "base": "ttc"},
-  "Tudor": {"coeff": 1.2, "base": "ttc"},
-  "Longines": {"coeff": 2.1, "base": "ttc"},
-  "Panerai": {"coeff": 2.1, "base": "ttc"},
-  "Girard-Perregaux": {"coeff": 2.1, "base": "ttc"},
-  "Zenith": {"coeff": 2.1, "base": "ttc"},
-  "Blancpain": {"coeff": 2.1, "base": "ttc"},
-  "Grand Seiko": {"coeff": 2.1, "base": "ttc"},
-  "March LA.B": {"coeff": 2.1, "base": "ttc"},
-  "Piaget": {"coeff": 2.1, "base": "ttc"},
-  "Bulgari": {"coeff": 2.1, "base": "ttc"},
-  "Hermès": {"coeff": 2.1, "base": "ttc"},
-  "Louis Vuitton": {"coeff": 2.1, "base": "ttc"},
-  "Frederique Constant": {"coeff": 2.1, "base": "ttc"},
-  "Messika": {"coeff": 2.1, "base": "ttc"},
-  "Chaumet": {"coeff": 2.1, "base": "ttc"},
-  "Pomellato": {"coeff": 2.1, "base": "ttc"},
-  "Repossi": {"coeff": 2.1, "base": "ttc"},
-  "FRED": {"coeff": 2.1, "base": "ttc"},
-  "dinh van": {"coeff": 2.1, "base": "ttc"},
-  "Akillis": {"coeff": 2.1, "base": "ttc"},
-  "Gigi Clozeau": {"coeff": 2.1, "base": "ttc"},
-  "Ginette NY": {"coeff": 2.1, "base": "ttc"},
-  "La Brune & La Blonde": {"coeff": 2.1, "base": "ttc"},
-  "Shamballa Jewels": {"coeff": 2.1, "base": "ttc"},
-  "Maria Battaglia": {"coeff": 2.1, "base": "ttc"},
-  "Gucci": {"coeff": 2.1, "base": "ttc"},
-  "Baume & Mercier": {"coeff": 2.1, "base": "ttc"},
-  "Glashütte Original": {"coeff": 2.1, "base": "ttc"},
-  "Jaquet Droz": {"coeff": 2.1, "base": "ttc"},
-  "Tissot": {"coeff": 2.1, "base": "ttc"},
-  "Bell & Ross": {"coeff": 2.1, "base": "ttc"},
-  "Boucheron": {"coeff": 2.1, "base": "ttc"},
-  "Franck Muller": {"coeff": 2.1, "base": "ttc"},
-  "Dior": {"coeff": 2.1, "base": "ttc"},
-  "Roger Dubuis": {"coeff": 2.1, "base": "ttc"}
+  "Rolex": {
+    "coeff": 1.2,
+    "base": "ht"
+  },
+  "Patek Philippe": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Audemars Piguet": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Richard Mille": {
+    "coeff": 1.2,
+    "base": "ht"
+  },
+  "Cartier": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Omega": {
+    "coeff": 1.6,
+    "base": "ht"
+  },
+  "IWC Schaffhausen": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Jaeger-LeCoultre": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Vacheron Constantin": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Breguet": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "A. Lange & Söhne": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Hublot": {
+    "coeff": 1.2,
+    "base": "ht"
+  },
+  "TAG Heuer": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Breitling": {
+    "coeff": 1.333,
+    "base": "ht"
+  },
+  "Chanel": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Bvlgari": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Chopard": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Tudor": {
+    "coeff": 1.2,
+    "base": "ht"
+  },
+  "Longines": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Panerai": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Girard-Perregaux": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Zenith": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Blancpain": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Grand Seiko": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "March LA.B": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Piaget": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Bulgari": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Hermès": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Louis Vuitton": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Frederique Constant": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Messika": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Chaumet": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Pomellato": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Repossi": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "FRED": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "dinh van": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Akillis": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Gigi Clozeau": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Ginette NY": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "La Brune & La Blonde": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Shamballa Jewels": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Maria Battaglia": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Gucci": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Baume & Mercier": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Glashütte Original": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Jaquet Droz": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Tissot": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Bell & Ross": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Boucheron": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Franck Muller": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Dior": {
+    "coeff": 2.1,
+    "base": "ht"
+  },
+  "Roger Dubuis": {
+    "coeff": 2.1,
+    "base": "ht"
+  }
 }

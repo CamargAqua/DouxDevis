@@ -48,6 +48,11 @@ document.querySelectorAll('#nec-lines .intervention-line').forEach(...)
 **Erreur :** `pdf_generator.py` et `docx_generator.py` affichaient les sous-points `service_complet_description` sous la première intervention quelle qu'elle soit. Pour un devis Chopard avec "ECHANGE DU FERMOIR" en premier, les sous-points du POLISSAGE apparaissaient sous l'échange du fermoir.
 **Règle :** Afficher `service_complet_description` uniquement si la description contient SERVICE, RÉVISION, OVERHAUL ou ENTRETIEN. Un échange de fermoir ou une réparation de pendentif ne doit jamais avoir de sous-points.
 
+## 2026-05-26 — Règle HT universelle pour toutes les marques
+**Erreur antérieure :** Le coeff_base="ht" était uniquement forcé pour Omega dans `_clean()`. Toutes les autres marques restaient en "ttc", causant une double-conversion (coeff × HT × 1.20).
+**Règle :** `_clean()` dans `pdf_extractor.py` doit toujours poser `coeff_base = "ht"` sans condition de marque. Le prompt force l'extraction HT universellement (colonnes FR/EN/DE). `coefficients.json` : tous les `"base"` à `"ht"`. `form.html` : default `coeff-base-hidden` à `"ht"`.
+**Rappel coefficient :** `prix_client = prix_HT_partenaire × coeff` — jamais de ×1.20 supplémentaire.
+
 ## 2026-05-22 — Emails : prix HT vs TTC
 **Règle :** Les partenaires envoient leurs prix en HT dans les emails (prix revendeur). Détecter `\d HT` dans le corps → poser `coeff_base="ht"`. Le coefficient DOUX convertit directement HT → prix client TTC, sans ajouter la TVA en plus.
 **Attention :** Le prix public TTC entre parenthèses (ex: "prix public recommandé 530€TTC") est à ignorer complètement.

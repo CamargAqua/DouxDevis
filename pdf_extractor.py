@@ -64,13 +64,24 @@ Le numéro SAV DOUX est un nombre à 6 chiffres, parfois suivi d'un suffixe à i
 - Emails → chercher dans l'objet ou le corps : "SAV 330624-1" → "330624"
 Supprime toujours le suffixe "-1", "-2", etc.
 
-═══ ⚠️ OMEGA — RÈGLE ABSOLUE (NE PAS IGNORER) ⚠️ ═══
-Si la marque est OMEGA :
-  → Tu DOIS utiliser UNIQUEMENT les colonnes "PU HT" ou "Total HT"
-  → Les colonnes "PU TTC" et "Total TTC" sont STRICTEMENT INTERDITES
-  → Le coefficient appliqué par DOUX convertit directement HT → TTC : ne pas faire cette conversion toi-même
-  → EXEMPLE CONCRET : si le tableau Omega affiche PU HT = 1 021,00 € et PU TTC = 1 225,20 €
-    tu retournes 1021.00 — PAS 1225.20
+═══ ⚠️ RÈGLE UNIVERSELLE — PRIX HT OBLIGATOIRE (NE PAS IGNORER) ⚠️ ═══
+Pour TOUTES les marques, sans exception :
+  → Tu DOIS extraire le prix HORS TAXES (HT) — jamais le prix TTC
+  → Le coefficient appliqué par DOUX convertit HT → TTC client : ne pas faire cette conversion toi-même
+  → Si le document affiche à la fois HT et TTC, prendre UNIQUEMENT le HT
+  → EXEMPLE : PU HT = 1 021,00 € et PU TTC = 1 225,20 € → retourner 1021.00 — PAS 1225.20
+
+Colonnes/libellés HT à reconnaître (toutes variantes) :
+  Français  : "HT", "H.T.", "Hors Taxe", "Hors TVA", "Prix HT", "Montant HT",
+              "Total HT", "PU HT", "Prix unitaire HT", "Net HT", "Prix de gros HT",
+              "Votre prix HT", "Prix public HT", "Tarif HT"
+  Anglais   : "Ex VAT", "Excl. VAT", "Excl VAT", "Net", "Before Tax", "Ex Tax",
+              "Unit price (ex VAT)", "Price excl. tax", "Net price", "Wholesale"
+  Allemand  : "Netto", "zzgl. MwSt", "ohne MwSt"
+
+Si le document ne montre QUE des prix TTC (aucune colonne HT) :
+  → Diviser par 1.20 pour obtenir le HT : prix_ht = prix_ttc / 1.20
+  → Arrondir à 2 décimales
 
 ═══ ⚠️ EMAILS AVEC PRIX HT — RÈGLE ABSOLUE ⚠️ ═══
 Si le document est un email et que les prix sont exprimés en HT (ex: "28€HT", "270 €HT", "42€") :
@@ -78,21 +89,13 @@ Si le document est un email et que les prix sont exprimés en HT (ex: "28€HT",
   → Le prix public recommandé TTC (entre parenthèses) est à IGNORER
   → EXEMPLE : "270 €HT (prix public recommandé 530 €TTC)" → total_ttc: 270.00
   → EXEMPLE : "DEVIS 1: ECHANGE PENDENTIF A NEUF: 42€" → interventions_necessaires[0].prix: 42.00, total_ttc: 42.00
-Pour les emails avec plusieurs options (séparées par //// ou numsrotées) : la première est interventions_necessaires, les suivantes sont interventions_optionnelles.
-
-═══ COLONNE DE PRIX À UTILISER (PDFs) ═══
-Chaque partenaire a ses propres colonnes de prix — respecte strictement ces règles :
-- Omega       → colonne "PU HT" ou "Total HT"    (INTERDICTION d'utiliser "PU TTC" ou "Total TTC")
-- Breitling   → colonne "Prix total TTC"          (ignorer "Total HT")
-- TAG Heuer   → colonne "PRIX PUBLIC TTC"         (ignorer "VOTRE PRIX HT" et "VOTRE PRIX TTC")
-- Chanel      → colonne "MONTANT TTC CONSEILLÉ"   (ignorer "PRIX DE GROS HT")
-- Rolex / March LA.B / autres → prendre le prix TTC affiché
+Pour les emails avec plusieurs options (séparées par //// ou numérotées) : la première est interventions_necessaires, les suivantes sont interventions_optionnelles.
 
 ═══ CONVERSION DES PRIX ═══
 - Nombre décimal : "705,50" → 705.50 | "310.00" → 310.0
 - Gratuit : "OFFERT" → 0.00
 - Inclus dans le prix : "Incl." | "inclus" | "inclus au service" → mettre la valeur "INCL" (chaîne, pas un nombre)
-- Si le total TTC n'est pas explicite, additionner les prix des interventions nécessaires.
+- Si le total HT n'est pas explicite, additionner les prix HT des interventions nécessaires.
 
 ═══ ÉTAT DE LA MONTRE OU DU BIJOU ═══
 Lister les constats du diagnostic (rayures, chocs, défauts, usure...) EN MAJUSCULES, un par entrée.
@@ -442,10 +445,8 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
         if detected:
             cleaned["marque"] = detected
 
-    # Omega : forcer coeff_base="ht" pour que le formulaire et le générateur
-    # sachent que les prix extraits sont en HT (jamais en TTC)
-    if cleaned.get("marque", "").lower() == "omega":
-        cleaned["coeff_base"] = "ht"
+    # Toutes les marques : les prix extraits sont TOUJOURS en HT
+    cleaned["coeff_base"] = "ht"
 
     return cleaned
 
