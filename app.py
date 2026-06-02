@@ -556,54 +556,52 @@ def _form_to_data(form) -> dict:
     # Les inputs soumettent déjà les prix clients appliqués dans le JS :
     # - marques TTC : inp.value = prix_partenaire_TTC × coeff
     # - Omega (HT)  : inp.value = prix_partenaire_HT  × coeff  → doit être converti en TTC ici
-    total_client = 0.0
-    last_nec_priced: dict | None = None
+    # Prix client = prix soumis (partenaire × coeff) arrondi à l'euro entier
+    priced_nec: list[dict] = []
     for line in necessaires:
         lbl = line.get("prix_label") or ""
         if lbl in ("OFFERT", "INCL"):
             line["prix_client"] = 0.0
             continue
-        prix_input = float(line.get("prix") or 0)  # prix soumis = prix_partenaire × coeff
-        line["prix_client"] = prix_input
-        # Reconstituer le prix partenaire original (= prix_client / coeff) pour que
-        # "Modifier le devis" affiche les prix partenaires, pas les prix clients
-        prix_partenaire = round(prix_input / coeff, 2) if coeff and coeff != 0 else prix_input
-        line["prix"] = prix_partenaire
-        total_client += prix_input
-        last_nec_priced = line
+        prix_client = float(round(float(line.get("prix") or 0)))  # euro entier
+        line["prix_client"] = prix_client
+        line["prix"] = round(prix_client / coeff, 2) if coeff and coeff != 0 else prix_client
+        priced_nec.append(line)
 
-    total_client = round(total_client, 2)
-
+    priced_opts: list[dict] = []
     for line in optionnelles:
         lbl = line.get("prix_label") or ""
         if lbl in ("OFFERT", "INCL"):
             line["prix_client"] = 0.0
             continue
-        prix_input = float(line.get("prix") or 0)
-        line["prix_client"] = prix_input
-        prix_partenaire = round(prix_input / coeff, 2) if coeff and coeff != 0 else prix_input
-        line["prix"] = prix_partenaire
+        prix_client = float(round(float(line.get("prix") or 0)))
+        line["prix_client"] = prix_client
+        line["prix"] = round(prix_client / coeff, 2) if coeff and coeff != 0 else prix_client
+        priced_opts.append(line)
 
-    # ── Arrondi des totaux au multiple de 5 supérieur ──
-    # La dernière ligne tarifée encaisse le delta pour que la somme affichée = total arrondi.
-    def _adjust_last(line: dict | None, delta: float) -> None:
-        if line is None or abs(delta) < 0.005:
+    # ── Arrondi au multiple de 5 supérieur, delta réparti sur toutes les lignes ──
+    def _distribute(lines: list[dict], delta: int) -> None:
+        """Ajoute 1 € aux `delta` lignes les plus chères pour atteindre le total arrondi."""
+        if delta <= 0 or not lines:
             return
-        line["prix_client"] = round((line.get("prix_client") or 0) + delta, 2)
-        if coeff and coeff != 0:
-            line["prix"] = round(line["prix_client"] / coeff, 2)
+        for line in sorted(lines, key=lambda l: l["prix_client"], reverse=True)[:delta]:
+            line["prix_client"] += 1.0
+            if coeff and coeff != 0:
+                line["prix"] = round(line["prix_client"] / coeff, 2)
 
-    if total_client > 0:
-        rounded_nec = _ceil5(total_client)
-        _adjust_last(last_nec_priced, rounded_nec - total_client)
-        total_client = rounded_nec
+    sum_nec = int(sum(l["prix_client"] for l in priced_nec))
+    if sum_nec > 0:
+        rounded_nec = int(_ceil5(float(sum_nec)))
+        _distribute(priced_nec, rounded_nec - sum_nec)
+        total_client = float(rounded_nec)
+    else:
+        total_client = 0.0
 
-    # Total "si toutes les options retenues" également arrondi à 5
-    priced_opts = [l for l in optionnelles if (l.get("prix_label") or "") not in ("OFFERT", "INCL")]
     if priced_opts:
-        total_opt = round(sum(float(l.get("prix_client") or 0) for l in priced_opts), 2)
-        grand = round(total_client + total_opt, 2)
-        _adjust_last(priced_opts[-1], _ceil5(grand) - grand)
+        sum_opt = int(sum(l["prix_client"] for l in priced_opts))
+        grand = int(total_client) + sum_opt
+        rounded_grand = int(_ceil5(float(grand)))
+        _distribute(priced_opts, rounded_grand - grand)
 
     return {
         "marque": (form.get("marque_custom") or form.get("marque") or "Autre").strip(),
