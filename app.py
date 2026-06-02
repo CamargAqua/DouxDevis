@@ -584,16 +584,18 @@ def _form_to_data(form) -> dict:
         """Ajoute 1 € aux `delta` lignes les plus chères pour atteindre le total arrondi."""
         if delta <= 0 or not lines:
             return
-        for line in sorted(lines, key=lambda l: l["prix_client"], reverse=True)[:delta]:
-            line["prix_client"] += 1.0
+        indices = sorted(range(len(lines)), key=lambda i: lines[i]["prix_client"], reverse=True)
+        for i in indices[:delta]:
+            lines[i]["prix_client"] += 1.0
             if coeff and coeff != 0:
-                line["prix"] = round(line["prix_client"] / coeff, 2)
+                lines[i]["prix"] = round(lines[i]["prix_client"] / coeff, 2)
 
-    sum_nec = int(sum(l["prix_client"] for l in priced_nec))
-    if sum_nec > 0:
+    if priced_nec:
+        sum_nec = int(sum(l["prix_client"] for l in priced_nec))
         rounded_nec = int(_ceil5(float(sum_nec)))
         _distribute(priced_nec, rounded_nec - sum_nec)
-        total_client = float(rounded_nec)
+        # total_client = somme réelle après distribution (garantit ligne == total)
+        total_client = float(sum(l["prix_client"] for l in priced_nec))
     else:
         total_client = 0.0
 
