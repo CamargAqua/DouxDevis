@@ -33,6 +33,15 @@
 - [x] pdf_extractor.py : _clean() force coeff_base="ht" pour toutes les marques
 - [x] app.py : _form_to_data → prix_client = prix_input, prix = prix_input / coeff (HT)
 
+## Session 2026-06-02
+
+- [x] Traduction FR : devis source en anglais → champs texte traduits en français (prompt extraction)
+- [x] Arrondi total au multiple de 5 supérieur (ceiling 5) — ex 847→850, 323→325
+- [x] Ajuster la dernière ligne nécessaire pour que la somme = total arrondi (app.py _form_to_data)
+- [x] Ajuster la dernière option pour que "total avec options" soit aussi arrondi à 5
+- [x] form.html : afficher le total client TTC arrondi dans la preview
+- [x] Vérifié via test _form_to_data : 847→850 (lignes somment), grand total 976→980
+
 ## Backlog
 - [ ] Section signature (Yousign) — à ajouter plus tard
 - [ ] Tests unitaires pdf_extractor

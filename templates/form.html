@@ -461,6 +461,8 @@ function refreshTotals() {
   // Pour Omega (HT) : prix_HT × coeff = prix_TTC_client directement (pas de ×1.20 supplémentaire)
   // Le coefficient intègre déjà la conversion HT→TTC
   const clientTTC = clientBrut;
+  // Total client arrondi au multiple de 5 supérieur (le backend ajuste la dernière ligne)
+  const clientTTCRounded = clientTTC > 0 ? Math.ceil(clientTTC / 5 - 1e-9) * 5 : clientTTC;
 
   const pLblEl = document.querySelector('.coeff-price-item:first-child .coeff-price-lbl');
   const cLblEl = document.querySelector('.coeff-price-item--gold .coeff-price-lbl');
@@ -468,14 +470,14 @@ function refreshTotals() {
   if (cLblEl) cLblEl.textContent = 'Prix client (TTC)';
 
   document.getElementById('total-display').textContent = fmt(base);
-  document.getElementById('total-final-display').textContent = fmt(clientTTC);
-  document.getElementById('total-override-input').value = clientTTC.toFixed(2);
+  document.getElementById('total-final-display').textContent = fmt(clientTTCRounded);
+  document.getElementById('total-override-input').value = clientTTCRounded.toFixed(2);
   document.getElementById('coeff-hidden').value = coeff.toFixed(4);
 
   const pricesRow = document.getElementById('coeff-prices-row');
   pricesRow.style.display = base > 0 ? 'flex' : 'none';
 
-  const gain = clientTTC - base;
+  const gain = clientTTCRounded - base;
   const gainEl = document.getElementById('coeff-gain');
   gainEl.textContent = gain > 0.01 ? `+ ${fmt(gain)} €` : '';
   gainEl.style.color = gain > 0.01 ? '#4CAF7D' : 'transparent';

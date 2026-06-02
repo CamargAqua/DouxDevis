@@ -48,6 +48,13 @@ Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc m
 }
 
 
+═══ LANGUE — TRADUCTION EN FRANÇAIS (OBLIGATOIRE) ═══
+Le devis final est destiné à un client français. Si le document source est rédigé dans une autre langue (anglais, allemand, italien...) :
+  → Traduis EN FRANÇAIS tout le texte libre que tu extrais : descriptions des interventions, état/constats du diagnostic, modèle (si c'est une description et non un nom propre), sous-points du service complet, délai.
+  → NE traduis PAS : le nom de la marque, les noms propres de modèles/collections (NAVITIMER, J12, HAPPY DIAMONDS...), les références, numéros de série, numéros SAV.
+  → EXEMPLE : "Full service movement" → "RÉVISION COMPLÈTE DU MOUVEMENT" | "Scratches on the case" → "RAYURES SUR LE BOÎTIER" | "Crown replacement" → "REMPLACEMENT DE LA COURONNE"
+  → Conserve la règle des MAJUSCULES pour les descriptions et l'état.
+
 ═══ RECONNAISSANCE DE LA MARQUE ═══
 Identifie la marque à partir du logo, de l'en-tête, du nom mentionné dans le document, de l'expéditeur de l'email, ou du nom de fichier.
 Exemples de valeurs attendues (respecter la casse) :

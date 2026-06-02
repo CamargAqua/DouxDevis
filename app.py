@@ -1,6 +1,7 @@
 """Flask app — Devis DOUX Joaillier."""
 from __future__ import annotations
 
+import math
 import os
 import re
 import secrets
@@ -497,6 +498,14 @@ def _supabase_client():
         return None
 
 
+def _ceil5(value: float) -> float:
+    """Arrondit au multiple de 5 supérieur (ex: 847 → 850, 323 → 325).
+
+    Un montant déjà multiple de 5 reste inchangé (epsilon pour absorber le bruit float).
+    """
+    return float(math.ceil(round(value, 2) / 5 - 1e-9) * 5)
+
+
 def _parse_price(value: str | None) -> float:
     if value is None:
         return 0.0
@@ -548,6 +557,7 @@ def _form_to_data(form) -> dict:
     # - marques TTC : inp.value = prix_partenaire_TTC × coeff
     # - Omega (HT)  : inp.value = prix_partenaire_HT  × coeff  → doit être converti en TTC ici
     total_client = 0.0
+    last_nec_priced: dict | None = None
     for line in necessaires:
         lbl = line.get("prix_label") or ""
         if lbl in ("OFFERT", "INCL"):
@@ -560,6 +570,7 @@ def _form_to_data(form) -> dict:
         prix_partenaire = round(prix_input / coeff, 2) if coeff and coeff != 0 else prix_input
         line["prix"] = prix_partenaire
         total_client += prix_input
+        last_nec_priced = line
 
     total_client = round(total_client, 2)
 
@@ -572,6 +583,27 @@ def _form_to_data(form) -> dict:
         line["prix_client"] = prix_input
         prix_partenaire = round(prix_input / coeff, 2) if coeff and coeff != 0 else prix_input
         line["prix"] = prix_partenaire
+
+    # ── Arrondi des totaux au multiple de 5 supérieur ──
+    # La dernière ligne tarifée encaisse le delta pour que la somme affichée = total arrondi.
+    def _adjust_last(line: dict | None, delta: float) -> None:
+        if line is None or abs(delta) < 0.005:
+            return
+        line["prix_client"] = round((line.get("prix_client") or 0) + delta, 2)
+        if coeff and coeff != 0:
+            line["prix"] = round(line["prix_client"] / coeff, 2)
+
+    if total_client > 0:
+        rounded_nec = _ceil5(total_client)
+        _adjust_last(last_nec_priced, rounded_nec - total_client)
+        total_client = rounded_nec
+
+    # Total "si toutes les options retenues" également arrondi à 5
+    priced_opts = [l for l in optionnelles if (l.get("prix_label") or "") not in ("OFFERT", "INCL")]
+    if priced_opts:
+        total_opt = round(sum(float(l.get("prix_client") or 0) for l in priced_opts), 2)
+        grand = round(total_client + total_opt, 2)
+        _adjust_last(priced_opts[-1], _ceil5(grand) - grand)
 
     return {
         "marque": (form.get("marque_custom") or form.get("marque") or "Autre").strip(),
