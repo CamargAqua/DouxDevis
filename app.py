@@ -574,50 +574,60 @@ def _form_to_data(form) -> dict:
         else:
             line["prix"] = prix_client
 
-    priced_nec: list[dict] = []
+    # Séparer les lignes OFFERT/INCL des lignes à prix
     for line in necessaires:
-        lbl = line.get("prix_label") or ""
-        if lbl in ("OFFERT", "INCL"):
+        if (line.get("prix_label") or "") in ("OFFERT", "INCL"):
             line["prix_client"] = 0.0
-            continue
-        prix_client = float(round(float(line.get("prix") or 0)))
-        _set_prix(line, prix_client)
-        priced_nec.append(line)
+        else:
+            line["prix_client"] = float(line.get("prix") or 0)  # valeur soumise par le form
+    priced_nec = [l for l in necessaires if (l.get("prix_label") or "") not in ("OFFERT", "INCL")]
 
-    priced_opts: list[dict] = []
     for line in optionnelles:
-        lbl = line.get("prix_label") or ""
-        if lbl in ("OFFERT", "INCL"):
+        if (line.get("prix_label") or "") in ("OFFERT", "INCL"):
             line["prix_client"] = 0.0
-            continue
-        prix_client = float(round(float(line.get("prix") or 0)))
-        _set_prix(line, prix_client)
-        priced_opts.append(line)
+        else:
+            line["prix_client"] = float(line.get("prix") or 0)
+    priced_opts = [l for l in optionnelles if (l.get("prix_label") or "") not in ("OFFERT", "INCL")]
 
-    # ── Arrondi au multiple de 5 supérieur, delta réparti sur toutes les lignes ──
-    def _distribute(lines: list[dict], delta: int) -> None:
-        """Ajoute 1 € aux `delta` lignes les plus chères pour atteindre le total arrondi."""
-        if delta <= 0 or not lines:
-            return
-        indices = sorted(range(len(lines)), key=lambda i: lines[i]["prix_client"], reverse=True)
-        for i in indices[:delta]:
-            lines[i]["prix_client"] += 1.0
-            # prix (HT partenaire) ne change pas — seul le prix_client est ajusté
-
+    # ── NÉCESSAIRES : algo ceil5 avec dernière ligne compensatrice ──
+    # T = ceil5(sum_HT × coeff) ; lignes[:-1] → ceil5 individuel ; dernière = T − somme
     if priced_nec:
-        sum_nec = int(sum(l["prix_client"] for l in priced_nec))
-        rounded_nec = int(_ceil5(float(sum_nec)))
-        _distribute(priced_nec, rounded_nec - sum_nec)
-        # total_client = somme réelle après distribution (garantit ligne == total)
+        sum_ht = sum(l.get("_base_prix") or 0 for l in priced_nec)
+        if sum_ht > 0:
+            T = _ceil5(sum_ht * coeff)
+            other_sum = 0.0
+            for l in priced_nec[:-1]:
+                base = l.get("_base_prix") or 0
+                pc = _ceil5(base * coeff) if base > 0 else _ceil5(l["prix_client"])
+                l["prix_client"] = pc
+                other_sum += pc
+            priced_nec[-1]["prix_client"] = T - other_sum
+        else:
+            # Fallback si pas de _base_prix (ligne ajoutée manuellement)
+            T = _ceil5(sum(l["prix_client"] for l in priced_nec))
+            other_sum = 0.0
+            for l in priced_nec[:-1]:
+                pc = _ceil5(l["prix_client"])
+                l["prix_client"] = pc
+                other_sum += pc
+            priced_nec[-1]["prix_client"] = T - other_sum
         total_client = float(sum(l["prix_client"] for l in priced_nec))
     else:
         total_client = 0.0
 
-    if priced_opts:
-        sum_opt = int(sum(l["prix_client"] for l in priced_opts))
-        grand = int(total_client) + sum_opt
-        rounded_grand = int(_ceil5(float(grand)))
-        _distribute(priced_opts, rounded_grand - grand)
+    # ── OPTIONS : ceil5 par ligne indépendamment ──
+    for l in priced_opts:
+        base = l.get("_base_prix") or 0
+        l["prix_client"] = _ceil5(base * coeff) if base > 0 else _ceil5(l["prix_client"])
+
+    # Fixer prix (HT partenaire) sur toutes les lignes
+    for line in necessaires + optionnelles:
+        base = line.get("_base_prix")
+        if base is not None and base > 0:
+            line["prix"] = base
+        elif coeff and coeff != 0 and line.get("prix_client", 0) > 0:
+            line["prix"] = round(line["prix_client"] / coeff, 2)
+        line.pop("_base_prix", None)  # nettoyer le champ intermédiaire
 
     return {
         "marque": (form.get("marque_custom") or form.get("marque") or "Autre").strip(),

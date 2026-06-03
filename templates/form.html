@@ -510,17 +510,17 @@ function roundInputs() {
     });
     var totalCible = ceil5(totalHT * coeff);
 
-    // Toutes les lignes sauf la dernière → arrondi entier
+    // Toutes les lignes sauf la dernière → ceil5 individuel
     var otherSum = 0;
     necLines.slice(0, -1).forEach(function(l) {
       var inp = l.querySelector('.prix-input');
-      var v = Math.round(parseFloat(inp.value || '0') || 0);
+      var v = ceil5(parseFloat(inp.value || '0') || 0);
       inp.value = v.toFixed(2);
       otherSum += v;
     });
-    // Dernière ligne = totalCible − somme des autres
+    // Dernière ligne = totalCible − somme des autres (automatiquement multiple de 5)
     var lastInp = necLines[necLines.length - 1].querySelector('.prix-input');
-    var lastVal = Math.round((totalCible - otherSum) * 100) / 100;
+    var lastVal = totalCible - otherSum;
     if (lastVal > 0) lastInp.value = lastVal.toFixed(2);
   }
 
