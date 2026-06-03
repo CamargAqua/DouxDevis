@@ -563,15 +563,25 @@ def _form_to_data(form) -> dict:
     # - marques TTC : inp.value = prix_partenaire_TTC × coeff
     # - Omega (HT)  : inp.value = prix_partenaire_HT  × coeff  → doit être converti en TTC ici
     # Prix client = prix soumis (partenaire × coeff) arrondi à l'euro entier
+    def _set_prix(line: dict, prix_client: float) -> None:
+        """Pose prix_client et prix (HT partenaire original si dispo, sinon back-compute)."""
+        line["prix_client"] = prix_client
+        base = line.get("_base_prix")          # HT original transmis par hidden input
+        if base is not None and base > 0:
+            line["prix"] = base                # ← conserve le HT original intact
+        elif coeff and coeff != 0:
+            line["prix"] = round(prix_client / coeff, 2)
+        else:
+            line["prix"] = prix_client
+
     priced_nec: list[dict] = []
     for line in necessaires:
         lbl = line.get("prix_label") or ""
         if lbl in ("OFFERT", "INCL"):
             line["prix_client"] = 0.0
             continue
-        prix_client = float(round(float(line.get("prix") or 0)))  # euro entier
-        line["prix_client"] = prix_client
-        line["prix"] = round(prix_client / coeff, 2) if coeff and coeff != 0 else prix_client
+        prix_client = float(round(float(line.get("prix") or 0)))
+        _set_prix(line, prix_client)
         priced_nec.append(line)
 
     priced_opts: list[dict] = []
@@ -581,8 +591,7 @@ def _form_to_data(form) -> dict:
             line["prix_client"] = 0.0
             continue
         prix_client = float(round(float(line.get("prix") or 0)))
-        line["prix_client"] = prix_client
-        line["prix"] = round(prix_client / coeff, 2) if coeff and coeff != 0 else prix_client
+        _set_prix(line, prix_client)
         priced_opts.append(line)
 
     # ── Arrondi au multiple de 5 supérieur, delta réparti sur toutes les lignes ──
@@ -593,8 +602,7 @@ def _form_to_data(form) -> dict:
         indices = sorted(range(len(lines)), key=lambda i: lines[i]["prix_client"], reverse=True)
         for i in indices[:delta]:
             lines[i]["prix_client"] += 1.0
-            if coeff and coeff != 0:
-                lines[i]["prix"] = round(lines[i]["prix_client"] / coeff, 2)
+            # prix (HT partenaire) ne change pas — seul le prix_client est ajusté
 
     if priced_nec:
         sum_nec = int(sum(l["prix_client"] for l in priced_nec))
