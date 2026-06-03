@@ -493,6 +493,7 @@ function refreshTotals() {
 function ceil5(v) { return v > 0 ? Math.ceil(v / 5 - 1e-9) * 5 : v; }
 
 // Ajuste la dernière ligne d'un groupe pour que la somme = cible
+// Ne touche PAS data-base : le prix partenaire HT reste intact
 function _adjustLastLine(lines, target) {
   if (!lines.length) return;
   let otherSum = 0;
@@ -501,11 +502,7 @@ function _adjustLastLine(lines, target) {
   });
   const lastInp = lines[lines.length - 1].querySelector('.prix-input');
   const newVal  = Math.round((target - otherSum) * 100) / 100;
-  if (newVal > 0) {
-    lastInp.value = newVal.toFixed(2);
-    const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
-    lastInp.dataset.base = (newVal / coeff).toFixed(2);
-  }
+  if (newVal > 0) lastInp.value = newVal.toFixed(2);
 }
 
 function roundInputs() {
