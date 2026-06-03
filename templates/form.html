@@ -494,44 +494,17 @@ function refreshTotals() {
 // Arrondit au multiple de 5 supérieur (identique au backend)
 function ceil5(v) { return v > 0 ? Math.ceil(v / 5 - 1e-9) * 5 : v; }
 
-// Ajuste la dernière ligne d'un groupe pour que la somme = cible
-// Ne touche PAS data-base : le prix partenaire HT reste intact
-function _adjustLastLine(lines, target) {
-  if (!lines.length) return;
-  let otherSum = 0;
-  lines.slice(0, -1).forEach(l => {
-    otherSum += parseFloat(l.querySelector('.prix-input').value || '0') || 0;
-  });
-  const lastInp = lines[lines.length - 1].querySelector('.prix-input');
-  const newVal  = Math.round((target - otherSum) * 100) / 100;
-  if (newVal > 0) lastInp.value = newVal.toFixed(2);
-}
-
 function roundInputs() {
-  const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
-
-  // ── Nécessaires ──
-  const necLines = [...document.querySelectorAll('#nec-lines .intervention-line')].filter(l => {
-    const lbl = l.querySelector('.label-input').value;
-    return lbl !== 'OFFERT' && lbl !== 'INCL';
+  // Arrondit chaque ligne indépendamment au multiple de 5 supérieur
+  ['#nec-lines', '#opt-lines'].forEach(function(selector) {
+    document.querySelectorAll(selector + ' .intervention-line').forEach(function(line) {
+      var lbl = line.querySelector('.label-input').value;
+      if (lbl === 'OFFERT' || lbl === 'INCL') return;
+      var inp = line.querySelector('.prix-input');
+      var v = parseFloat(inp.value || '0') || 0;
+      if (v > 0) inp.value = ceil5(v).toFixed(2);
+    });
   });
-  let necSum = 0;
-  necLines.forEach(l => { necSum += parseFloat(l.querySelector('.prix-input').value || '0') || 0; });
-  const necRounded = ceil5(necSum);
-  if (necLines.length > 0 && necRounded !== necSum) _adjustLastLine(necLines, necRounded);
-
-  // ── Options : grand total (nec arrondi + opt) → arrondi à 5 ──
-  const optLines = [...document.querySelectorAll('#opt-lines .intervention-line')].filter(l => {
-    const lbl = l.querySelector('.label-input').value;
-    return lbl !== 'OFFERT' && lbl !== 'INCL';
-  });
-  if (optLines.length > 0) {
-    let optSum = 0;
-    optLines.forEach(l => { optSum += parseFloat(l.querySelector('.prix-input').value || '0') || 0; });
-    const grandRounded = ceil5(necRounded + optSum);
-    const optTarget = grandRounded - necRounded;
-    if (optTarget !== optSum) _adjustLastLine(optLines, optTarget);
-  }
 }
 
 function updateTotal() {
