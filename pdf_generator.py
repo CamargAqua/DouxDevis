@@ -25,7 +25,7 @@ from docx_generator import FRAIS_REFUS
 
 
 class _CheckboxField(Flowable):
-    """Case à cocher PDF interactive (AcroForm) avec libellé à droite."""
+    """Case à cocher PDF interactive (AcroForm) avec libellé à droite, wrappé."""
 
     BOX = 10  # taille en points
 
@@ -35,19 +35,47 @@ class _CheckboxField(Flowable):
         self._label = label
         self._font = font
         self._font_size = font_size
+        self._lines: list[str] = [label]
         self.hAlign = "LEFT"
 
+    def _wrap_label(self, avail_w: float) -> list[str]:
+        """Découpe le libellé en lignes qui tiennent dans avail_w."""
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        text_w = avail_w - self.BOX - 8  # marge après la case
+        if text_w <= 0:
+            return [self._label]
+        words = self._label.split()
+        lines: list[str] = []
+        current: list[str] = []
+        for word in words:
+            candidate = " ".join(current + [word])
+            if stringWidth(candidate, self._font, self._font_size) <= text_w:
+                current.append(word)
+            else:
+                if current:
+                    lines.append(" ".join(current))
+                current = [word]
+        if current:
+            lines.append(" ".join(current))
+        return lines or [self._label]
+
     def wrap(self, avail_w, avail_h):
-        self._h = max(self.BOX + 4, self._font_size + 6)
+        self._avail_w = avail_w
+        self._lines = self._wrap_label(avail_w)
+        leading = self._font_size * 1.35
+        self._h = max(self.BOX + 4, len(self._lines) * leading + 4)
+        self._leading = leading
         return avail_w, self._h
 
     def draw(self):
         c = self.canv
         box = self.BOX
-        y_box = (self._h - box) / 2
+        leading = self._leading
 
-        # AcroForm uses absolute page coords — transformer via la matrice courante
-        m = c._currentMatrix  # (a, b, c, d, e, f)
+        # Checkbox aligné sur la première ligne de texte
+        y_box = self._h - leading + (leading - box) / 2
+
+        m = c._currentMatrix
         x_abs = m[0] * 0 + m[2] * y_box + m[4]
         y_abs = m[1] * 0 + m[3] * y_box + m[5]
 
@@ -66,8 +94,9 @@ class _CheckboxField(Flowable):
         )
         c.setFont(self._font, self._font_size)
         c.setFillColor(colors.black)
-        text_y = y_box + (box - self._font_size) / 2 + 1
-        c.drawString(box + 5, text_y, self._label)
+        for i, line in enumerate(self._lines):
+            text_y = self._h - (i + 1) * leading + (leading - self._font_size) / 2
+            c.drawString(box + 8, text_y, line)
 
 GOLD = colors.HexColor("#C8A028")
 DARK = colors.HexColor("#1A1814")
