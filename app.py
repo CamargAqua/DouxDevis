@@ -519,22 +519,28 @@ def _parse_price(value: str | None) -> float:
 
 
 def _collect_lines(form, prefix: str) -> list[dict]:
-    descs = form.getlist(f"{prefix}_description[]")
-    prices = form.getlist(f"{prefix}_prix[]")
-    labels = form.getlist(f"{prefix}_label[]")
+    descs       = form.getlist(f"{prefix}_description[]")
+    prices      = form.getlist(f"{prefix}_prix[]")
+    base_prices = form.getlist(f"{prefix}_base_prix[]")   # prix HT partenaire original
+    labels      = form.getlist(f"{prefix}_label[]")
     out: list[dict] = []
     for i, desc in enumerate(descs):
         desc_clean = desc.strip()
         if not desc_clean:
             continue
         price_raw = prices[i] if i < len(prices) else ""
-        label = labels[i].strip() if i < len(labels) else ""
+        base_raw  = base_prices[i] if i < len(base_prices) else ""
+        label     = labels[i].strip() if i < len(labels) else ""
         item: dict = {"description": desc_clean}
         if label:
             item["prix_label"] = label
             item["prix"] = _parse_price(label)
         else:
             item["prix"] = _parse_price(price_raw)
+        # Conserver le prix HT partenaire original (hidden input) pour éviter
+        # la dérive due au back-compute arrondi ÷ coeff
+        if base_raw:
+            item["_base_prix"] = _parse_price(base_raw)
         out.append(item)
     return out
 

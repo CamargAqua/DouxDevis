@@ -113,6 +113,7 @@
                    data-base="{{ base_val }}"
                    value="{{ base_val }}"
                    placeholder="0,00">
+            <input type="hidden" name="nec_base_prix[]" class="base-prix-input" value="{{ base_val }}">
             <input type="hidden" name="nec_label[]" class="label-input" value="{{ 'OFFERT' if is_offert else ('INCL' if is_incl else '') }}">
             {% if not (loop.first and data.service_complet_description) %}
             <button type="button" class="toggle-incl {% if is_incl %}active{% endif %}" onclick="toggleIncl(this)">
@@ -202,6 +203,7 @@
                    data-base="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
                    value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
                    placeholder="0,00">
+            <input type="hidden" name="opt_base_prix[]" class="base-prix-input" value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}">
             <input type="hidden" name="opt_label[]" class="label-input" value="{{ line.prix_label or '' }}">
             <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>
             <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove()">×</button>
@@ -547,14 +549,19 @@ function setCoeff(val) {
 
 document.getElementById('coeff-input').addEventListener('input', updateTotal);
 
-// Quand l'utilisateur modifie manuellement un prix → recalibrer data-base
-document.getElementById('nec-lines').addEventListener('input', e => {
-  if (e.target.classList.contains('prix-input')) {
-    const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
-    const v = parseFloat(e.target.value || '0');
-    e.target.dataset.base = (coeff > 1 ? v / coeff : v).toFixed(2);
-    refreshTotals();
-  }
+// Quand l'utilisateur modifie manuellement un prix → recalibrer data-base + hidden base
+['nec-lines', 'opt-lines'].forEach(id => {
+  document.getElementById(id).addEventListener('input', e => {
+    if (e.target.classList.contains('prix-input')) {
+      const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+      const v = parseFloat(e.target.value || '0');
+      const newBase = (coeff > 1 ? v / coeff : v).toFixed(2);
+      e.target.dataset.base = newBase;
+      const hidden = e.target.closest('.intervention-line').querySelector('.base-prix-input');
+      if (hidden) hidden.value = newBase;
+      refreshTotals();
+    }
+  });
 });
 
 // Coefficient marque à la sélection de marque
@@ -592,6 +599,7 @@ function addLine(prefix) {
   div.innerHTML = `
     <input type="text" name="${prefix}_description[]" placeholder="Intitulé">
     <input type="text" name="${prefix}_prix[]" class="prix-input" data-base="" placeholder="0,00">
+    <input type="hidden" name="${prefix}_base_prix[]" class="base-prix-input" value="">
     <input type="hidden" name="${prefix}_label[]" class="label-input" value="">
     ${_toggleBtns}
     <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>`;
