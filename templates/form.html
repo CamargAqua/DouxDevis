@@ -495,15 +495,42 @@ function refreshTotals() {
 function ceil5(v) { return v > 0 ? Math.ceil(v / 5 - 1e-9) * 5 : v; }
 
 function roundInputs() {
-  // Arrondit chaque ligne indépendamment au multiple de 5 supérieur
-  ['#nec-lines', '#opt-lines'].forEach(function(selector) {
-    document.querySelectorAll(selector + ' .intervention-line').forEach(function(line) {
-      var lbl = line.querySelector('.label-input').value;
-      if (lbl === 'OFFERT' || lbl === 'INCL') return;
-      var inp = line.querySelector('.prix-input');
-      var v = parseFloat(inp.value || '0') || 0;
-      if (v > 0) inp.value = ceil5(v).toFixed(2);
+  var coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+
+  // ── NÉCESSAIRES : ceil5 sur le TOTAL (sum_HT × coeff), dernière ligne ajustée ──
+  var necLines = [...document.querySelectorAll('#nec-lines .intervention-line')].filter(function(l) {
+    var lbl = l.querySelector('.label-input').value;
+    return lbl !== 'OFFERT' && lbl !== 'INCL';
+  });
+  if (necLines.length > 0) {
+    // Total cible = ceil5(sum des bases HT × coeff)
+    var totalHT = 0;
+    necLines.forEach(function(l) {
+      totalHT += parseFloat((l.querySelector('.prix-input').dataset.base || '0').replace(',', '.')) || 0;
     });
+    var totalCible = ceil5(totalHT * coeff);
+
+    // Toutes les lignes sauf la dernière → arrondi entier
+    var otherSum = 0;
+    necLines.slice(0, -1).forEach(function(l) {
+      var inp = l.querySelector('.prix-input');
+      var v = Math.round(parseFloat(inp.value || '0') || 0);
+      inp.value = v.toFixed(2);
+      otherSum += v;
+    });
+    // Dernière ligne = totalCible − somme des autres
+    var lastInp = necLines[necLines.length - 1].querySelector('.prix-input');
+    var lastVal = Math.round((totalCible - otherSum) * 100) / 100;
+    if (lastVal > 0) lastInp.value = lastVal.toFixed(2);
+  }
+
+  // ── OPTIONS : ceil5 par ligne (prix unitaire indépendant) ──
+  document.querySelectorAll('#opt-lines .intervention-line').forEach(function(line) {
+    var lbl = line.querySelector('.label-input').value;
+    if (lbl === 'OFFERT' || lbl === 'INCL') return;
+    var inp = line.querySelector('.prix-input');
+    var v = parseFloat(inp.value || '0') || 0;
+    if (v > 0) inp.value = ceil5(v).toFixed(2);
   });
 }
 
