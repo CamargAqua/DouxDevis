@@ -319,8 +319,11 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
 
     # Logo DOUX (gauche) — Image ou texte
     doux_logo = _logo_path("doux")
+    _LOGO_MAX_W = 8 * cm
+    _LOGO_MAX_H = 2.0 * cm
+
     if doux_logo:
-        left_cell = _logo_img(doux_logo, 8 * cm, 1.4 * cm)
+        left_cell = _logo_img(doux_logo, _LOGO_MAX_W, _LOGO_MAX_H)
         left_cell.hAlign = 'LEFT'
     else:
         left_cell = _html('<font face="Helvetica-Bold" size="28">DOUX JOAILLIER</font>', base)
@@ -333,7 +336,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     else:
         brand_logo = _logo_path(marque_raw)
         if brand_logo:
-            right_cell = _logo_img(brand_logo, 8 * cm, 1.4 * cm)
+            right_cell = _logo_img(brand_logo, _LOGO_MAX_W, _LOGO_MAX_H)
             right_cell.hAlign = 'RIGHT'
         else:
             right_cell = _html(
@@ -342,7 +345,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
             )
 
     hdr = Table([[left_cell, right_cell]], colWidths=[9 * cm, 9 * cm],
-                rowHeights=[1.6 * cm])
+                rowHeights=[2.2 * cm])
     hdr.setStyle(TableStyle([
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN",         (1, 0), (1, 0),   "RIGHT"),

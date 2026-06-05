@@ -101,11 +101,11 @@ Pour les emails avec plusieurs options (séparées par //// ou numérotées) : l
 ═══ LISTE D'INTERVENTIONS AVEC UN SEUL PRIX GLOBAL ═══
 Si l'email liste plusieurs interventions de détail (tirets/puces) SANS prix individuel, et qu'un prix global unique est donné ensuite :
   → Ne pas créer une ligne par intervention
-  → Créer UNE SEULE entrée dans interventions_necessaires avec un intitulé synthétique EN MAJUSCULES (ex: "RÉPARATION BAGUE", "RÉVISION COMPLÈTE")
+  → Créer UNE SEULE entrée dans interventions_necessaires avec "SERVICE COMPLET" ou "RÉVISION COMPLÈTE" comme description (jamais le nom de l'objet)
   → Mettre le prix global dans cette ligne
   → Copier les items de détail dans service_complet_description (un par ligne, sans tirets ni puces)
   → EXEMPLE (email Fred) : 6 items détaillés + "270 €HT" global
-    → interventions_necessaires: [{"description": "RÉPARATION BAGUE FORCE10", "prix": 270.00}]
+    → interventions_necessaires: [{"description": "SERVICE COMPLET", "prix": 270.00}]
     → service_complet_description: "diagnostic\nfournitures des 3 pierres\ncontrôle du serti\nremise en forme et soudure\npolissage\ncontrôle technique et esthétique"
 
 ═══ CONVERSION DES PRIX ═══
@@ -321,6 +321,22 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
         data["total_ttc"] = sum(
             l.get("prix") or 0.0 for l in (data.get("interventions_necessaires") or [])
         )
+
+    # Fallback prix : si total_ttc > 0 mais toutes les interventions sont à 0,
+    # mettre le total sur la première intervention (cas email avec prix global)
+    nec = data.get("interventions_necessaires") or []
+    if data["total_ttc"] > 0 and nec:
+        sum_prix = sum(
+            l.get("prix") or 0.0
+            for l in nec
+            if not l.get("prix_label")  # ignorer OFFERT/INCL
+        )
+        if sum_prix == 0.0:
+            # Trouver la première ligne sans label
+            for line in nec:
+                if not line.get("prix_label"):
+                    line["prix"] = data["total_ttc"]
+                    break
 
     # Délai : normaliser en minuscules
     delai = (data.get("delai") or "4 à 6 semaines").lower().strip()
