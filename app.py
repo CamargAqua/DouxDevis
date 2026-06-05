@@ -674,25 +674,57 @@ def _build_filename(data: dict) -> str:
 
 
 def _generate_qr_cgv() -> None:
-    """Génère static/qr_cgv.png pointant vers APP_URL/cgv au démarrage."""
-    app_url = os.environ.get("APP_URL", "").rstrip("/")
-    if not app_url:
+    """Génère static/qr_cgv.png pointant vers CGV_URL (GitHub Pages) ou APP_URL/cgv."""
+    # CGV_URL prioritaire (GitHub Pages) — sinon fallback sur l'app
+    cgv_url = (
+        os.environ.get("CGV_URL")
+        or (os.environ.get("APP_URL", "").rstrip("/") + "/cgv")
+    )
+    if not cgv_url.startswith("http"):
         return
     try:
         import qrcode  # type: ignore
-        url = f"{app_url}/cgv"
+        from qrcode.image.styledpil import StyledPilImage  # type: ignore
+        from qrcode.image.styles.moduledrawers.pil import CircleModuleDrawer, RoundedModuleDrawer  # type: ignore
+        from qrcode.image.styles.colormasks import SolidFillColorMask  # type: ignore
+
+        GOLD = (200, 160, 40)   # #C8A028 — or DOUX
+        DARK = (26, 24, 20)     # #1A1814 — quasi-noir
+        WHITE = (255, 255, 255)
+
+        url = cgv_url
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_M,
-            box_size=6,
+            box_size=8,
             border=2,
         )
         qr.add_data(url)
         qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
+
+        img = qr.make_image(
+            image_factory=StyledPilImage,
+            module_drawer=CircleModuleDrawer(),
+            color_mask=SolidFillColorMask(
+                front_color=DARK,
+                back_color=WHITE,
+            ),
+        )
         img.save(str(BASE_DIR / "static" / "qr_cgv.png"))
     except Exception as e:
-        print(f"[QR] Génération échouée : {e}")
+        # Fallback sans style si la version de qrcode ne supporte pas StyledPilImage
+        print(f"[QR] Style non supporté ({e}), génération classique.")
+        try:
+            import qrcode as _qr  # type: ignore
+            url = cgv_url
+            q = _qr.QRCode(version=1, error_correction=_qr.constants.ERROR_CORRECT_M,
+                            box_size=8, border=2)
+            q.add_data(url)
+            q.make(fit=True)
+            q.make_image(fill_color="#1A1814", back_color="white").save(
+                str(BASE_DIR / "static" / "qr_cgv.png"))
+        except Exception as e2:
+            print(f"[QR] Génération échouée : {e2}")
 
 
 app = create_app()
