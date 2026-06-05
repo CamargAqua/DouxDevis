@@ -676,10 +676,7 @@ def _build_filename(data: dict) -> str:
 def _generate_qr_cgv() -> None:
     """Génère static/qr_cgv.png pointant vers CGV_URL (GitHub Pages) ou APP_URL/cgv."""
     # CGV_URL prioritaire (GitHub Pages) — sinon fallback sur l'app
-    cgv_url = (
-        os.environ.get("CGV_URL")
-        or (os.environ.get("APP_URL", "").rstrip("/") + "/cgv")
-    )
+    cgv_url = os.environ.get("CGV_URL", "https://bit.ly/Doux-cgv")
     if not cgv_url.startswith("http"):
         return
     try:
