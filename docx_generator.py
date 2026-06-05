@@ -361,6 +361,16 @@ def _add_footer_block(doc: Document, delai: str, frais_refus: int | None = None)
     _add_run(legal2, "Intracommunautaire FR 313 152 15442  ", size=8)
     _add_run(legal2, "sav@douxjoaillier.com", size=8, color=RGBColor(0x05, 0x63, 0xC1))
 
+    cgv = doc.add_paragraph()
+    cgv.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_cgv = cgv.add_run(
+        "Toute signature du présent devis vaut acceptation des CGV "
+        "consultables via le QR code apposé sur ce devis"
+    )
+    run_cgv.font.size = Pt(7)
+    run_cgv.font.underline = True
+    run_cgv.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
+
 
 def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     """Construit le devis DOUX et renvoie le contenu binaire .docx."""

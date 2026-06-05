@@ -558,3 +558,55 @@ def extract_from_eml(eml_bytes: bytes, api_key: str | None = None,
                 break
 
     return data
+
+
+def extract_from_msg(msg_bytes: bytes, api_key: str | None = None,
+                     filename: str | None = None) -> dict[str, Any]:
+    """Extrait les données depuis un email Outlook .msg (drag & drop depuis Outlook).
+
+    Si le .msg contient un PDF en pièce jointe, délègue à extract_from_pdf.
+    Sinon extrait le corps texte comme pour un .eml.
+    """
+    try:
+        import extract_msg as _msg_lib
+    except ImportError:
+        raise RuntimeError(
+            "La bibliothèque extract-msg est requise pour les fichiers .msg. "
+            "Installez-la avec : pip install extract-msg"
+        )
+
+    from io import BytesIO
+    msg = _msg_lib.Message(BytesIO(msg_bytes))
+
+    subject = msg.subject or ""
+    sender  = msg.sender  or ""
+
+    # 1. Chercher un PDF joint
+    for att in (msg.attachments or []):
+        name = (att.longFilename or att.shortFilename or "").lower()
+        if name.endswith(".pdf"):
+            pdf_bytes = att.data
+            if pdf_bytes:
+                return extract_from_pdf(pdf_bytes, api_key=api_key, filename=name)
+
+    # 2. Extraire le corps texte
+    body = msg.body or ""
+    if not body.strip():
+        raise RuntimeError("Aucun contenu extractible dans le fichier .msg.")
+
+    email_context = f"Expéditeur : {sender}\nObjet : {subject}\n\n{body}"
+    hint = f"Nom du fichier : {filename}" if filename else None
+
+    data = _extract_from_text(email_context, api_key=api_key, hint=hint)
+
+    if re.search(r"\d[\s ]*[€$]?\s*HT\b|\bHT\s*[:=]\s*\d", body, re.IGNORECASE):
+        data["coeff_base"] = "ht"
+
+    if data.get("marque", "Autre").lower() in ("autre", ""):
+        for txt in (sender, subject, body[:300]):
+            detected = _detect_brand_from_text(txt)
+            if detected:
+                data["marque"] = detected
+                break
+
+    return data

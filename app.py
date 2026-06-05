@@ -49,7 +49,7 @@ FEEDBACK_FILE = RUNTIME_DIR / "feedback.jsonl"
 UPLOAD_DIR.mkdir(exist_ok=True)
 GENERATED_DIR.mkdir(exist_ok=True)
 
-ALLOWED_DOC = {"pdf", "eml"}
+ALLOWED_DOC = {"pdf", "eml", "msg"}
 
 ALLOWED_IMG = {"jpg", "jpeg", "png", "webp", "gif"}
 MAX_CONTENT_LENGTH = 25 * 1024 * 1024
@@ -233,7 +233,7 @@ def create_app() -> Flask:
             flash("Veuillez sélectionner un fichier.", "error")
             return redirect(url_for("index"))
         if not _has_extension(upload_file.filename, ALLOWED_DOC):
-            flash("Le fichier doit être un PDF ou un email (.eml).", "error")
+            flash("Le fichier doit être un PDF, un email (.eml) ou un message Outlook (.msg).", "error")
             return redirect(url_for("index"))
 
         file_bytes = upload_file.read()
@@ -245,6 +245,9 @@ def create_app() -> Flask:
         try:
             if ext == "eml":
                 data = extract_from_eml(file_bytes, api_key=api_key, filename=upload_file.filename)
+            elif ext == "msg":
+                from pdf_extractor import extract_from_msg
+                data = extract_from_msg(file_bytes, api_key=api_key, filename=upload_file.filename)
             else:
                 data = extract_from_pdf(file_bytes, api_key=api_key, filename=upload_file.filename)
         except Exception as exc:
@@ -503,7 +506,7 @@ def _ceil5(value: float) -> float:
 
     Un montant déjà multiple de 5 reste inchangé (epsilon pour absorber le bruit float).
     """
-    return float(math.ceil(round(value, 2) / 5 - 1e-9) * 5)
+    return float(math.ceil((round(value, 2) - 0.01) / 5) * 5)
 
 
 def _parse_price(value: str | None) -> float:

@@ -393,7 +393,6 @@ function toggleOffert(btn) {
   const label  = line.querySelector('.label-input');
   const inclBtn = line.querySelector('.toggle-incl');
   const on     = !btn.classList.contains('active');
-  // Désactiver INCL si actif
   if (on && inclBtn && inclBtn.classList.contains('active')) {
     inclBtn.classList.remove('active');
     line.classList.remove('is-incl');
@@ -401,8 +400,16 @@ function toggleOffert(btn) {
   btn.classList.toggle('active', on);
   line.classList.toggle('is-offert', on);
   label.value = on ? 'OFFERT' : '';
-  if (on)  { prix.dataset.base = prix.value; prix.value = ''; }
-  else     { prix.value = prix.dataset.base || ''; }
+  if (on) {
+    // Sauvegarder la valeur affichée ET la base HT — NE PAS écraser data-base
+    prix.dataset.savedDisplay = prix.value;
+    prix.dataset.savedBase    = prix.dataset.base || '';
+    prix.value = '';
+  } else {
+    // Restaurer exactement ce qui était affiché
+    prix.value          = prix.dataset.savedDisplay || '';
+    prix.dataset.base   = prix.dataset.savedBase    || '';
+  }
   updateTotal();
 }
 
@@ -413,7 +420,6 @@ function toggleIncl(btn) {
   const label     = line.querySelector('.label-input');
   const offertBtn = line.querySelector('.toggle-offert');
   const on        = !btn.classList.contains('active');
-  // Désactiver OFFERT si actif
   if (on && offertBtn && offertBtn.classList.contains('active')) {
     offertBtn.classList.remove('active');
     line.classList.remove('is-offert');
@@ -421,8 +427,14 @@ function toggleIncl(btn) {
   btn.classList.toggle('active', on);
   line.classList.toggle('is-incl', on);
   label.value = on ? 'INCL' : '';
-  if (on)  { prix.dataset.base = prix.value; prix.value = ''; }
-  else     { prix.value = prix.dataset.base || ''; }
+  if (on) {
+    prix.dataset.savedDisplay = prix.value;
+    prix.dataset.savedBase    = prix.dataset.base || '';
+    prix.value = '';
+  } else {
+    prix.value          = prix.dataset.savedDisplay || '';
+    prix.dataset.base   = prix.dataset.savedBase    || '';
+  }
   updateTotal();
 }
 
@@ -492,7 +504,7 @@ function refreshTotals() {
 }
 
 // Arrondit au multiple de 5 supérieur (identique au backend)
-function ceil5(v) { return v > 0 ? Math.ceil(v / 5 - 1e-9) * 5 : v; }
+function ceil5(v) { return v > 0 ? Math.ceil((Math.round(v * 100) / 100 - 0.01) / 5) * 5 : v; }
 
 function roundInputs() {
   var coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;

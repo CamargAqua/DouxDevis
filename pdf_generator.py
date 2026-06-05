@@ -217,17 +217,33 @@ _FOOTER = (
 )
 
 
+_CGV_PHRASE = (
+    "<u>Toute signature du présent devis vaut acceptation des CGV "
+    "consultables via le QR code apposé sur ce devis</u>"
+)
+
+
 def _draw_footer(canvas, doc):
     canvas.saveState()
-    usable_w = A4[0] - 30 * mm  # marges gauche + droite
-    style = ParagraphStyle(
+    usable_w = A4[0] - 30 * mm
+    base_style = ParagraphStyle(
         "footer_style",
         fontName="Helvetica", fontSize=7,
         alignment=1, leading=9, textColor=colors.black,
     )
-    p = Paragraph(_FOOTER, style)
+    cgv_style = ParagraphStyle(
+        "cgv_style",
+        fontName="Helvetica", fontSize=6.5,
+        alignment=1, leading=8, textColor=colors.HexColor("#555555"),
+    )
+    # Ligne SARL
+    p = Paragraph(_FOOTER, base_style)
     p.wrap(usable_w, 20 * mm)
-    p.drawOn(canvas, 15 * mm, 5 * mm)
+    p.drawOn(canvas, 15 * mm, 10 * mm)
+    # Phrase CGV soulignée
+    p2 = Paragraph(_CGV_PHRASE, cgv_style)
+    p2.wrap(usable_w, 10 * mm)
+    p2.drawOn(canvas, 15 * mm, 4 * mm)
     canvas.restoreState()
 
 
@@ -259,7 +275,9 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         left_cell = _html('<font face="Helvetica-Bold" size="28">DOUX JOAILLIER</font>', base)
 
     # Logo marque partenaire (droite) — Image ou nom en or
-    brand_logo = _logo_path(marque_raw)
+    # Rolex interdit l'affichage de son logo : on n'affiche que DOUX
+    _NO_LOGO_BRANDS = {"rolex"}
+    brand_logo = None if marque_raw.lower() in _NO_LOGO_BRANDS else _logo_path(marque_raw)
     if brand_logo:
         right_cell = _logo_img(brand_logo, 8 * cm, 1.4 * cm)
         right_cell.hAlign = 'RIGHT'
