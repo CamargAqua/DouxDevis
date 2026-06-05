@@ -433,6 +433,11 @@ def create_app() -> Flask:
                 return jsonify({"error": str(exc)}), 500
         return jsonify({"status": "ok"})
 
+    @app.route("/cgv")
+    def cgv():
+        return send_from_directory(str(BASE_DIR / "static"), "cgv.pdf",
+                                   mimetype="application/pdf")
+
     @app.route("/stats-auth", methods=["POST"])
     def stats_auth():
         payload = request.get_json(silent=True) or {}
@@ -668,7 +673,30 @@ def _build_filename(data: dict) -> str:
     return (safe or "DEVIS_DOUX")[:80]  # cap 80 chars
 
 
+def _generate_qr_cgv() -> None:
+    """Génère static/qr_cgv.png pointant vers APP_URL/cgv au démarrage."""
+    app_url = os.environ.get("APP_URL", "").rstrip("/")
+    if not app_url:
+        return
+    try:
+        import qrcode  # type: ignore
+        url = f"{app_url}/cgv"
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=6,
+            border=2,
+        )
+        qr.add_data(url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        img.save(str(BASE_DIR / "static" / "qr_cgv.png"))
+    except Exception as e:
+        print(f"[QR] Génération échouée : {e}")
+
+
 app = create_app()
+_generate_qr_cgv()
 
 
 if __name__ == "__main__":

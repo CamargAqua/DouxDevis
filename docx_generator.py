@@ -361,15 +361,41 @@ def _add_footer_block(doc: Document, delai: str, frais_refus: int | None = None)
     _add_run(legal2, "Intracommunautaire FR 313 152 15442  ", size=8)
     _add_run(legal2, "sav@douxjoaillier.com", size=8, color=RGBColor(0x05, 0x63, 0xC1))
 
-    cgv = doc.add_paragraph()
-    cgv.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run_cgv = cgv.add_run(
+    # Ligne CGV + QR code côte à côte
+    cgv_table = doc.add_table(rows=1, cols=2)
+    cgv_table.autofit = False
+    cgv_table.columns[0].width = Cm(15)
+    cgv_table.columns[1].width = Cm(3)
+    for cell in cgv_table.rows[0].cells:
+        for edge in ("top", "left", "bottom", "right"):
+            tc_pr = cell._tc.get_or_add_tcPr()
+            borders = tc_pr.find(qn("w:tcBorders"))
+            if borders is None:
+                borders = OxmlElement("w:tcBorders")
+                tc_pr.append(borders)
+            b = OxmlElement(f"w:{edge}")
+            b.set(qn("w:val"), "nil")
+            borders.append(b)
+
+    cgv_cell = cgv_table.cell(0, 0)
+    cgv_cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    p_cgv = cgv_cell.paragraphs[0]
+    p_cgv.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    run_cgv = p_cgv.add_run(
         "Toute signature du présent devis vaut acceptation des CGV "
         "consultables via le QR code apposé sur ce devis"
     )
     run_cgv.font.size = Pt(7)
     run_cgv.font.underline = True
     run_cgv.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
+
+    qr_cell = cgv_table.cell(0, 1)
+    qr_cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    qr_path = Path(__file__).parent / "static" / "qr_cgv.png"
+    if qr_path.exists():
+        p_qr = qr_cell.paragraphs[0]
+        p_qr.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p_qr.add_run().add_picture(str(qr_path), width=Cm(2.0))
 
 
 def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:

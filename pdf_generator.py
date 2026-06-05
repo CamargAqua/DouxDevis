@@ -223,9 +223,13 @@ _CGV_PHRASE = (
 )
 
 
+_QR_PATH = Path(__file__).parent / "static" / "qr_cgv.png"
+_QR_SIZE  = 18 * mm  # taille du QR code dans le PDF
+
+
 def _draw_footer(canvas, doc):
     canvas.saveState()
-    usable_w = A4[0] - 30 * mm
+    text_w = A4[0] - 30 * mm - (_QR_SIZE + 4 * mm)  # largeur texte (laisse place au QR)
     base_style = ParagraphStyle(
         "footer_style",
         fontName="Helvetica", fontSize=7,
@@ -238,12 +242,19 @@ def _draw_footer(canvas, doc):
     )
     # Ligne SARL
     p = Paragraph(_FOOTER, base_style)
-    p.wrap(usable_w, 20 * mm)
+    p.wrap(text_w, 20 * mm)
     p.drawOn(canvas, 15 * mm, 10 * mm)
     # Phrase CGV soulignée
     p2 = Paragraph(_CGV_PHRASE, cgv_style)
-    p2.wrap(usable_w, 10 * mm)
+    p2.wrap(text_w, 10 * mm)
     p2.drawOn(canvas, 15 * mm, 4 * mm)
+    # QR code CGV — bas droite
+    if _QR_PATH.exists():
+        qr_x = A4[0] - 15 * mm - _QR_SIZE
+        qr_y = 3 * mm
+        canvas.drawImage(str(_QR_PATH), qr_x, qr_y,
+                         width=_QR_SIZE, height=_QR_SIZE,
+                         preserveAspectRatio=True, mask="auto")
     canvas.restoreState()
 
 
