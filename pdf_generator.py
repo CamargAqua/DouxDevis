@@ -140,6 +140,7 @@ LOGOS_DIR = Path(__file__).parent / "static" / "logos"
 
 # Mapping marque → nom de fichier logo (sans extension)
 BRAND_LOGOS: dict[str, str] = {
+    # Horlogerie classique
     "breitling":              "breitling",
     "chanel":                 "chanel",
     "rolex":                  "rolex",
@@ -159,6 +160,45 @@ BRAND_LOGOS: dict[str, str] = {
     "audemars piguet":        "audemars_piguet",
     "ap":                     "audemars_piguet",
     "doux":                   "doux",
+    # Accents / caractères spéciaux → slug normalisé
+    "hermès":                 "hermes",
+    "hermes":                 "hermes",
+    "bulgari":                "bvlgari",
+    "bvlgari":                "bvlgari",
+    "glashütte original":     "glashutte_original",
+    "glashutte original":     "glashutte_original",
+    "a. lange & söhne":       "lange_sohne",
+    "a. lange sohne":         "lange_sohne",
+    "lange & söhne":          "lange_sohne",
+    "baume & mercier":        "baume_mercier",
+    "bell & ross":            "bell_ross",
+    "la brune & la blonde":   "la_brune_la_blonde",
+    "la brune la blonde":     "la_brune_la_blonde",
+    "l'épée":                 "l_epee",
+    "l'epee":                 "l_epee",
+    "l epee":                 "l_epee",
+    "fred":                   "fred",
+    "dinh van":               "dinh_van",
+    "ginette ny":             "ginette_ny",
+    "gigi clozeau":           "gigi_clozeau",
+    "shamballa jewels":       "shamballa_jewels",
+    "wolf 1834":              "wolf_1834",
+    "wolf1834":               "wolf_1834",
+    "march la.b":             "march_lab",
+    "arthus bertrand":        "arthus_bertrand",
+    "arthus-bertrand":        "arthus_bertrand",
+    "daniel roth":            "daniel_roth",
+    "gerald genta":           "gerald_genta",
+    "maria battaglia":        "maria_battaglia",
+    "mattia cielo":           "mattia_cielo",
+    "serafino consoli":       "serafino_consoli",
+    "jaeger-lecoultre":       "jaeger_lecoultre",
+    "jaeger lecoultre":       "jaeger_lecoultre",
+    "girard-perregaux":       "girard_perregaux",
+    "girard perregaux":       "girard_perregaux",
+    "vacheron constantin":    "vacheron_constantin",
+    "grand seiko":            "grand_seiko",
+    "jaquet droz":            "jaquet_droz",
 }
 
 
