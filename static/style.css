@@ -194,15 +194,11 @@ textarea { resize: vertical; min-height: 90px; }
   transition: border-color var(--transition), background var(--transition);
 }
 .intervention-line:hover { border-color: var(--line-strong); background: #fff; }
-.move-btns {
-  display: flex; flex-direction: column; gap: 2px; align-items: center;
+.drag-handle {
+  cursor: grab; color: #bbb; font-size: 16px; line-height: 1;
+  user-select: none; text-align: center; padding: 2px 0;
 }
-.btn-move {
-  background: none; border: 1px solid var(--line); border-radius: 3px;
-  padding: 0 4px; font-size: 9px; line-height: 1.6; cursor: pointer;
-  color: var(--ink-soft); transition: background var(--transition);
-}
-.btn-move:hover { background: var(--gold-ultra); border-color: var(--gold-light); }
+.drag-handle:active { cursor: grabbing; }
 .intervention-line.is-offert {
   background: var(--gold-ultra);
   border-color: var(--gold-light);

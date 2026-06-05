@@ -107,7 +107,7 @@
           {% set base_val    = '' if (is_offert or is_incl) else ('%.2f'|format(line.prix or 0)) %}
           {% set display_val = '' if (is_offert or is_incl) else ('%.2f'|format(line.prix_client if line.prix_client else (line.prix or 0))) %}
           <div class="intervention-line {% if is_offert %}is-offert{% endif %}{% if is_incl %} is-incl{% endif %}">
-            <span class="move-btns"><button type="button" class="btn-move" onclick="moveLine(this,-1)">▲</button><button type="button" class="btn-move" onclick="moveLine(this,1)">▼</button></span>
+            <span class="drag-handle" title="Déplacer" onmousedown="initHandleDrag(event, this.closest('.intervention-line'))">⠿</span>
             <input type="text" name="nec_description[]" value="{{ line.description or '' }}" placeholder="Intitulé">
             <input type="text" name="nec_prix[]" class="prix-input"
                    data-base="{{ base_val }}"
@@ -198,7 +198,7 @@
         <div class="interventions" id="opt-lines">
           {% for line in (data.interventions_optionnelles or []) %}
           <div class="intervention-line">
-            <span class="move-btns"><button type="button" class="btn-move" onclick="moveLine(this,-1)">▲</button><button type="button" class="btn-move" onclick="moveLine(this,1)">▼</button></span>
+            <span class="drag-handle" title="Déplacer" onmousedown="initHandleDrag(event, this.closest('.intervention-line'))">⠿</span>
             <input type="text" name="opt_description[]" value="{{ line.description or '' }}" placeholder="Option proposée">
             <input type="text" name="opt_prix[]" class="prix-input"
                    data-base="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
@@ -616,7 +616,7 @@ function addLine(prefix) {
        <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>`
     : '';
   div.innerHTML = `
-    <span class="move-btns"><button type="button" class="btn-move" onclick="moveLine(this,-1)">▲</button><button type="button" class="btn-move" onclick="moveLine(this,1)">▼</button></span>
+    <span class="drag-handle" title="Déplacer" onmousedown="initHandleDrag(event, this.closest('.intervention-line'))">⠿</span>
     <input type="text" name="${prefix}_description[]" placeholder="Intitulé">
     <input type="text" name="${prefix}_prix[]" class="prix-input" data-base="" placeholder="0,00">
     <input type="hidden" name="${prefix}_base_prix[]" class="base-prix-input" value="">
@@ -628,18 +628,59 @@ function addLine(prefix) {
   if (prefix === 'nec') updateTotal();
 }
 
-/* ── Réordonnage ↑↓ des interventions ── */
-function moveLine(btn, dir) {
-  const line = btn.closest('.intervention-line');
-  const parent = line.parentNode;
-  if (dir === -1) {
-    const prev = line.previousElementSibling;
-    if (prev) parent.insertBefore(line, prev);
-  } else {
-    const next = line.nextElementSibling;
-    if (next) parent.insertBefore(next, line);
+/* ── Drag via handle ⠿ (mouse custom — fiable, sans HTML5 DnD) ── */
+function initHandleDrag(e, dragEl) {
+  e.preventDefault();
+  const parent   = dragEl.parentNode;
+  const siblings = () => [...parent.querySelectorAll(':scope > .intervention-line')];
+
+  // Ghost visuel
+  const ghost = dragEl.cloneNode(true);
+  ghost.style.cssText = 'position:fixed;opacity:.55;pointer-events:none;z-index:9999;' +
+    'width:' + dragEl.offsetWidth + 'px;box-shadow:0 4px 16px rgba(0,0,0,.15);';
+  document.body.appendChild(ghost);
+
+  let lastTarget = null;
+
+  function onMove(ev) {
+    ghost.style.left = ev.clientX - 20 + 'px';
+    ghost.style.top  = ev.clientY - 14 + 'px';
+    dragEl.style.opacity = '0.35';
+
+    // Trouver la ligne cible
+    let target = null, before = true;
+    for (const s of siblings()) {
+      if (s === dragEl) continue;
+      const r = s.getBoundingClientRect();
+      if (ev.clientY >= r.top && ev.clientY <= r.bottom) {
+        target = s;
+        before = ev.clientY < r.top + r.height / 2;
+        break;
+      }
+    }
+    if (lastTarget) lastTarget.style.borderTop = lastTarget.style.borderBottom = '';
+    if (target) {
+      target.style[before ? 'borderTop' : 'borderBottom'] = '2px solid var(--gold)';
+      lastTarget = target;
+    }
   }
-  updateTotal();
+
+  function onUp(ev) {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+    ghost.remove();
+    dragEl.style.opacity = '';
+    if (lastTarget) {
+      lastTarget.style.borderTop = lastTarget.style.borderBottom = '';
+      const r = lastTarget.getBoundingClientRect();
+      const before = ev.clientY < r.top + r.height / 2;
+      parent.insertBefore(dragEl, before ? lastTarget : lastTarget.nextSibling);
+    }
+    updateTotal();
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
 }
 
 /* ── Photo preview ── */

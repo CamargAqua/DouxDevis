@@ -439,7 +439,7 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     intro_p.paragraph_format.space_after = Pt(4)
     _add_run(intro_p,
              "Madame, Monsieur,\n"
-             "Suite à l'examen de votre pièce, veuillez trouver ci-dessous"
+             "Suite à l'examen de votre pièce, veuillez trouver ci-dessous "
              "nos préconisations de remise en état.",
              italic=True, size=10)
 
