@@ -228,9 +228,36 @@ def create_app() -> Flask:
             flash("Clé API manquante — contactez l'administrateur.", "error")
             return redirect(url_for("index"))
 
+        paste_text = request.form.get("paste_text", "").strip()
+
+        # ── Mode "coller un email" ──────────────────────────────────────────
+        if paste_text:
+            from pdf_extractor import _extract_from_text, _detect_brand_from_text
+            import re as _re
+            try:
+                data = _extract_from_text(paste_text, api_key=api_key)
+            except Exception as exc:
+                flash(f"Erreur lors de l'extraction : {exc}", "error")
+                return redirect(url_for("index"))
+            if _re.search(r"\d[\s ]*[€$]?\s*HT\b|\bHT\s*[:=]\s*\d", paste_text, _re.IGNORECASE):
+                data["coeff_base"] = "ht"
+            if data.get("marque", "Autre").lower() in ("autre", ""):
+                detected = _detect_brand_from_text(paste_text[:500])
+                if detected:
+                    data["marque"] = detected
+            if not (data.get("sav") or {}).get("date"):
+                if "sav" not in data or not isinstance(data["sav"], dict):
+                    data["sav"] = {}
+                data["sav"]["date"] = datetime.now().strftime("%d.%m.%Y")
+            token = uuid.uuid4().hex
+            session["token"] = token
+            session["data"]  = data
+            return redirect(url_for("review"))
+
+        # ── Mode fichier ────────────────────────────────────────────────────
         upload_file = request.files.get("pdf")
         if not upload_file or not upload_file.filename:
-            flash("Veuillez sélectionner un fichier.", "error")
+            flash("Veuillez sélectionner un fichier ou coller un email.", "error")
             return redirect(url_for("index"))
         if not _has_extension(upload_file.filename, ALLOWED_DOC):
             flash("Le fichier doit être un PDF, un email (.eml) ou un message Outlook (.msg).", "error")

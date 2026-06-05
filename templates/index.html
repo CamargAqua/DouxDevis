@@ -4,34 +4,64 @@
 <section class="card">
   <div class="hero">
     <h1>Nouveau devis</h1>
-    <p class="lead">Importez le devis reçu du partenaire — PDF ou email (.eml). Les informations sont extraites automatiquement.</p>
-
+    <p class="lead">Importez le devis reçu du partenaire — PDF ou email. Les informations sont extraites automatiquement.</p>
   </div>
 
-  <form action="{{ url_for('extract') }}" method="post" enctype="multipart/form-data" class="upload-form">
+  <!-- Onglets -->
+  <div style="display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid var(--line);">
+    <button type="button" id="tab-file" onclick="switchTab('file')"
+      style="background:none;border:none;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--gold);margin-bottom:-2px;color:var(--gold);">
+      📄 Fichier
+    </button>
+    <button type="button" id="tab-paste" onclick="switchTab('paste')"
+      style="background:none;border:none;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--ink-soft);">
+      ✉️ Coller un email
+    </button>
+  </div>
+
+  <!-- Mode fichier -->
+  <form id="form-file" action="{{ url_for('extract') }}" method="post" enctype="multipart/form-data" class="upload-form">
     <label for="pdf" class="dropzone" id="dropzone">
       <span class="dropzone-icon">📄</span>
       <span class="dropzone-title">Glisser-déposer le fichier ici</span>
-
       <span class="dropzone-sub">PDF, email (.eml) ou message Outlook (.msg) — max 25 Mo</span>
-
       <input type="file" id="pdf" name="pdf" accept="application/pdf,.pdf,.eml,message/rfc822,.msg,application/vnd.ms-outlook" required>
-
       <span id="filename" class="dropzone-filename" style="display:none"></span>
     </label>
-
-    <button type="submit" id="submit-btn" class="btn btn-primary btn-lg" style="align-self:center;min-width:220px">
+    <button type="submit" id="submit-file" class="btn btn-primary btn-lg" style="align-self:center;min-width:220px">
       Extraire les informations
     </button>
-    <p class="hint" id="hint-normal">⏱ L'extraction prend généralement 10 à 20 secondes</p>
-    <p class="hint" id="hint-loading" style="display:none;color:var(--gold);font-weight:600">
-      ⏳ Analyse en cours… ne pas fermer la page
-
-    </p>
+    <p class="hint" id="hint-normal-file">⏱ L'extraction prend généralement 10 à 20 secondes</p>
+    <p class="hint" id="hint-loading-file" style="display:none;color:var(--gold);font-weight:600">⏳ Analyse en cours… ne pas fermer la page</p>
   </form>
+
+  <!-- Mode coller -->
+  <form id="form-paste" action="{{ url_for('extract') }}" method="post" class="upload-form" style="display:none">
+    <textarea name="paste_text" id="paste-area" placeholder="Colle ici le contenu de ton email Outlook (Ctrl+A dans le mail puis Ctrl+C, ensuite Ctrl+V ici)…"
+      style="width:100%;box-sizing:border-box;min-height:200px;padding:12px 14px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;line-height:1.5;"
+      required></textarea>
+    <button type="submit" id="submit-paste" class="btn btn-primary btn-lg" style="align-self:center;min-width:220px">
+      Extraire les informations
+    </button>
+    <p class="hint" id="hint-normal-paste">⏱ L'extraction prend généralement 10 à 20 secondes</p>
+    <p class="hint" id="hint-loading-paste" style="display:none;color:var(--gold);font-weight:600">⏳ Analyse en cours… ne pas fermer la page</p>
+  </form>
+
 </section>
 
 <script>
+  /* ── Onglets ── */
+  function switchTab(tab) {
+    const isFile = tab === 'file';
+    document.getElementById('form-file').style.display  = isFile ? '' : 'none';
+    document.getElementById('form-paste').style.display = isFile ? 'none' : '';
+    document.getElementById('tab-file').style.borderBottomColor  = isFile ? 'var(--gold)' : 'transparent';
+    document.getElementById('tab-file').style.color              = isFile ? 'var(--gold)' : 'var(--ink-soft)';
+    document.getElementById('tab-paste').style.borderBottomColor = isFile ? 'transparent' : 'var(--gold)';
+    document.getElementById('tab-paste').style.color             = isFile ? 'var(--ink-soft)' : 'var(--gold)';
+  }
+
+  /* ── Dropzone fichier ── */
   const input = document.getElementById('pdf');
   const fname = document.getElementById('filename');
   const zone  = document.getElementById('dropzone');
@@ -57,20 +87,19 @@
       dt.items.add(files[0]);
       input.files = dt.files;
       input.dispatchEvent(new Event('change'));
-    } catch (_) {
-      // fallback navigateurs anciens — le fichier ne se charge pas mais pas de crash
-    }
+    } catch (_) {}
   });
 
-  // Anti-double-submit + spinner
-  document.querySelector('.upload-form').addEventListener('submit', function(e) {
-    if (!input.files[0]) return; // laisser la validation HTML gérer
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true;
-    btn.textContent = '⏳ Extraction en cours…';
-    btn.style.opacity = '0.7';
-    document.getElementById('hint-normal').style.display  = 'none';
-    document.getElementById('hint-loading').style.display = 'block';
+  /* ── Spinner anti-double-submit ── */
+  ['file','paste'].forEach(function(mode) {
+    document.getElementById('form-' + mode).addEventListener('submit', function() {
+      var btn = document.getElementById('submit-' + mode);
+      btn.disabled = true;
+      btn.textContent = '⏳ Extraction en cours…';
+      btn.style.opacity = '0.7';
+      document.getElementById('hint-normal-' + mode).style.display  = 'none';
+      document.getElementById('hint-loading-' + mode).style.display = 'block';
+    });
   });
 </script>
 {% endblock %}
