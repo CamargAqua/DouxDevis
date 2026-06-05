@@ -102,15 +102,16 @@
 
         <div class="interventions" id="nec-lines">
           {% for line in (data.interventions_necessaires or [{'description':'','prix':''}]) %}
-          {% set is_offert = line.prix_label == 'OFFERT' %}
-          {% set is_incl   = line.prix_label == 'INCL' %}
-          {% set base_val  = '' if (is_offert or is_incl) else ('%.2f'|format(line.prix or 0)) %}
-          <div class="intervention-line {% if is_offert %}is-offert{% endif %}{% if is_incl %} is-incl{% endif %}" draggable="true">
-            <span class="drag-handle">⠿</span>
+          {% set is_offert   = line.prix_label == 'OFFERT' %}
+          {% set is_incl     = line.prix_label == 'INCL' %}
+          {% set base_val    = '' if (is_offert or is_incl) else ('%.2f'|format(line.prix or 0)) %}
+          {% set display_val = '' if (is_offert or is_incl) else ('%.2f'|format(line.prix_client if line.prix_client else (line.prix or 0))) %}
+          <div class="intervention-line {% if is_offert %}is-offert{% endif %}{% if is_incl %} is-incl{% endif %}">
+            <span class="move-btns"><button type="button" class="btn-move" onclick="moveLine(this,-1)">▲</button><button type="button" class="btn-move" onclick="moveLine(this,1)">▼</button></span>
             <input type="text" name="nec_description[]" value="{{ line.description or '' }}" placeholder="Intitulé">
             <input type="text" name="nec_prix[]" class="prix-input"
                    data-base="{{ base_val }}"
-                   value="{{ base_val }}"
+                   value="{{ display_val }}"
                    placeholder="0,00">
             <input type="hidden" name="nec_base_prix[]" class="base-prix-input" value="{{ base_val }}">
             <input type="hidden" name="nec_label[]" class="label-input" value="{{ 'OFFERT' if is_offert else ('INCL' if is_incl else '') }}">
@@ -196,8 +197,8 @@
       <div class="form-section-body">
         <div class="interventions" id="opt-lines">
           {% for line in (data.interventions_optionnelles or []) %}
-          <div class="intervention-line" draggable="true">
-            <span class="drag-handle">⠿</span>
+          <div class="intervention-line">
+            <span class="move-btns"><button type="button" class="btn-move" onclick="moveLine(this,-1)">▲</button><button type="button" class="btn-move" onclick="moveLine(this,1)">▼</button></span>
             <input type="text" name="opt_description[]" value="{{ line.description or '' }}" placeholder="Option proposée">
             <input type="text" name="opt_prix[]" class="prix-input"
                    data-base="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
@@ -443,7 +444,7 @@ function fmt(n) { return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maxim
 
 // Applique le coefficient sur chaque ligne (répartition proportionnelle du delta = x coeff)
 // Pour Omega (base HT) : inp.value = prix_HT × coeff ; pour les autres : prix_TTC × coeff
-function applyCoeffToLines(coeff) {
+function applyCoeffToLines(coeff, force) {
   ['#nec-lines', '#opt-lines'].forEach(selector => {
     document.querySelectorAll(selector + ' .intervention-line').forEach(line => {
       const lbl = line.querySelector('.label-input').value;
@@ -451,8 +452,14 @@ function applyCoeffToLines(coeff) {
       const inp = line.querySelector('.prix-input');
       if (!inp.dataset.base && inp.value) inp.dataset.base = inp.value;
       const base = parseFloat((inp.dataset.base || '0').replace(',','.'));
-      if (!isNaN(base) && base > 0)
-        inp.value = (base * coeff).toFixed(2);
+      if (!isNaN(base) && base > 0) {
+        // Sur le chargement initial (force=false), ne pas écraser si value est déjà
+        // le prix_client (différent de la base HT) — évite le drift de précision.
+        const current = parseFloat((inp.value || '0').replace(',','.'));
+        const computed = Math.round(base * coeff * 100) / 100;
+        if (force || Math.abs(current - computed) > 0.5 || current === base)
+          inp.value = computed.toFixed(2);
+      }
     });
   });
 }
@@ -546,9 +553,9 @@ function roundInputs() {
   });
 }
 
-function updateTotal() {
+function updateTotal(force) {
   const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
-  applyCoeffToLines(coeff);
+  applyCoeffToLines(coeff, force !== false);
   roundInputs();
   refreshTotals();
 }
@@ -559,7 +566,7 @@ function setCoeff(val) {
   updateTotal();
 }
 
-document.getElementById('coeff-input').addEventListener('input', updateTotal);
+document.getElementById('coeff-input').addEventListener('input', () => updateTotal(true));
 
 // Quand l'utilisateur modifie manuellement un prix → recalibrer data-base + hidden base
 ['nec-lines', 'opt-lines'].forEach(id => {
@@ -594,23 +601,22 @@ window.selectMarque = function(val) {
   document.getElementById('coeff-input').value      = coeff;
   document.getElementById('coeff-hidden').value     = coeff.toFixed(4);
   document.getElementById('coeff-base-hidden').value = base;
-  updateTotal();
+  updateTotal(true);
 };
 
-updateTotal();
+updateTotal(false); // init — preserve prix_client déjà affichés
 
 /* ── Ajouter une ligne ── */
 function addLine(prefix) {
   const cont = document.getElementById(prefix+'-lines');
   const div  = document.createElement('div');
   div.className = 'intervention-line';
-  div.draggable = true;
   const _toggleBtns = prefix === 'nec'
     ? `<button type="button" class="toggle-incl" onclick="toggleIncl(this)"><span class="dot"></span>INCL</button>
        <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>`
     : '';
   div.innerHTML = `
-    <span class="drag-handle">⠿</span>
+    <span class="move-btns"><button type="button" class="btn-move" onclick="moveLine(this,-1)">▲</button><button type="button" class="btn-move" onclick="moveLine(this,1)">▼</button></span>
     <input type="text" name="${prefix}_description[]" placeholder="Intitulé">
     <input type="text" name="${prefix}_prix[]" class="prix-input" data-base="" placeholder="0,00">
     <input type="hidden" name="${prefix}_base_prix[]" class="base-prix-input" value="">
@@ -618,75 +624,23 @@ function addLine(prefix) {
     ${_toggleBtns}
     <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>`;
   cont.appendChild(div);
-  if (window._bindDragLine) window._bindDragLine(div);
   div.querySelector('.prix-input').focus();
   if (prefix === 'nec') updateTotal();
 }
 
-/* ── Drag & drop réordonnage des interventions ── */
-(function() {
-  let dragSrc = null;
-
-  function onDragStart(e) {
-    dragSrc = this;
-    this.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', '');
+/* ── Réordonnage ↑↓ des interventions ── */
+function moveLine(btn, dir) {
+  const line = btn.closest('.intervention-line');
+  const parent = line.parentNode;
+  if (dir === -1) {
+    const prev = line.previousElementSibling;
+    if (prev) parent.insertBefore(line, prev);
+  } else {
+    const next = line.nextElementSibling;
+    if (next) parent.insertBefore(next, line);
   }
-  function onDragEnd() {
-    dragSrc = null;
-    document.querySelectorAll('.intervention-line').forEach(el => {
-      el.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
-    });
-  }
-  function onDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (!dragSrc || dragSrc === this) return;
-    this.classList.remove('drag-over-top', 'drag-over-bottom');
-    const rect = this.getBoundingClientRect();
-    const mid  = rect.top + rect.height / 2;
-    this.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
-  }
-  function onDragLeave() {
-    this.classList.remove('drag-over-top', 'drag-over-bottom');
-  }
-  function onDrop(e) {
-    e.preventDefault();
-    if (!dragSrc || dragSrc === this) return;
-    const rect = this.getBoundingClientRect();
-    const mid  = rect.top + rect.height / 2;
-    const before = e.clientY < mid;
-    this.classList.remove('drag-over-top', 'drag-over-bottom');
-    if (before) this.parentNode.insertBefore(dragSrc, this);
-    else         this.parentNode.insertBefore(dragSrc, this.nextSibling);
-    updateTotal();
-  }
-
-  function bindDrag(el) {
-    el.addEventListener('dragstart',  onDragStart);
-    el.addEventListener('dragend',    onDragEnd);
-    el.addEventListener('dragover',   onDragOver);
-    el.addEventListener('dragleave',  onDragLeave);
-    el.addEventListener('drop',       onDrop);
-  }
-
-  // Empêcher le drag sur les inputs (ne déclencher que depuis la poignée)
-  function guardInputs(el) {
-    el.querySelectorAll('input, button, textarea').forEach(function(inp) {
-      inp.addEventListener('mousedown', function(e) { e.stopPropagation(); });
-    });
-  }
-
-  // Init sur toutes les lignes existantes
-  document.querySelectorAll('.intervention-line').forEach(function(el) {
-    bindDrag(el);
-    guardInputs(el);
-  });
-
-  // Exposer pour addLine()
-  window._bindDragLine = function(el) { bindDrag(el); guardInputs(el); };
-})();
+  updateTotal();
+}
 
 /* ── Photo preview ── */
 document.getElementById('photo-input').addEventListener('change', function() {

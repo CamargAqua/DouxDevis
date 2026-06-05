@@ -194,14 +194,15 @@ textarea { resize: vertical; min-height: 90px; }
   transition: border-color var(--transition), background var(--transition);
 }
 .intervention-line:hover { border-color: var(--line-strong); background: #fff; }
-.drag-handle {
-  cursor: grab; color: #bbb; font-size: 16px; line-height: 1;
-  user-select: none; text-align: center; padding: 2px 0;
+.move-btns {
+  display: flex; flex-direction: column; gap: 2px; align-items: center;
 }
-.drag-handle:active { cursor: grabbing; }
-.intervention-line.dragging { opacity: 0.4; }
-.intervention-line.drag-over-top    { border-top: 2px solid var(--gold); }
-.intervention-line.drag-over-bottom { border-bottom: 2px solid var(--gold); }
+.btn-move {
+  background: none; border: 1px solid var(--line); border-radius: 3px;
+  padding: 0 4px; font-size: 9px; line-height: 1.6; cursor: pointer;
+  color: var(--ink-soft); transition: background var(--transition);
+}
+.btn-move:hover { background: var(--gold-ultra); border-color: var(--gold-light); }
 .intervention-line.is-offert {
   background: var(--gold-ultra);
   border-color: var(--gold-light);
