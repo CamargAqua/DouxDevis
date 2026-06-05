@@ -409,7 +409,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     )
     story.append(_p(
         "Madame, Monsieur,\n"
-        "Suite à l'examen de votre montre, veuillez trouver ci-dessous "
+        "Suite à l'examen de votre pièce, veuillez trouver ci-dessous"
         "nos préconisations de remise en état.",
         intro_style,
     ))
