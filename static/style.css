@@ -185,7 +185,7 @@ textarea { resize: vertical; min-height: 90px; }
 
 .intervention-line {
   display: grid;
-  grid-template-columns: 1fr 120px auto auto;
+  grid-template-columns: 20px 1fr 120px auto auto auto;
   gap: 8px; align-items: center;
   padding: 10px 12px;
   background: var(--bg);
@@ -194,6 +194,14 @@ textarea { resize: vertical; min-height: 90px; }
   transition: border-color var(--transition), background var(--transition);
 }
 .intervention-line:hover { border-color: var(--line-strong); background: #fff; }
+.drag-handle {
+  cursor: grab; color: #bbb; font-size: 16px; line-height: 1;
+  user-select: none; text-align: center; padding: 2px 0;
+}
+.drag-handle:active { cursor: grabbing; }
+.intervention-line.dragging { opacity: 0.4; }
+.intervention-line.drag-over-top    { border-top: 2px solid var(--gold); }
+.intervention-line.drag-over-bottom { border-bottom: 2px solid var(--gold); }
 .intervention-line.is-offert {
   background: var(--gold-ultra);
   border-color: var(--gold-light);

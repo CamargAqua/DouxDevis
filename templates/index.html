@@ -36,10 +36,33 @@
   </form>
 
   <!-- Mode coller -->
-  <form id="form-paste" action="{{ url_for('extract') }}" method="post" class="upload-form" style="display:none">
-    <textarea name="paste_text" id="paste-area" placeholder="Colle ici le contenu de ton email Outlook (Ctrl+A dans le mail puis Ctrl+C, ensuite Ctrl+V ici)…"
-      style="width:100%;box-sizing:border-box;min-height:200px;padding:12px 14px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;line-height:1.5;"
-      required></textarea>
+  <form id="form-paste" action="{{ url_for('extract') }}" method="post" class="upload-form" style="display:none" onsubmit="return validatePaste()">
+    <!-- Zone visuelle — même style que dropzone fichier -->
+    <div id="paste-zone" class="dropzone" tabindex="0"
+         onclick="document.getElementById('paste-area').focus()"
+         style="cursor:pointer;outline:none;">
+      <!-- État vide -->
+      <span id="paste-empty">
+        <span class="dropzone-icon">✉️</span>
+        <span class="dropzone-title">Cliquer ici puis Ctrl+V</span>
+        <span class="dropzone-sub">Copier tout le mail Outlook (Ctrl+A → Ctrl+C) puis coller ici</span>
+      </span>
+      <!-- État rempli (masqué par défaut) -->
+      <span id="paste-ready" style="display:none;text-align:center;">
+        <span style="font-size:2rem;">✉️</span>
+        <span id="paste-badge" style="display:block;margin-top:8px;font-weight:700;font-size:15px;color:var(--gold)">Email collé</span>
+        <span id="paste-info" style="display:block;font-size:12px;color:var(--ink-soft);margin-top:4px"></span>
+        <button type="button" id="paste-clear"
+          onclick="clearPaste(event)"
+          style="margin-top:10px;background:none;border:1.5px solid var(--line);border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--ink-soft)">
+          ✕ Effacer
+        </button>
+      </span>
+      <!-- Textarea invisible qui stocke le texte -->
+      <textarea id="paste-area" name="paste_text"
+        style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;"></textarea>
+    </div>
+
     <button type="submit" id="submit-paste" class="btn btn-primary btn-lg" style="align-self:center;min-width:220px">
       Extraire les informations
     </button>
@@ -89,6 +112,59 @@
       input.dispatchEvent(new Event('change'));
     } catch (_) {}
   });
+
+  /* ── Zone coller email ── */
+  const pasteZone  = document.getElementById('paste-zone');
+  const pasteArea  = document.getElementById('paste-area');
+  const pasteEmpty = document.getElementById('paste-empty');
+  const pasteReady = document.getElementById('paste-ready');
+  const pasteBadge = document.getElementById('paste-badge');
+  const pasteInfo  = document.getElementById('paste-info');
+
+  function setPasteReady(text) {
+    pasteArea.value = text;
+    // Compter les lignes non vides pour l'info
+    const lines = text.split('\n').filter(l => l.trim()).length;
+    pasteBadge.textContent = 'Email collé — prêt à extraire';
+    pasteInfo.textContent  = lines + ' ligne' + (lines > 1 ? 's' : '') + ' copiée' + (lines > 1 ? 's' : '');
+    pasteEmpty.style.display = 'none';
+    pasteReady.style.display = '';
+    pasteZone.style.borderColor = 'var(--gold)';
+    pasteZone.style.background  = 'var(--gold-ultra)';
+  }
+
+  function clearPaste(e) {
+    if (e) e.stopPropagation();
+    pasteArea.value = '';
+    pasteEmpty.style.display = '';
+    pasteReady.style.display = 'none';
+    pasteZone.style.borderColor = '';
+    pasteZone.style.background  = '';
+  }
+
+  // Coller via Ctrl+V sur la zone ou le textarea caché
+  pasteZone.addEventListener('paste', function(e) {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (text && text.trim()) { e.preventDefault(); setPasteReady(text.trim()); }
+  });
+  pasteArea.addEventListener('paste', function(e) {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (text && text.trim()) { e.preventDefault(); setPasteReady(text.trim()); }
+  });
+
+  // Focus sur la zone → focus sur textarea caché pour capter Ctrl+V
+  pasteZone.addEventListener('focus', () => pasteArea.focus());
+  pasteZone.addEventListener('click', () => pasteArea.focus());
+
+  function validatePaste() {
+    if (!pasteArea.value.trim()) {
+      pasteZone.style.borderColor = '#e53e3e';
+      pasteZone.style.boxShadow = '0 0 0 3px rgba(229,62,62,0.15)';
+      setTimeout(() => { pasteZone.style.borderColor=''; pasteZone.style.boxShadow=''; }, 1500);
+      return false;
+    }
+    return true;
+  }
 
   /* ── Spinner anti-double-submit ── */
   ['file','paste'].forEach(function(mode) {

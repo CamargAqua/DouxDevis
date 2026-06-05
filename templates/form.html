@@ -98,16 +98,15 @@
         <span class="section-chevron">▾</span>
       </div>
       <div class="form-section-body">
-        <label class="field">Description du service complet
-          <textarea name="service_complet" rows="3" placeholder="Sous-points : démontage, nettoyage…">{{ data.service_complet_description or '' }}</textarea>
-        </label>
+        <input type="hidden" name="service_complet" value="{{ data.service_complet_description or '' }}">
 
         <div class="interventions" id="nec-lines">
           {% for line in (data.interventions_necessaires or [{'description':'','prix':''}]) %}
           {% set is_offert = line.prix_label == 'OFFERT' %}
           {% set is_incl   = line.prix_label == 'INCL' %}
           {% set base_val  = '' if (is_offert or is_incl) else ('%.2f'|format(line.prix or 0)) %}
-          <div class="intervention-line {% if is_offert %}is-offert{% endif %}{% if is_incl %} is-incl{% endif %}">
+          <div class="intervention-line {% if is_offert %}is-offert{% endif %}{% if is_incl %} is-incl{% endif %}" draggable="true">
+            <span class="drag-handle">⠿</span>
             <input type="text" name="nec_description[]" value="{{ line.description or '' }}" placeholder="Intitulé">
             <input type="text" name="nec_prix[]" class="prix-input"
                    data-base="{{ base_val }}"
@@ -197,7 +196,8 @@
       <div class="form-section-body">
         <div class="interventions" id="opt-lines">
           {% for line in (data.interventions_optionnelles or []) %}
-          <div class="intervention-line">
+          <div class="intervention-line" draggable="true">
+            <span class="drag-handle">⠿</span>
             <input type="text" name="opt_description[]" value="{{ line.description or '' }}" placeholder="Option proposée">
             <input type="text" name="opt_prix[]" class="prix-input"
                    data-base="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
@@ -604,11 +604,13 @@ function addLine(prefix) {
   const cont = document.getElementById(prefix+'-lines');
   const div  = document.createElement('div');
   div.className = 'intervention-line';
+  div.draggable = true;
   const _toggleBtns = prefix === 'nec'
     ? `<button type="button" class="toggle-incl" onclick="toggleIncl(this)"><span class="dot"></span>INCL</button>
        <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>`
     : '';
   div.innerHTML = `
+    <span class="drag-handle">⠿</span>
     <input type="text" name="${prefix}_description[]" placeholder="Intitulé">
     <input type="text" name="${prefix}_prix[]" class="prix-input" data-base="" placeholder="0,00">
     <input type="hidden" name="${prefix}_base_prix[]" class="base-prix-input" value="">
@@ -616,9 +618,75 @@ function addLine(prefix) {
     ${_toggleBtns}
     <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>`;
   cont.appendChild(div);
+  if (window._bindDragLine) window._bindDragLine(div);
   div.querySelector('.prix-input').focus();
   if (prefix === 'nec') updateTotal();
 }
+
+/* ── Drag & drop réordonnage des interventions ── */
+(function() {
+  let dragSrc = null;
+
+  function onDragStart(e) {
+    dragSrc = this;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+  }
+  function onDragEnd() {
+    dragSrc = null;
+    document.querySelectorAll('.intervention-line').forEach(el => {
+      el.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+    });
+  }
+  function onDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!dragSrc || dragSrc === this) return;
+    this.classList.remove('drag-over-top', 'drag-over-bottom');
+    const rect = this.getBoundingClientRect();
+    const mid  = rect.top + rect.height / 2;
+    this.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
+  }
+  function onDragLeave() {
+    this.classList.remove('drag-over-top', 'drag-over-bottom');
+  }
+  function onDrop(e) {
+    e.preventDefault();
+    if (!dragSrc || dragSrc === this) return;
+    const rect = this.getBoundingClientRect();
+    const mid  = rect.top + rect.height / 2;
+    const before = e.clientY < mid;
+    this.classList.remove('drag-over-top', 'drag-over-bottom');
+    if (before) this.parentNode.insertBefore(dragSrc, this);
+    else         this.parentNode.insertBefore(dragSrc, this.nextSibling);
+    updateTotal();
+  }
+
+  function bindDrag(el) {
+    el.addEventListener('dragstart',  onDragStart);
+    el.addEventListener('dragend',    onDragEnd);
+    el.addEventListener('dragover',   onDragOver);
+    el.addEventListener('dragleave',  onDragLeave);
+    el.addEventListener('drop',       onDrop);
+  }
+
+  // Empêcher le drag sur les inputs (ne déclencher que depuis la poignée)
+  function guardInputs(el) {
+    el.querySelectorAll('input, button, textarea').forEach(function(inp) {
+      inp.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+    });
+  }
+
+  // Init sur toutes les lignes existantes
+  document.querySelectorAll('.intervention-line').forEach(function(el) {
+    bindDrag(el);
+    guardInputs(el);
+  });
+
+  // Exposer pour addLine()
+  window._bindDragLine = function(el) { bindDrag(el); guardInputs(el); };
+})();
 
 /* ── Photo preview ── */
 document.getElementById('photo-input').addEventListener('change', function() {

@@ -214,13 +214,32 @@ def _logo_path(name: str) -> Path | None:
 
 
 def _logo_img(path: Path, max_w: float, max_h: float) -> Image:
-    img = Image(str(path))
+    """Charge un logo, rogne les bordures vides (transparentes ou blanches), et scale."""
+    from io import BytesIO as _BIO
+    src: str | _BIO = str(path)
+    try:
+        from PIL import Image as _PIL
+        pil = _PIL.open(str(path)).convert("RGBA")
+        r, g, b, a = pil.split()
+        # Rogner les pixels transparents
+        bbox = a.getbbox()
+        if bbox and bbox != (0, 0, pil.width, pil.height):
+            pil = pil.crop(bbox)
+        buf = _BIO()
+        pil.save(buf, format="PNG")
+        buf.seek(0)
+        src = buf
+    except Exception:
+        pass
+
+    img = Image(src)
     ratio = img.imageWidth / img.imageHeight
-    w = min(max_w, max_h * ratio)
-    h = w / ratio
-    if h > max_h:
-        h = max_h
-        w = h * ratio
+    # Toujours remplir max_h en priorité, contraindre par max_w si trop large
+    h = max_h
+    w = h * ratio
+    if w > max_w:
+        w = max_w
+        h = w / ratio
     img._restrictSize(w, h)
     return img
 
