@@ -98,6 +98,16 @@ Si le document est un email et que les prix sont exprimés en HT (ex: "28€HT",
   → EXEMPLE : "DEVIS 1: ECHANGE PENDENTIF A NEUF: 42€" → interventions_necessaires[0].prix: 42.00, total_ttc: 42.00
 Pour les emails avec plusieurs options (séparées par //// ou numérotées) : la première est interventions_necessaires, les suivantes sont interventions_optionnelles.
 
+═══ LISTE D'INTERVENTIONS AVEC UN SEUL PRIX GLOBAL ═══
+Si l'email liste plusieurs interventions de détail (tirets/puces) SANS prix individuel, et qu'un prix global unique est donné ensuite :
+  → Ne pas créer une ligne par intervention
+  → Créer UNE SEULE entrée dans interventions_necessaires avec un intitulé synthétique EN MAJUSCULES (ex: "RÉPARATION BAGUE", "RÉVISION COMPLÈTE")
+  → Mettre le prix global dans cette ligne
+  → Copier les items de détail dans service_complet_description (un par ligne, sans tirets ni puces)
+  → EXEMPLE (email Fred) : 6 items détaillés + "270 €HT" global
+    → interventions_necessaires: [{"description": "RÉPARATION BAGUE FORCE10", "prix": 270.00}]
+    → service_complet_description: "diagnostic\nfournitures des 3 pierres\ncontrôle du serti\nremise en forme et soudure\npolissage\ncontrôle technique et esthétique"
+
 ═══ CONVERSION DES PRIX ═══
 - Nombre décimal : "705,50" → 705.50 | "310.00" → 310.0
 - Gratuit : "OFFERT" → 0.00
