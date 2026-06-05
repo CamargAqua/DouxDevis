@@ -286,17 +286,20 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         left_cell = _html('<font face="Helvetica-Bold" size="28">DOUX JOAILLIER</font>', base)
 
     # Logo marque partenaire (droite) — Image ou nom en or
-    # Rolex interdit l'affichage de son logo : on n'affiche que DOUX
-    _NO_LOGO_BRANDS = {"rolex"}
-    brand_logo = None if marque_raw.lower() in _NO_LOGO_BRANDS else _logo_path(marque_raw)
-    if brand_logo:
-        right_cell = _logo_img(brand_logo, 8 * cm, 1.4 * cm)
-        right_cell.hAlign = 'RIGHT'
+    # Rolex : ni logo ni mention — cellule vide
+    _NO_BRAND_DISPLAY = {"rolex"}
+    if marque_raw.lower() in _NO_BRAND_DISPLAY:
+        right_cell = _html("", base)
     else:
-        right_cell = _html(
-            f'<para align="right"><font face="Helvetica-Bold" size="22"'
-            f' color="#C8A028">{marque_up}</font></para>', base
-        )
+        brand_logo = _logo_path(marque_raw)
+        if brand_logo:
+            right_cell = _logo_img(brand_logo, 8 * cm, 1.4 * cm)
+            right_cell.hAlign = 'RIGHT'
+        else:
+            right_cell = _html(
+                f'<para align="right"><font face="Helvetica-Bold" size="22"'
+                f' color="#C8A028">{marque_up}</font></para>', base
+            )
 
     hdr = Table([[left_cell, right_cell]], colWidths=[9 * cm, 9 * cm],
                 rowHeights=[1.6 * cm])
