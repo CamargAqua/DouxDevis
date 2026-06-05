@@ -309,7 +309,24 @@ def _format_price(value: Any) -> str:
     return f"{value:,.2f}".replace(",", " ").replace(".", ",").replace(" ", " ")
 
 
-def _add_footer_block(doc: Document, delai: str, frais_refus: int | None = None) -> None:
+_DOCX_FOOTERS: dict[str, tuple[str, str]] = {
+    "avignon": (
+        "SARL DOUX Développement au Capital de 15 245 € - R.C. Avignon 65 A 59 – Siret 315 215 442 00023 – APE 4777 Z – TVA",
+        "Intracommunautaire FR 313 152 15442  ",
+    ),
+    "nimes": (
+        "SAS DIANE DOUX – Siret 354 089 419 00049 – APE 4777 Z – 2 PLACE DE LA MAISON CARRÉE, 30000 NÎMES",
+        "",
+    ),
+    "nîmes": (
+        "SAS DIANE DOUX – Siret 354 089 419 00049 – APE 4777 Z – 2 PLACE DE LA MAISON CARRÉE, 30000 NÎMES",
+        "",
+    ),
+}
+_DOCX_FOOTER_DEFAULT = _DOCX_FOOTERS["avignon"]
+
+
+def _add_footer_block(doc: Document, delai: str, frais_refus: int | None = None, lieu: str = "Avignon") -> None:
     p = doc.add_paragraph()
     _add_run(p, f"DELAIS APRES ACCORD {delai.upper()} SOUS RESERVE DE DISPONIBILITE DES PIECES",
              size=9)
@@ -350,14 +367,14 @@ def _add_footer_block(doc: Document, delai: str, frais_refus: int | None = None)
     sig_cell.add_paragraph()
 
     doc.add_paragraph()
+    footer_lines = _DOCX_FOOTERS.get((lieu or "").strip().lower(), _DOCX_FOOTER_DEFAULT)
     legal = doc.add_paragraph()
     legal.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    _add_run(legal,
-             "SARL DOUX Développement au Capital de 15 245 € - R.C. Avignon 65 A 59 – Siret 315 215 442 00023 – APE 4777 Z – TVA",
-             size=8)
+    _add_run(legal, footer_lines[0], size=8)
     legal2 = doc.add_paragraph()
     legal2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    _add_run(legal2, "Intracommunautaire FR 313 152 15442  ", size=8)
+    if footer_lines[1]:
+        _add_run(legal2, footer_lines[1], size=8)
     _add_run(legal2, "sav@douxjoaillier.com", size=8, color=RGBColor(0x05, 0x63, 0xC1))
 
     # Ligne CGV + QR code côte à côte
@@ -482,7 +499,8 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
                         total_value=total_avec_opt)
 
     frais_refus = FRAIS_REFUS.get((marque or "").lower())
-    _add_footer_block(doc, delai=data.get("delai") or "4 à 6 semaines", frais_refus=frais_refus)
+    _add_footer_block(doc, delai=data.get("delai") or "4 à 6 semaines", frais_refus=frais_refus,
+                      lieu=(data.get("sav") or {}).get("lieu") or "Avignon")
 
     buf = BytesIO()
     doc.save(buf)

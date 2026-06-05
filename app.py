@@ -592,6 +592,11 @@ def _form_to_data(form) -> dict:
         coeff = float((form.get("coeff") or "1.0").replace(",", "."))
     except (ValueError, TypeError):
         coeff = 1.0
+    try:
+        coeff_opt_raw = (form.get("coeff_opt") or "").strip()
+        coeff_opt = float(coeff_opt_raw.replace(",", ".")) if coeff_opt_raw else coeff
+    except (ValueError, TypeError):
+        coeff_opt = coeff
     coeff_base = (form.get("coeff_base") or "ttc").lower()  # "ht" ou "ttc"
 
     # Les inputs soumettent déjà les prix clients appliqués dans le JS :
@@ -650,10 +655,10 @@ def _form_to_data(form) -> dict:
     else:
         total_client = 0.0
 
-    # ── OPTIONS : ceil5 par ligne indépendamment ──
+    # ── OPTIONS : ceil5 par ligne avec coeff_opt si défini ──
     for l in priced_opts:
         base = l.get("_base_prix") or 0
-        l["prix_client"] = _ceil5(base * coeff) if base > 0 else _ceil5(l["prix_client"])
+        l["prix_client"] = _ceil5(base * coeff_opt) if base > 0 else _ceil5(l["prix_client"])
 
     # Fixer prix (HT partenaire) sur toutes les lignes
     for line in necessaires + optionnelles:
@@ -682,10 +687,14 @@ def _form_to_data(form) -> dict:
             "etat": etat_lines,
         },
         "service_complet_description": form.get("service_complet", "").strip(),
-        "interventions_necessaires": necessaires,
+        "interventions_necessaires": (
+            [l for l in necessaires if (l.get("prix_label") or "") != "OFFERT"] +
+            [l for l in necessaires if (l.get("prix_label") or "") == "OFFERT"]
+        ),
         "interventions_optionnelles": optionnelles,
         "total_ttc": total_client,
         "coeff": coeff,
+        "coeff_opt": coeff_opt if coeff_opt != coeff else None,
         "coeff_base": coeff_base,
         "delai": form.get("delai", "4 à 6 semaines").strip() or "4 à 6 semaines",
     }

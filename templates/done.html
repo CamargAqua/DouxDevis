@@ -13,22 +13,48 @@
     <h1>Devis généré avec succès</h1>
     <p class="lead">Les deux fichiers sont prêts. Téléchargez-les ci-dessous.</p>
     {% if confidence is not none %}
-    <div class="confidence-bar">
-      <span class="confidence-label">Indice de confiance extraction</span>
-      <span class="confidence-dots">
-        {% for i in range(1, 11) %}
-          <span class="confidence-dot{% if i <= confidence %} filled{% if confidence <= 4 %} low{% elif confidence <= 6 %} mid{% else %} high{% endif %}{% endif %}"></span>
+    {% set _anchors = {
+      "Marque non identifiée":      "field-marque",
+      "Nom client absent":          "field-client-nom",
+      "N° SAV invalide ou absent":  "field-sav-numero",
+      "Date SAV absente":           "field-sav-date",
+      "Modèle montre absent":       "field-modele",
+      "Référence boîtier absente":  "field-reference",
+      "Numéro de série absent":     "field-serie",
+      "État / diagnostic absent":   "field-etat",
+      "Aucune intervention détectée": "nec-lines",
+      "Total TTC nul ou absent":    "nec-lines"
+    } %}
+    {% if confidence <= 5 %}{% set _lvl = "low" %}{% set _label = "À compléter" %}
+    {% elif confidence <= 7 %}{% set _lvl = "mid" %}{% set _label = "Acceptable" %}
+    {% else %}{% set _lvl = "high" %}{% set _label = "Bonne extraction" %}{% endif %}
+    <div class="eq-block eq-{{ _lvl }}">
+      <div class="eq-header">
+        <div class="eq-badge">
+          <span class="eq-num">{{ confidence }}</span><span class="eq-denom">/10</span>
+        </div>
+        <div class="eq-meta">
+          <strong class="eq-title">Qualité d'extraction</strong>
+          <span class="eq-subtitle">
+            {% if confidence_missing %}{{ confidence_missing|length }} champ(s) à vérifier{% else %}Tous les champs sont renseignés{% endif %}
+          </span>
+        </div>
+      </div>
+      {% if confidence_missing %}
+      <table class="eq-table">
+        {% for issue in confidence_missing %}
+        {% set anchor = _anchors.get(issue, '') %}
+        <tr>
+          <td class="eq-warn-icon">▲</td>
+          <td class="eq-warn-label">{{ issue }}</td>
+          <td class="eq-warn-action">
+            <a href="{{ url_for('review') }}{% if anchor %}#{{ anchor }}{% endif %}" class="eq-fix-btn">Corriger →</a>
+          </td>
+        </tr>
         {% endfor %}
-      </span>
-      <span class="confidence-value">{{ confidence }}/10</span>
+      </table>
+      {% endif %}
     </div>
-    {% if confidence_missing %}
-    <ul class="confidence-issues">
-      {% for issue in confidence_missing %}
-      <li>{{ issue }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
     {% endif %}
   </div>
 

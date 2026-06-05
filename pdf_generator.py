@@ -269,11 +269,28 @@ def _html(markup: str, style: ParagraphStyle) -> Paragraph:
     return Paragraph(markup or "", style)
 
 
-_FOOTER = (
-    "SARL DOUX Développement au Capital de 15 245 € — R.C. Avignon 65 A 59 "
-    "— Siret 315 215 442 00023 — APE 4777 Z — TVA Intracommunautaire FR 313 152 15442 "
-    "| sav@douxjoaillier.com"
-)
+_FOOTERS: dict[str, str] = {
+    "avignon": (
+        "SARL DOUX Développement au Capital de 15 245 € — R.C. Avignon 65 A 59 "
+        "— Siret 315 215 442 00023 — APE 4777 Z — TVA Intracommunautaire FR 313 152 15442 "
+        "| sav@douxjoaillier.com"
+    ),
+    "nimes": (
+        "SAS DIANE DOUX — Siret 354 089 419 00049 — APE 4777 Z "
+        "— 2 PLACE DE LA MAISON CARRÉE, 30000 NÎMES "
+        "| sav@douxjoaillier.com"
+    ),
+    "nîmes": (
+        "SAS DIANE DOUX — Siret 354 089 419 00049 — APE 4777 Z "
+        "— 2 PLACE DE LA MAISON CARRÉE, 30000 NÎMES "
+        "| sav@douxjoaillier.com"
+    ),
+}
+_FOOTER_DEFAULT = _FOOTERS["avignon"]
+
+
+def _footer_for(lieu: str) -> str:
+    return _FOOTERS.get((lieu or "").strip().lower(), _FOOTER_DEFAULT)
 
 
 _CGV_PHRASE = (
@@ -286,35 +303,38 @@ _QR_PATH = Path(__file__).parent / "static" / "qr_cgv.png"
 _QR_SIZE  = 18 * mm  # taille du QR code dans le PDF
 
 
-def _draw_footer(canvas, doc):
-    canvas.saveState()
-    text_w = A4[0] - 30 * mm - (_QR_SIZE + 4 * mm)  # largeur texte (laisse place au QR)
-    base_style = ParagraphStyle(
-        "footer_style",
-        fontName="Helvetica", fontSize=7,
-        alignment=1, leading=9, textColor=colors.black,
-    )
-    cgv_style = ParagraphStyle(
-        "cgv_style",
-        fontName="Helvetica", fontSize=6.5,
-        alignment=1, leading=8, textColor=colors.HexColor("#555555"),
-    )
-    # Ligne SARL
-    p = Paragraph(_FOOTER, base_style)
-    p.wrap(text_w, 20 * mm)
-    p.drawOn(canvas, 15 * mm, 10 * mm)
-    # Phrase CGV soulignée
-    p2 = Paragraph(_CGV_PHRASE, cgv_style)
-    p2.wrap(text_w, 10 * mm)
-    p2.drawOn(canvas, 15 * mm, 4 * mm)
-    # QR code CGV — bas droite
-    if _QR_PATH.exists():
-        qr_x = A4[0] - 15 * mm - _QR_SIZE
-        qr_y = 3 * mm
-        canvas.drawImage(str(_QR_PATH), qr_x, qr_y,
-                         width=_QR_SIZE, height=_QR_SIZE,
-                         preserveAspectRatio=True, mask="auto")
-    canvas.restoreState()
+def _make_draw_footer(lieu: str):
+    footer_text = _footer_for(lieu)
+    def _draw_footer(canvas, doc):
+        canvas.saveState()
+        text_w = A4[0] - 30 * mm - (_QR_SIZE + 4 * mm)
+        base_style = ParagraphStyle(
+            "footer_style",
+            fontName="Helvetica", fontSize=7,
+            alignment=1, leading=9, textColor=colors.black,
+        )
+        cgv_style = ParagraphStyle(
+            "cgv_style",
+            fontName="Helvetica", fontSize=6.5,
+            alignment=1, leading=8, textColor=colors.HexColor("#555555"),
+        )
+        # Ligne mentions légales
+        p = Paragraph(footer_text, base_style)
+        p.wrap(text_w, 20 * mm)
+        p.drawOn(canvas, 15 * mm, 10 * mm)
+        # Phrase CGV soulignée
+        p2 = Paragraph(_CGV_PHRASE, cgv_style)
+        p2.wrap(text_w, 10 * mm)
+        p2.drawOn(canvas, 15 * mm, 4 * mm)
+        # QR code CGV — bas droite
+        if _QR_PATH.exists():
+            qr_x = A4[0] - 15 * mm - _QR_SIZE
+            qr_y = 3 * mm
+            canvas.drawImage(str(_QR_PATH), qr_x, qr_y,
+                             width=_QR_SIZE, height=_QR_SIZE,
+                             preserveAspectRatio=True, mask="auto")
+        canvas.restoreState()
+    return _draw_footer
 
 
 def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
@@ -338,11 +358,12 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
 
     # Logo DOUX (gauche) — Image ou texte
     doux_logo = _logo_path("doux")
-    _LOGO_MAX_W = 8 * cm
-    _LOGO_MAX_H = 1.4 * cm
+    _LOGO_MAX_W   = 8 * cm
+    _DOUX_MAX_H   = 1.0 * cm   # DOUX plus discret
+    _BRAND_MAX_H  = 1.4 * cm   # marque partenaire plus visible
 
     if doux_logo:
-        left_cell = _logo_img(doux_logo, _LOGO_MAX_W, _LOGO_MAX_H)
+        left_cell = _logo_img(doux_logo, _LOGO_MAX_W, _DOUX_MAX_H)
         left_cell.hAlign = 'LEFT'
     else:
         left_cell = _html('<font face="Helvetica-Bold" size="28">DOUX JOAILLIER</font>', base)
@@ -355,7 +376,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     else:
         brand_logo = _logo_path(marque_raw)
         if brand_logo:
-            right_cell = _logo_img(brand_logo, _LOGO_MAX_W, _LOGO_MAX_H)
+            right_cell = _logo_img(brand_logo, _LOGO_MAX_W, _BRAND_MAX_H)
             right_cell.hAlign = 'RIGHT'
         else:
             right_cell = _html(
@@ -733,7 +754,9 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         ]))
     story.append(sig)
 
-    doc.build(story, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
+    lieu = (data.get("sav") or {}).get("lieu") or "Avignon"
+    _footer_fn = _make_draw_footer(lieu)
+    doc.build(story, onFirstPage=_footer_fn, onLaterPages=_footer_fn)
     return buf.getvalue()
 
 

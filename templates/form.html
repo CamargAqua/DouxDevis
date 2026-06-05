@@ -19,7 +19,7 @@
       <div class="form-section-body">
 
         <!-- Marque — barre de recherche -->
-        <div>
+        <div id="field-marque">
           <div style="font-size:12px;color:var(--ink-mid);font-weight:600;margin-bottom:8px;letter-spacing:.3px">Marque partenaire</div>
           <div class="marque-search-wrap" id="marque-wrap">
             <div class="marque-search-box">
@@ -36,10 +36,10 @@
         </div>
 
         <div class="grid grid-3">
-          <label class="field">Numéro SAV
+          <label class="field" id="field-sav-numero">Numéro SAV
             <input type="text" name="sav_numero" value="{{ data.sav.numero or '' }}" required>
           </label>
-          <label class="field">Date
+          <label class="field" id="field-sav-date">Date
             <input type="text" name="sav_date" id="sav-date" value="" placeholder="JJ.MM.AAAA">
           </label>
           <label class="field">Lieu
@@ -47,7 +47,7 @@
           </label>
         </div>
 
-        <label class="field" style="max-width:360px">Nom du client
+        <label class="field" id="field-client-nom" style="max-width:360px">Nom du client
           <input type="text" name="client_nom" value="{{ data.client.nom or '' }}" placeholder="NOM PRENOM" style="font-weight:600">
         </label>
       </div>
@@ -62,16 +62,16 @@
       </div>
       <div class="form-section-body">
         <div class="grid grid-3">
-          <label class="field">Modèle<input type="text" name="modele" value="{{ data.montre.modele or '' }}"></label>
-          <label class="field">Référence<input type="text" name="reference" value="{{ data.montre.reference or '' }}"></label>
-          <label class="field">N° de série<input type="text" name="numero_serie" value="{{ data.montre.numero_serie or '' }}"></label>
+          <label class="field" id="field-modele">Modèle<input type="text" name="modele" value="{{ data.montre.modele or '' }}"></label>
+          <label class="field" id="field-reference">Référence<input type="text" name="reference" value="{{ data.montre.reference or '' }}"></label>
+          <label class="field" id="field-serie">N° de série<input type="text" name="numero_serie" value="{{ data.montre.numero_serie or '' }}"></label>
         </div>
         <div class="grid grid-3">
           <label class="field">Poids<input type="text" name="poids" value="{{ data.montre.poids or '' }}" placeholder="—"></label>
           <label class="field">Métal<input type="text" name="metal" value="{{ data.montre.metal or '' }}" placeholder="Acier, Or blanc…"></label>
           <label class="field">Taille<input type="text" name="taille" value="{{ data.montre.taille or '' }}" placeholder="41 mm"></label>
         </div>
-        <label class="field">État constaté
+        <label class="field" id="field-etat">État constaté
           <textarea name="etat" rows="4" placeholder="Une ligne par constat…">{% if data.montre.etat is iterable and data.montre.etat is not string %}{% for line in data.montre.etat %}{{ line }}
 {% endfor %}{% else %}{{ data.montre.etat or '' }}{% endif %}</textarea>
         </label>
@@ -181,8 +181,9 @@
 
         </div>
         <input type="hidden" name="total_ttc"   id="total-override-input">
-        <input type="hidden" name="coeff"        id="coeff-hidden"        value="1.00">
-        <input type="hidden" name="coeff_base"   id="coeff-base-hidden"   value="ht">
+        <input type="hidden" name="coeff"        id="coeff-hidden"        value="{{ data.coeff or 1.0 }}">
+        <input type="hidden" name="coeff_opt"    id="coeff-opt-hidden"    value="{{ data.coeff_opt or '' }}">
+        <input type="hidden" name="coeff_base"   id="coeff-base-hidden"   value="{{ data.coeff_base or 'ttc' }}">
       </div>
     </div>
 
@@ -358,6 +359,24 @@ const MARQUES_DB = [
 /* ── Sections toggle ── */
 function toggleSection(h) { h.closest('.form-section').classList.toggle('collapsed'); }
 
+/* ── Ancrage depuis "Corriger →" (done page) ── */
+(function() {
+  var hash = window.location.hash.replace('#', '');
+  if (!hash) return;
+  var target = document.getElementById(hash);
+  if (!target) return;
+  // Ouvrir la section parente si elle est repliée
+  var section = target.closest('.form-section');
+  if (section) section.classList.remove('collapsed');
+  // Scroll + flash de surbrillance
+  setTimeout(function() {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.style.transition = 'box-shadow .2s';
+    target.style.boxShadow = '0 0 0 3px var(--gold)';
+    setTimeout(function() { target.style.boxShadow = ''; }, 2000);
+  }, 200);
+})();
+
 /* ── Délai pills ── */
 function selectDelai(el, val) {
   document.querySelectorAll('.delai-pill').forEach(p => p.classList.remove('selected'));
@@ -529,11 +548,12 @@ function roundInputs() {
     });
     var totalCible = ceil5(totalHT * coeff);
 
-    // Toutes les lignes sauf la dernière → ceil5 individuel
+    // Toutes les lignes sauf la dernière → ceil5(base HT × coeff)
     var otherSum = 0;
     necLines.slice(0, -1).forEach(function(l) {
-      var inp = l.querySelector('.prix-input');
-      var v = ceil5(parseFloat(inp.value || '0') || 0);
+      var inp  = l.querySelector('.prix-input');
+      var base = parseFloat((inp.dataset.base || '0').replace(',', '.')) || 0;
+      var v    = base > 0 ? ceil5(base * coeff) : ceil5(parseFloat(inp.value || '0') || 0);
       inp.value = v.toFixed(2);
       otherSum += v;
     });
@@ -543,13 +563,16 @@ function roundInputs() {
     if (lastVal > 0) lastInp.value = lastVal.toFixed(2);
   }
 
-  // ── OPTIONS : ceil5 par ligne (prix unitaire indépendant) ──
+  // ── OPTIONS : ceil5 par ligne avec coeff_opt si dispo ──
+  var coeffOptRaw = document.getElementById('coeff-opt-hidden').value;
+  var coeffOpt = coeffOptRaw ? (parseFloat(coeffOptRaw) || coeff) : coeff;
   document.querySelectorAll('#opt-lines .intervention-line').forEach(function(line) {
     var lbl = line.querySelector('.label-input').value;
     if (lbl === 'OFFERT' || lbl === 'INCL') return;
-    var inp = line.querySelector('.prix-input');
-    var v = parseFloat(inp.value || '0') || 0;
-    if (v > 0) inp.value = ceil5(v).toFixed(2);
+    var inp  = line.querySelector('.prix-input');
+    var base = parseFloat((inp.dataset.base || '0').replace(',', '.')) || 0;
+    var v    = base > 0 ? ceil5(base * coeffOpt) : ceil5(parseFloat(inp.value || '0') || 0);
+    if (v > 0) inp.value = v.toFixed(2);
   });
 }
 
@@ -568,19 +591,21 @@ function setCoeff(val) {
 
 document.getElementById('coeff-input').addEventListener('input', () => updateTotal(true));
 
-// Quand l'utilisateur modifie manuellement un prix → recalibrer data-base + hidden base
+// Quand l'utilisateur saisit un prix manuellement → valeur = HT partenaire
+// Le coefficient est appliqué par roundInputs() sur blur
 ['nec-lines', 'opt-lines'].forEach(id => {
   document.getElementById(id).addEventListener('input', e => {
     if (e.target.classList.contains('prix-input')) {
-      const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
       const v = parseFloat(e.target.value || '0');
-      const newBase = (coeff > 1 ? v / coeff : v).toFixed(2);
-      e.target.dataset.base = newBase;
+      e.target.dataset.base = v.toFixed(2);  // valeur saisie = prix HT
       const hidden = e.target.closest('.intervention-line').querySelector('.base-prix-input');
-      if (hidden) hidden.value = newBase;
+      if (hidden) hidden.value = v.toFixed(2);
       refreshTotals();
     }
   });
+  document.getElementById(id).addEventListener('blur', e => {
+    if (e.target.classList.contains('prix-input')) roundInputs();
+  }, true);
 });
 
 // Coefficient marque à la sélection de marque
@@ -589,17 +614,21 @@ window.selectMarque = function(val) {
   _origSelectMarque(val);
   const brandKey  = findBrandKey(val) || val;
   const brandData = BRAND_COEFFS_RAW[brandKey] || {};
-  const coeff     = typeof brandData === 'object' ? (brandData.coeff || DEFAULT_COEFF) : (brandData || DEFAULT_COEFF);
-  const base      = typeof brandData === 'object' ? (brandData.base  || 'ttc')        : 'ttc';
+  const coeff     = typeof brandData === 'object' ? (brandData.coeff     || DEFAULT_COEFF) : (brandData || DEFAULT_COEFF);
+  const coeffOpt  = typeof brandData === 'object' ? (brandData.coeff_opt || null)          : null;
+  const base      = typeof brandData === 'object' ? (brandData.base      || 'ttc')         : 'ttc';
 
   const tag = document.getElementById('coeff-brand-tag');
-  tag.textContent = base === 'ht'
-    ? `${val} → ×${coeff.toFixed(2).replace('.',',')} (base HT)`
-    : `${val} → ×${coeff.toFixed(2).replace('.',',')}`;
+  let tagText = base === 'ht'
+    ? `${val} → ×${coeff.toFixed(4).replace('.',',')} HT`
+    : `${val} → ×${coeff.toFixed(4).replace('.',',')}`;
+  if (coeffOpt) tagText += ` | options ×${coeffOpt.toFixed(4).replace('.',',')}`;
+  tag.textContent = tagText;
   tag.style.display = 'inline-flex';
 
-  document.getElementById('coeff-input').value      = coeff;
-  document.getElementById('coeff-hidden').value     = coeff.toFixed(4);
+  document.getElementById('coeff-input').value       = coeff;
+  document.getElementById('coeff-hidden').value      = coeff.toFixed(4);
+  document.getElementById('coeff-opt-hidden').value  = coeffOpt ? coeffOpt.toFixed(4) : '';
   document.getElementById('coeff-base-hidden').value = base;
   updateTotal(true);
 };

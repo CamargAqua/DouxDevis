@@ -338,6 +338,13 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
                     line["prix"] = data["total_ttc"]
                     break
 
+    # OFFERT en dernier dans les nécessaires
+    nec = data.get("interventions_necessaires") or []
+    data["interventions_necessaires"] = (
+        [l for l in nec if (l.get("prix_label") or "") != "OFFERT"] +
+        [l for l in nec if (l.get("prix_label") or "") == "OFFERT"]
+    )
+
     # Délai : normaliser en minuscules
     delai = (data.get("delai") or "4 à 6 semaines").lower().strip()
     delai = re.sub(r"\s+", " ", delai)
