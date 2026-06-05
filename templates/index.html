@@ -47,7 +47,20 @@
 
   zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-  zone.addEventListener('drop', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (!files || !files.length) return;
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(files[0]);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    } catch (_) {
+      // fallback navigateurs anciens — le fichier ne se charge pas mais pas de crash
+    }
+  });
 
   // Anti-double-submit + spinner
   document.querySelector('.upload-form').addEventListener('submit', function(e) {
