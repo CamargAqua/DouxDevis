@@ -104,9 +104,9 @@
 
         <div class="interventions" id="nec-lines">
           {% for line in (data.interventions_necessaires or [{'description':'','prix':''}]) %}
-          {% set is_offert = line.prix_label == 'OFFERT' or (line.prix == 0 and not line.prix_label) %}
+          {% set is_offert = line.prix_label == 'OFFERT' %}
           {% set is_incl   = line.prix_label == 'INCL' %}
-          {% set base_val  = '%.2f'|format(line.prix) if (line.prix and not is_offert and not is_incl) else '' %}
+          {% set base_val  = '' if (is_offert or is_incl) else ('%.2f'|format(line.prix or 0)) %}
           <div class="intervention-line {% if is_offert %}is-offert{% endif %}{% if is_incl %} is-incl{% endif %}">
             <input type="text" name="nec_description[]" value="{{ line.description or '' }}" placeholder="Intitulé">
             <input type="text" name="nec_prix[]" class="prix-input"
