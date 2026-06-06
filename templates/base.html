@@ -14,58 +14,9 @@
     </a>
     <span class="topbar-right">
       Service après-vente
-      <button id="stats-trigger" onclick="openStatsModal()" title="Statistiques" style="background:none;border:1px solid rgba(184,150,46,.5);border-radius:5px;cursor:pointer;padding:4px 10px;margin-left:14px;font-size:12px;font-weight:600;color:#B8962E;letter-spacing:.04em;vertical-align:middle;" aria-label="Accès statistiques">📊 Stats</button>
     </span>
-  </header>
 
-  <!-- Modal stats login -->
-  <div id="stats-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:10px;padding:28px 28px 22px;width:320px;box-shadow:0 8px 32px rgba(0,0,0,.18);">
-      <p style="margin:0 0 16px;font-weight:600;font-size:15px;color:#1a1a1a">Accès statistiques</p>
-      <input id="stats-pwd" type="password" placeholder="Mot de passe" autocomplete="off"
-        style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #d0cfc8;border-radius:6px;font-size:14px;font-family:inherit;margin-bottom:10px;"
-        onkeydown="if(event.key==='Enter')submitStatsAuth()">
-      <p id="stats-err" style="display:none;color:#b94040;font-size:13px;margin:0 0 10px">Mot de passe incorrect.</p>
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button onclick="closeStatsModal()" style="background:none;border:1px solid #d0cfc8;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:13px;">Annuler</button>
-        <button onclick="submitStatsAuth()" style="background:#B8962E;color:#fff;border:none;border-radius:6px;padding:7px 16px;cursor:pointer;font-size:13px;font-weight:600;">Accéder</button>
-      </div>
-    </div>
-  </div>
 
-  <script>
-  function openStatsModal() {
-    var m = document.getElementById('stats-modal');
-    m.style.display = 'flex';
-    document.getElementById('stats-pwd').focus();
-    document.getElementById('stats-err').style.display = 'none';
-  }
-  function closeStatsModal() {
-    document.getElementById('stats-modal').style.display = 'none';
-    document.getElementById('stats-pwd').value = '';
-  }
-  function submitStatsAuth() {
-    var pwd = document.getElementById('stats-pwd').value;
-    fetch('/stats-auth', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({password: pwd})
-    }).then(function(r) {
-      if (r.ok) {
-        window.location = '/stats';
-      } else {
-        document.getElementById('stats-err').style.display = 'block';
-        document.getElementById('stats-pwd').value = '';
-        document.getElementById('stats-pwd').focus();
-      }
-    });
-  }
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeStatsModal();
-  });
-  </script>
-
-  <main class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flashes">

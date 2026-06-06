@@ -7,6 +7,5 @@ python-dotenv==1.0.1
 reportlab==4.2.5
 Werkzeug==3.0.4
 requests>=2.31.0
-supabase
 extract-msg
 qrcode[pil]

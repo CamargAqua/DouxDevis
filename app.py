@@ -45,7 +45,6 @@ RUNTIME_DIR = Path(_runtime) if _runtime else BASE_DIR
 
 UPLOAD_DIR = RUNTIME_DIR / "uploads"
 GENERATED_DIR = RUNTIME_DIR / "generated"
-FEEDBACK_FILE = RUNTIME_DIR / "feedback.jsonl"
 UPLOAD_DIR.mkdir(exist_ok=True)
 GENERATED_DIR.mkdir(exist_ok=True)
 
@@ -206,7 +205,16 @@ def create_app() -> Flask:
     static_folder = str(BASE_DIR / "static")
     app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
     app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
-    app.secret_key = os.environ.get("FLASK_SECRET_KEY") or secrets.token_hex(32)
+    _secret_key = os.environ.get("FLASK_SECRET_KEY")
+    if not _secret_key:
+        import sys
+        print(
+            "CRITICAL: FLASK_SECRET_KEY non définie — les sessions seront "
+            "invalidées à chaque redémarrage. Ajoutez cette variable sur Render.",
+            file=sys.stderr,
+        )
+        _secret_key = secrets.token_hex(32)
+    app.secret_key = _secret_key
 
     # Sessions côté serveur (filesystem) — évite la limite 4KB des cookies
     SESSION_DIR = RUNTIME_DIR / "flask_sessions"
@@ -303,6 +311,8 @@ def create_app() -> Flask:
     @app.route("/dev-preview")
     def dev_preview():
         """Route de test locale uniquement — injecte des données de démo."""
+        if not app.debug:
+            abort(404)
         import uuid
         session["token"] = uuid.uuid4().hex
         session["data"] = {
@@ -383,8 +393,6 @@ def create_app() -> Flask:
             method=method,
             confidence=score,
             confidence_missing=missing,
-            marque=data.get("marque", ""),
-            sav_num=(data.get("sav") or {}).get("numero", ""),
         )
 
     @app.route("/download/<token>/<path:filename>")
@@ -425,92 +433,11 @@ def create_app() -> Flask:
 
         return jsonify(result)
 
-    @app.route("/feedback", methods=["POST"])
-    def feedback():
-        payload = request.get_json(silent=True) or {}
-        extracted = session.get("data") or {}
-        extraction_snapshot = {
-            "marque": extracted.get("marque", ""),
-            "sav": (extracted.get("sav") or {}).get("numero", ""),
-            "montre": extracted.get("montre", {}),
-            "interventions_necessaires": extracted.get("interventions_necessaires", []),
-            "interventions_optionnelles": extracted.get("interventions_optionnelles", []),
-            "total_ttc": extracted.get("total_ttc", 0),
-        }
-        entry = {
-            "ts": datetime.utcnow().isoformat(),
-            "marque": str(payload.get("marque", "")),
-            "sav": str(payload.get("sav", "")),
-            "ok": bool(payload.get("ok", True)),
-            "comment": str(payload.get("comment", "")).strip(),
-            "extraction": extraction_snapshot,
-        }
-        sb = _supabase_client()
-        if sb:
-            try:
-                sb.table("feedback").insert(entry).execute()
-            except Exception as exc:
-                return jsonify({"error": str(exc)}), 500
-        else:
-            # Fallback local
-            try:
-                with FEEDBACK_FILE.open("a", encoding="utf-8") as fh:
-                    fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
-            except Exception as exc:
-                return jsonify({"error": str(exc)}), 500
-        return jsonify({"status": "ok"})
 
     @app.route("/cgv")
     def cgv():
         return send_from_directory(str(BASE_DIR / "static"), "cgv.pdf",
                                    mimetype="application/pdf")
-
-    @app.route("/stats-auth", methods=["POST"])
-    def stats_auth():
-        payload = request.get_json(silent=True) or {}
-        password = str(payload.get("password", ""))
-        expected = os.environ.get("STATS_KEY", "")
-        if not expected or password != expected:
-            return jsonify({"ok": False}), 403
-        session["stats_auth"] = True
-        return jsonify({"ok": True})
-
-    @app.route("/stats")
-    def stats():
-        if not session.get("stats_auth"):
-            abort(403)
-
-        entries: list[dict] = []
-        sb = _supabase_client()
-        if sb:
-            try:
-                result = sb.table("feedback").select("*").order("ts", desc=True).execute()
-                entries = result.data or []
-            except Exception:
-                entries = []
-        elif FEEDBACK_FILE.exists():
-            for line in FEEDBACK_FILE.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if line:
-                    try:
-                        entries.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        pass
-
-        total = len(entries)
-        ok_count = sum(1 for e in entries if e.get("ok"))
-        ko_count = total - ok_count
-        pct = round(ok_count / total * 100) if total else None
-        kos = [e for e in entries if not e.get("ok")][:20]
-
-        return render_template(
-            "stats.html",
-            total=total,
-            ok_count=ok_count,
-            ko_count=ko_count,
-            pct=pct,
-            kos=kos,
-        )
 
     @app.errorhandler(413)
     def too_large(_):
@@ -519,18 +446,6 @@ def create_app() -> Flask:
 
     return app
 
-
-def _supabase_client():
-    """Retourne un client Supabase si les vars d'env sont configurées, sinon None."""
-    url = os.environ.get("SUPABASE_URL", "")
-    key = os.environ.get("SUPABASE_KEY", "")
-    if not url or not key:
-        return None
-    try:
-        from supabase import create_client
-        return create_client(url, key)
-    except Exception:
-        return None
 
 
 def _ceil5(value: float) -> float:

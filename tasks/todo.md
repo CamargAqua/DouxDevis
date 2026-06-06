@@ -42,6 +42,16 @@
 - [x] form.html : afficher le total client TTC arrondi dans la preview
 - [x] Vérifié via test _form_to_data : 847→850 (lignes somment), grand total 976→980
 
+## Session 2026-06-06
+
+- [x] Full site audit (quick mode) — douxdevis.onrender.com
+- [x] P0 fix : `/dev-preview` bloquée en production (`if not app.debug: abort(404)`)
+- [x] P0 fix : `FLASK_SECRET_KEY` — warning CRITICAL si absente + clé fixe fournie pour Render
+- [x] Suppression section feedback fidélité (done.html + JS)
+- [x] Suppression accès stats (bouton, modal, routes /stats + /stats-auth, template stats.html)
+- [x] Suppression route `/feedback` + `_supabase_client()` + `FEEDBACK_FILE`
+- [x] Nettoyage requirements.txt : retrait de `supabase`
+
 ## Backlog
 - [ ] Section signature (Yousign) — à ajouter plus tard
 - [ ] Tests unitaires pdf_extractor
