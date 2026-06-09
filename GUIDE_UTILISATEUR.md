@@ -92,6 +92,99 @@ Marge : +1 200 €
 
 ---
 
+## ⚠️ Points de vigilance — Vérifications essentielles
+
+**Après l'extraction, avant de générer, vérifiez ABSOLUMENT ces points :**
+
+### 🎯 Le chiffre critique : **Total partenaire HT**
+
+C'est **LE** chiffre à vérifier en priorité. Situé dans la section **Tarification**, ligne "PRIX PARTENAIRE (HT)".
+
+**Pourquoi ?** Si ce total est correct, cela signifie que :
+- ✅ Toutes les interventions ont été extraites (aucune oubliée)
+- ✅ Tous les prix sont corrects
+- ✅ Les calculs en cascade seront juste (coefficient, TVA, options, arrondi)
+
+**Comment vérifier ?**
+1. Ouvrez le devis partenaire original (PDF ou email)
+2. Repérez le **total HT du partenaire**
+3. Comparez avec le chiffre affichée dans DouxDevis : "PRIX PARTENAIRE (HT)"
+4. **Ils doivent être identiques** ✓
+
+| Situation | Action |
+|-----------|--------|
+| ✅ Total HT correct | Continuer, vous pouvez générer avec confiance |
+| ❌ Total HT différent | ⚠️ **STOP** — Vérifiez la suite ci-dessous |
+
+---
+
+### ❌ Si le total HT est incorrect :
+
+**Étapes pour corriger :**
+
+1. **Scrollez dans "Travail nécessaire"** — Vérifiez que **chaque intervention** du devis original est présente
+   - Aucune ligne manquante ?
+   - Aucune ligne en doublon ?
+
+2. **Vérifiez les prix** — Cliquez sur chaque prix et confirmez qu'il correspond au devis partenaire
+   - Les décimales sont-elles bonnes ? (ex: 830.00, pas 83.00)
+   - Les montants INCL ou OFFERT sont bien à 0 € ?
+
+3. **Ajoutez les lignes manquantes** — Si une intervention manque :
+   - Cliquez sur "➕ Ajouter une intervention"
+   - Entrez l'intitulé exact
+   - Entrez le prix exact (en €)
+
+4. **Supprimez les doublons** — Cliquez sur le bouton "❌" à droite de la ligne
+
+5. **Vérifiez le total** — Après chaque modification, le "PRIX PARTENAIRE (HT)" se met à jour automatiquement en haut
+
+---
+
+### ✅ Autres contrôles importants (après le total HT) :
+
+| À vérifier | Pourquoi | Comment |
+|-----------|---------|---------|
+| **Marque partenaire** | Détermine le coefficient | Sélectionnez la bonne marque dans le dropdown |
+| **Numéro SAV** | Identifie la réparation | Comparez avec le devis original |
+| **Nom du client** | Figure sur le devis final | Vérifiez l'orthographe |
+| **État constaté** | Apparaît dans le PDF | Vérifiez qu'il est complet et lisible |
+| **Coefficient appliqué** | Définit votre marge | Vérifiez que c'est celui que vous désirez avant de générer |
+| **Options** | Proposées au client | Chaque option est-elle celle que vous voulez proposer ? |
+
+---
+
+### 🚨 Cas particuliers — Attention !
+
+**Lignes marquées "INCL" (inclus) ou "OFFERT"**
+- Elles apparaissent dans le tableau client
+- Mais leur prix = **0 €** (ne comptent pas dans le total)
+- Vérifiez que c'est intentionnel ✓
+
+**Total client TTC (prix final)**
+- Affiché en haut à droite : "PRIX CLIENT (TTC)"
+- C'est le total partenaire × coefficient × 1.20 TVA, **arrondi à 5**
+- Vous n'avez pas à le modifier manuellement (automatique)
+
+---
+
+### 📋 Checklist avant de générer
+
+```
+☐ Total HT partenaire = celui du devis original
+☐ Aucune intervention n'est manquante
+☐ Aucun prix n'est erroné
+☐ Marque partenaire correcte
+☐ Numéro SAV correct
+☐ Nom client correct
+☐ Coefficient appliqué = celui souhaité
+☐ Options à proposer sont présentes
+```
+
+**Si tout est ✅ → Cliquez sur "Générer"**
+
+---
+
 ### **Étape 3️⃣ : Générer le devis final**
 
 Une fois vérifié et ajusté, cliquez sur **"Générer"** (bouton en bas à droite).
