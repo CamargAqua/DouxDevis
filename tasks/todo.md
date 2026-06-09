@@ -52,6 +52,12 @@
 - [x] Suppression route `/feedback` + `_supabase_client()` + `FEEDBACK_FILE`
 - [x] Nettoyage requirements.txt : retrait de `supabase`
 
+## Session 2026-06-09
+
+- [x] Créer GUIDE_UTILISATEUR.md — documentation client-friendly (workflow, règles métier, FAQ, contact)
+- [x] Créer README.md — documentation technique (stack, installation, déploiement, structure code, troubleshooting)
+
 ## Backlog
 - [ ] Section signature (Yousign) — à ajouter plus tard
 - [ ] Tests unitaires pdf_extractor
+- [ ] Screenshots intégrées au GUIDE_UTILISATEUR.md
