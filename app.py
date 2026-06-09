@@ -245,7 +245,11 @@ def create_app() -> Flask:
             try:
                 data = _extract_from_text(paste_text, api_key=api_key)
             except Exception as exc:
-                flash(f"Erreur lors de l'extraction : {exc}", "error")
+                exc_str = str(exc).lower()
+                if "api" in exc_str or "anthropic" in exc_str:
+                    flash("Service temporairement indisponible. Réessayez dans 1 minute.", "error")
+                else:
+                    flash("Impossible d'extraire les données de ce texte. Vérifiez que c'est bien un devis.", "error")
                 return redirect(url_for("index"))
             if _re.search(r"\d[\s ]*[€$]?\s*HT\b|\bHT\s*[:=]\s*\d", paste_text, _re.IGNORECASE):
                 data["coeff_base"] = "ht"
@@ -285,8 +289,22 @@ def create_app() -> Flask:
                 data = extract_from_msg(file_bytes, api_key=api_key, filename=upload_file.filename)
             else:
                 data = extract_from_pdf(file_bytes, api_key=api_key, filename=upload_file.filename)
+        except ValueError as exc:
+            flash(f"Format invalide : {str(exc)}", "error")
+            return redirect(url_for("index"))
+        except TimeoutError:
+            flash("L'extraction a pris trop de temps. Essayez un fichier plus simple.", "error")
+            return redirect(url_for("index"))
         except Exception as exc:
-            flash(f"Erreur lors de l'extraction : {exc}", "error")
+            exc_str = str(exc).lower()
+            if "empty" in exc_str or "no data" in exc_str:
+                flash("Le fichier semble vide. Vérifiez que c'est un devis valide.", "error")
+            elif "parse" in exc_str or "format" in exc_str:
+                flash("Impossible de lire ce PDF. Essayez un email (.eml) à la place.", "error")
+            elif "api" in exc_str or "anthropic" in exc_str:
+                flash("Service temporairement indisponible. Réessayez dans 1 minute.", "error")
+            else:
+                flash("Erreur lors de l'extraction. Essayez un autre fichier.", "error")
             return redirect(url_for("index"))
 
         # Date du jour si absente ou vide
