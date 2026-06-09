@@ -751,7 +751,7 @@ document.getElementById('photo-input').addEventListener('change', function() {
 });
 
 /* ── Validation avant génération ── */
-function validateForm() {
+function validateForm(scroll) {
   const errors = [];
 
   // ERREUR BLOQUANTE : aucune intervention
@@ -760,7 +760,7 @@ function validateForm() {
     const desc = line.querySelector('input[name="nec_description[]"]');
     return desc && desc.value.trim() !== '';
   });
-  if (!hasInterventions) errors.push('Aucune intervention n’est présente');
+  if (!hasInterventions) errors.push('Aucune intervention n\'est présente');
 
   // ERREUR BLOQUANTE : coefficient invalide
   const coeff = parseFloat(document.getElementById('coeff-input')?.value || 1);
@@ -768,14 +768,12 @@ function validateForm() {
     errors.push('Coefficient invalide (doit être entre 1 et 5)');
   }
 
-  // Afficher/masquer bloc
   const bloc = document.getElementById('validation-bloc');
   const errorsDiv = document.getElementById('validation-errors');
   const errorsList = document.getElementById('errors-list');
   const btnGenerate = document.getElementById('btn-generate');
 
   bloc.style.display = 'block';
-  bloc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   if (errors.length > 0) {
     errorsList.innerHTML = errors.map(e => `<li>${e}</li>`).join('');
@@ -783,6 +781,7 @@ function validateForm() {
     btnGenerate.disabled = true;
     btnGenerate.style.opacity = '0.4';
     btnGenerate.style.cursor = 'not-allowed';
+    if (scroll) bloc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return false;
   } else {
     errorsDiv.style.display = 'none';
@@ -793,14 +792,22 @@ function validateForm() {
   }
 }
 
-// Déclencher au submit
+// Scroll vers les erreurs seulement si le user clique sur Générer
 document.querySelector('form').addEventListener('submit', function(e) {
-  if (!validateForm()) e.preventDefault();
+  if (!validateForm(true)) e.preventDefault();
 });
 
-// Valider + afficher le bloc dès le chargement
+// Ré-valider silencieusement quand le contenu change
+document.getElementById('nec-lines').addEventListener('input', function(e) {
+  if (e.target.name === 'nec_description[]') validateForm(false);
+});
+document.getElementById('coeff-input').addEventListener('input', function() {
+  validateForm(false);
+});
+
+// Afficher l'état initial sans scroller
 document.addEventListener('DOMContentLoaded', function() {
-  validateForm();
+  validateForm(false);
 });
 </script>
 {% endblock %}
