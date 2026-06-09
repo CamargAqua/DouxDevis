@@ -64,6 +64,8 @@ body {
 .flash-error::before { content: "⚠"; }
 .flash-success { background: var(--ok-bg); color: var(--ok-ink); border: 1px solid #b8dfc9; }
 .flash-success::before { content: "✓"; }
+.flash-warning { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
+.flash-warning::before { content: "⚠"; }
 
 /* ── Cards ── */
 .card {

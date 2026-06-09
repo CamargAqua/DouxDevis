@@ -798,9 +798,9 @@ document.querySelector('form').addEventListener('submit', function(e) {
   if (!validateForm()) e.preventDefault();
 });
 
-// Afficher le bloc de vigilance dès le chargement
+// Valider + afficher le bloc dès le chargement
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('validation-bloc').style.display = 'block';
+  validateForm();
 });
 </script>
 {% endblock %}

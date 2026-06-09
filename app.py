@@ -313,6 +313,13 @@ def create_app() -> Flask:
                 data["sav"] = {}
             data["sav"]["date"] = datetime.now().strftime("%d.%m.%Y")
 
+        # Détecter extraction vide ou hors-sujet
+        interventions = data.get("interventions_necessaires") or []
+        has_prix = any(float(i.get("prix") or 0) > 0 for i in interventions)
+        if not interventions or not has_prix:
+            flash("⚠️ Aucune intervention trouvée dans ce fichier. Vérifiez que c'est bien un devis partenaire horlogerie ou joaillerie.", "warning")
+
+
         token = uuid.uuid4().hex
         session_dir = UPLOAD_DIR / token
         session_dir.mkdir(parents=True, exist_ok=True)
