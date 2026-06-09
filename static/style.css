@@ -217,15 +217,17 @@ textarea { resize: vertical; min-height: 90px; }
 
 .prix-wrapper {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
 }
 
 .prix-base-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-soft);
-  opacity: 0.75;
+  opacity: 0.7;
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .toggle-offert, .toggle-incl {
