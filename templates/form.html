@@ -524,7 +524,7 @@ function refreshTotals() {
     const b = parseFloat((inp.dataset.base || '0').replace(',','.'));
     const v = parseFloat((inp.value    || '0').replace(',','.'));
     if (!isNaN(b)) base       += b;
-    if (!isNaN(v)) clientBrut += Math.round(v);
+    if (!isNaN(b) && b > 0) clientBrut += Math.round(b * coeff); else if (!isNaN(v)) clientBrut += Math.round(v);
   });
 
   // Pour Omega (HT) : prix_HT × coeff = prix_TTC_client directement (pas de ×1.20 supplémentaire)
