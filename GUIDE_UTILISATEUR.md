@@ -61,6 +61,12 @@ L'outil vous affiche une page "**Vérification & ajustement**" où vous pouvez r
   - Un prix (en €)
   - Une option : Normal / INCL (inclus) / OFFERT (gratuit)
 
+🚨 **IMPORTANT — Quel prix rentrer ?**
+- **Rentrez TOUJOURS le prix HT du partenaire**, tel qu'indiqué dans son devis
+- Ne rentrez PAS votre prix avec coefficient (celui-ci est appliqué automatiquement après)
+- Exemple : Si le partenaire facture 400 € HT → rentrez **400 €** (pas 840 € ou autre)
+- Le coefficient sera appliqué automatiquement dans la section Tarification
+
 Vous pouvez :
 - ✏️ Modifier les prix
 - ➕ Ajouter une intervention
