@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Devis — Cartes arrondies</title>
+<style>
+  :root{
+    --ink:#1a1d24;
+    --muted:#6b7280;
+    --line:#e5e7eb;
+    --bg:#f4f5f7;
+    --card:#ffffff;
+    --blue:#0b2b5b;        /* bleu marine sobre */
+    --blue-soft:#eef3fb;   /* fond bleu très léger */
+    --accent:#b8860b;      /* doré discret option */
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Segoe UI',-apple-system,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    padding:40px 0;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{
+    width:760px;
+    margin:0 auto;
+    background:var(--card);
+    border-radius:24px;
+    padding:48px 52px 40px;
+    box-shadow:0 10px 40px rgba(16,24,40,.08);
+  }
+
+  /* En-tête */
+  .top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding-bottom:24px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand-doux{font-size:30px;font-weight:700;letter-spacing:4px;color:var(--ink)}
+  .brand-doux small{font-size:9px;letter-spacing:2px;color:var(--muted);display:block;font-weight:400;margin-top:2px}
+  .brand-breitling{font-size:15px;font-weight:600;letter-spacing:1px;color:var(--blue);display:flex;align-items:center;gap:6px}
+
+  .title-row{margin:28px 0 6px}
+  .title-row h1{font-size:23px;font-weight:600;letter-spacing:.5px}
+  .meta{font-size:13px;color:var(--muted);margin-top:4px}
+
+  .intro{
+    font-size:13.5px;color:#4b5563;line-height:1.6;
+    margin:22px 0 30px;max-width:560px;
+  }
+
+  /* Cartes */
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px 26px;
+    margin-bottom:18px;
+  }
+  .card-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .card-head .label{
+    font-size:11px;font-weight:600;letter-spacing:1.5px;
+    text-transform:uppercase;color:var(--muted);
+  }
+  .card-head .price-label{
+    font-size:11px;font-weight:600;letter-spacing:1px;
+    color:var(--muted);text-transform:uppercase;
+  }
+
+  /* Carte montre */
+  .watch{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .watch .model{font-size:18px;font-weight:600}
+  .watch .ref{font-size:13px;color:var(--muted)}
+  .watch .ref b{color:var(--ink);font-weight:600}
+
+  /* État constaté */
+  .state-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:8px 28px;
+    margin-top:4px;
+  }
+  .state-grid li{
+    list-style:none;font-size:13.5px;color:#374151;
+    padding-left:18px;position:relative;line-height:1.5;
+  }
+  .state-grid li::before{
+    content:"";position:absolute;left:0;top:8px;
+    width:6px;height:6px;border-radius:50%;background:var(--blue);
+  }
+
+  /* Travail */
+  .line{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding:11px 0;border-bottom:1px dashed var(--line);
+  }
+  .line:last-of-type{border-bottom:none}
+  .line .name{font-size:14.5px;font-weight:500}
+  .line .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5;max-width:480px}
+  .line .amount{font-size:15px;font-weight:600;white-space:nowrap}
+  .line .incl{font-size:12.5px;color:var(--muted);font-style:italic;font-weight:500}
+
+  .total{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--blue-soft);
+    border-radius:12px;
+    padding:14px 18px;
+    margin-top:16px;
+  }
+  .total .t-label{font-size:13px;font-weight:600;letter-spacing:.5px;color:var(--blue)}
+  .total .t-amount{font-size:19px;font-weight:700;color:var(--blue)}
+
+  /* Option */
+  .card.option{border-color:#f0e6cf;background:#fffdf7}
+  .opt-line{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0}
+  .opt-line .name{font-size:14.5px;font-weight:500}
+  .opt-line .amount{font-size:15px;font-weight:600;color:var(--accent)}
+  .opt-total{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .opt-total b{color:var(--ink);font-weight:600}
+
+  .footer{
+    margin-top:26px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:12px;color:var(--muted);line-height:1.6;
+  }
+  .footer .delay{font-weight:600;color:#374151}
+</style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="top">
+      <div class="brand-doux">DOUX<small>HORLOGER · AVIGNON</small></div>
+      <div class="brand-breitling">✈ BREITLING</div>
+    </div>
+
+    <div class="title-row">
+      <h1>Devis de réparation</h1>
+      <div class="meta">SAV 384054&nbsp;&nbsp;·&nbsp;&nbsp;05.06.2026&nbsp;&nbsp;·&nbsp;&nbsp;Avignon</div>
+    </div>
+
+    <p class="intro">
+      Madame, Monsieur,<br>
+      Suite à l'examen de votre pièce, veuillez trouver ci-dessous nos préconisations de remise en état.
+    </p>
+
+    <!-- Carte montre -->
+    <div class="card">
+      <div class="card-head"><span class="label">La montre</span></div>
+      <div class="watch">
+        <span class="model">Breitling Navitimer Heritage</span>
+        <span class="ref">Réf. <b>A3536016</b>&nbsp;&nbsp;·&nbsp;&nbsp;N° <b>424054</b></span>
+      </div>
+    </div>
+
+    <!-- État constaté -->
+    <div class="card">
+      <div class="card-head"><span class="label">État constaté</span></div>
+      <ul class="state-grid">
+        <li>Mouvement hors critères</li>
+        <li>Cadran rayé (index légèrement tâchés)</li>
+        <li>Glace marquée</li>
+        <li>Lunette rayée</li>
+        <li>Carrure rayée (cornes &amp; tranches)</li>
+        <li>Poussoir rayé</li>
+        <li>Fond rayé</li>
+        <li>Bracelet rayé</li>
+      </ul>
+    </div>
+
+    <!-- Travail à réaliser -->
+    <div class="card">
+      <div class="card-head">
+        <span class="label">Travail à réaliser</span>
+        <span class="price-label">Prix TTC</span>
+      </div>
+
+      <div class="line">
+        <div>
+          <div class="name">Service complet</div>
+          <div class="desc">Démontage, nettoyage et remplacement des composants standard, lubrification, réglage des paramètres, contrôle d'étanchéité, polissage du boîtier et du bracelet métallique.</div>
+        </div>
+        <div class="amount">785,00 €</div>
+      </div>
+
+      <div class="line">
+        <div class="name">Échange aiguilles</div>
+        <div class="incl">inclus</div>
+      </div>
+
+      <div class="line">
+        <div class="name">Échange couronne</div>
+        <div class="incl">inclus</div>
+      </div>
+
+      <div class="total">
+        <span class="t-label">Total hors options</span>
+        <span class="t-amount">785,00 €</span>
+      </div>
+    </div>
+
+    <!-- Option -->
+    <div class="card option">
+      <div class="card-head"><span class="label">Option disponible</span></div>
+      <div class="opt-line">
+        <span class="name">Échange glace marquée, anti-reflet rayé et altéré</span>
+        <span class="amount">430,00 €</span>
+      </div>
+      <div class="opt-total">Si toutes les options sont retenues&nbsp;: <b>1 215,00 €</b></div>
+    </div>
+
+    <div class="footer">
+      <span class="delay">Délais : 4 semaines après accord</span>, sous réserve de disponibilité des pièces.<br>
+      SARL DOUX Développement · Capital 15 245 € · RCS Avignon 65 A 59 · TVA FR 313 152 15442
+    </div>
+
+  </div>
+</body>
+</html>

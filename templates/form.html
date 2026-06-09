@@ -109,10 +109,15 @@
           <div class="intervention-line {% if is_offert %}is-offert{% endif %}{% if is_incl %} is-incl{% endif %}">
             <span class="drag-handle" title="Déplacer" onmousedown="initHandleDrag(event, this.closest('.intervention-line'))">⠿</span>
             <input type="text" name="nec_description[]" value="{{ line.description or '' }}" placeholder="Intitulé">
-            <input type="text" name="nec_prix[]" class="prix-input"
-                   data-base="{{ base_val }}"
-                   value="{{ display_val }}"
-                   placeholder="0,00">
+            <div class="prix-wrapper">
+              <input type="text" name="nec_prix[]" class="prix-input"
+                     data-base="{{ base_val }}"
+                     value="{{ display_val }}"
+                     placeholder="0,00">
+              {% if not (is_offert or is_incl) and line.prix %}
+              <span class="prix-base-label">{{ '%.2f'|format(line.prix or 0) }}€ HT</span>
+              {% endif %}
+            </div>
             <input type="hidden" name="nec_base_prix[]" class="base-prix-input" value="{{ base_val }}">
             <input type="hidden" name="nec_label[]" class="label-input" value="{{ 'OFFERT' if is_offert else ('INCL' if is_incl else '') }}">
             {% if not (loop.first and data.service_complet_description) %}
@@ -201,10 +206,15 @@
           <div class="intervention-line">
             <span class="drag-handle" title="Déplacer" onmousedown="initHandleDrag(event, this.closest('.intervention-line'))">⠿</span>
             <input type="text" name="opt_description[]" value="{{ line.description or '' }}" placeholder="Option proposée">
-            <input type="text" name="opt_prix[]" class="prix-input"
-                   data-base="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
-                   value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
-                   placeholder="0,00">
+            <div class="prix-wrapper">
+              <input type="text" name="opt_prix[]" class="prix-input"
+                     data-base="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
+                     value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
+                     placeholder="0,00">
+              {% if line.prix %}
+              <span class="prix-base-label">{{ '%.2f'|format(line.prix) }}€ HT</span>
+              {% endif %}
+            </div>
             <input type="hidden" name="opt_base_prix[]" class="base-prix-input" value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}">
             <input type="hidden" name="opt_label[]" class="label-input" value="{{ line.prix_label or '' }}">
             <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>

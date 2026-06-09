@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Devis de réparation — DOUX Joaillier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Aboreto&family=Albert+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --taupe:    #9F8F7C;   /* couleur brand Doux */
+    --taupe-lt: #EADBC8;   /* beige clair */
+    --cream:    #FAF3EC;   /* fond crème sections */
+    --ink:      #1A1A1A;
+    --mid:      #6B6259;
+    --subtle:   #C8BEB4;
+    --bg:       #F5F5F5;
+    --white:    #FFFFFF;
+    --radius:   12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Albert Sans', sans-serif;
+    color: var(--ink);
+    padding: 52px 0 72px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    width: 720px;
+    margin: 0 auto;
+    background: var(--white);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 6px 40px rgba(0,0,0,.06);
+  }
+
+  /* ── Bande taupe en haut ── */
+  .taupe-bar {
+    height: 4px;
+    background: var(--taupe);
+  }
+
+  /* ── Header ── */
+  .header {
+    padding: 40px 52px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--taupe-lt);
+  }
+
+  .brand-doux {
+    font-family: 'Aboreto', system-ui;
+    font-size: 32px;
+    font-weight: 400;
+    letter-spacing: 4px;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .brand-doux sub {
+    display: block;
+    font-family: 'Albert Sans', sans-serif;
+    font-size: 9px;
+    font-weight: 300;
+    letter-spacing: 3px;
+    color: var(--taupe);
+    margin-top: 7px;
+    text-transform: uppercase;
+    vertical-align: baseline;
+  }
+
+  .brand-partner {
+    text-align: right;
+    font-family: 'Albert Sans', sans-serif;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    color: var(--mid);
+    text-transform: uppercase;
+    padding-top: 6px;
+  }
+
+  /* ── Intro ── */
+  .intro-block {
+    padding: 36px 52px 0;
+  }
+
+  .devis-title {
+    font-family: 'Aboreto', system-ui;
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    color: var(--ink);
+  }
+
+  .devis-ref {
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--mid);
+    letter-spacing: .4px;
+  }
+  .devis-ref b { color: var(--ink); font-weight: 500; }
+
+  .intro-text {
+    margin-top: 22px;
+    font-size: 13.5px;
+    font-weight: 300;
+    color: var(--mid);
+    line-height: 1.75;
+  }
+
+  /* ── Section ── */
+  .section {
+    padding: 32px 52px 0;
+  }
+
+  .section-label {
+    font-family: 'Albert Sans', sans-serif;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--taupe);
+    margin-bottom: 14px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    border: 1px solid var(--taupe-lt);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    background: var(--white);
+  }
+
+  .card.cream {
+    background: var(--cream);
+    border-color: var(--taupe-lt);
+  }
+
+  /* Montre */
+  .watch-name {
+    font-family: 'Aboreto', system-ui;
+    font-size: 17px;
+    font-weight: 400;
+    letter-spacing: .5px;
+    color: var(--ink);
+  }
+  .watch-refs {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--mid);
+    letter-spacing: .2px;
+  }
+  .watch-refs b { color: var(--ink); font-weight: 500; }
+
+  /* État */
+  .state-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 28px;
+    list-style: none;
+  }
+  .state-grid li {
+    font-size: 13px;
+    font-weight: 300;
+    color: var(--ink);
+    padding-left: 14px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .state-grid li::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 8px;
+    width: 6px; height: 1px;
+    background: var(--taupe);
+  }
+
+  /* Travail */
+  .work-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--taupe-lt);
+  }
+  .work-row:last-of-type { border-bottom: none; }
+
+  .w-name {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--ink);
+  }
+  .w-desc {
+    margin-top: 5px;
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--mid);
+    line-height: 1.65;
+    max-width: 400px;
+  }
+  .w-price {
+    font-family: 'Aboreto', system-ui;
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--taupe);
+    white-space: nowrap;
+    padding-left: 20px;
+    letter-spacing: .5px;
+  }
+  .w-incl {
+    font-size: 11.5px;
+    font-weight: 300;
+    color: var(--subtle);
+    font-style: italic;
+    white-space: nowrap;
+    padding-left: 20px;
+  }
+
+  /* Total */
+  .total-row {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--taupe-lt);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .t-label {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--mid);
+  }
+  .t-amount {
+    font-family: 'Aboreto', system-ui;
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--taupe);
+    letter-spacing: 1px;
+  }
+
+  /* Option */
+  .opt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .o-name {
+    font-size: 13.5px;
+    font-weight: 400;
+    color: var(--ink);
+  }
+  .o-price {
+    font-family: 'Aboreto', system-ui;
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--taupe);
+    white-space: nowrap;
+    padding-left: 20px;
+  }
+  .opt-sub {
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--mid);
+  }
+  .opt-sub b { color: var(--ink); font-weight: 500; }
+
+  /* Separator */
+  .sep { height: 28px; }
+
+  /* Footer */
+  .footer {
+    margin: 32px 52px 40px;
+    padding-top: 22px;
+    border-top: 1px solid var(--taupe-lt);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .delay-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .delay-sub {
+    margin-top: 4px;
+    font-size: 11.5px;
+    font-weight: 300;
+    color: var(--mid);
+  }
+  .legal {
+    font-size: 10px;
+    font-weight: 300;
+    color: var(--subtle);
+    text-align: right;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+
+    <div class="taupe-bar"></div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="brand-doux">DOUX<sub>Joaillier · Horloger · Avignon</sub></div>
+      <div class="brand-partner">✈ &thinsp;Breitling</div>
+    </div>
+
+    <!-- Intro -->
+    <div class="intro-block">
+      <div class="devis-title">Devis de réparation</div>
+      <div class="devis-ref">
+        <b>SAV 384054</b>&ensp;·&ensp;05.06.2026&ensp;·&ensp;Avignon
+      </div>
+      <p class="intro-text">
+        Madame, Monsieur,<br>
+        Suite à l'examen de votre pièce, veuillez trouver ci-dessous<br>
+        nos préconisations de remise en état.
+      </p>
+    </div>
+
+    <!-- La montre -->
+    <div class="section">
+      <div class="section-label">La montre</div>
+      <div class="card">
+        <div class="watch-name">Breitling Navitimer Heritage</div>
+        <div class="watch-refs">
+          Référence&nbsp;<b>A3536016</b>&emsp;·&emsp;N° de série&nbsp;<b>424054</b>
+        </div>
+      </div>
+    </div>
+
+    <!-- État constaté -->
+    <div class="section" style="padding-top:24px">
+      <div class="section-label">État constaté</div>
+      <div class="card">
+        <ul class="state-grid">
+          <li>Mouvement hors critères</li>
+          <li>Cadran rayé (index légèrement tâchés)</li>
+          <li>Glace marquée</li>
+          <li>Lunette rayée</li>
+          <li>Carrure rayée (cornes &amp; tranches)</li>
+          <li>Poussoir rayé</li>
+          <li>Fond rayé</li>
+          <li>Bracelet rayé</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Travail à réaliser -->
+    <div class="section" style="padding-top:24px">
+      <div class="section-label">Travail à réaliser</div>
+      <div class="card">
+        <div class="work-row">
+          <div>
+            <div class="w-name">Service complet</div>
+            <div class="w-desc">Démontage, nettoyage et remplacement des composants standard, lubrification, réglage des paramètres de fonctions, contrôle d'étanchéité, polissage du boîtier et du bracelet métallique.</div>
+          </div>
+          <div class="w-price">785,00 €</div>
+        </div>
+        <div class="work-row">
+          <div class="w-name">Échange aiguilles</div>
+          <div class="w-incl">inclus</div>
+        </div>
+        <div class="work-row">
+          <div class="w-name">Échange couronne</div>
+          <div class="w-incl">inclus</div>
+        </div>
+
+        <div class="total-row">
+          <div class="t-label">Total hors options</div>
+          <div class="t-amount">785,00 €</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Option -->
+    <div class="section" style="padding-top:24px">
+      <div class="section-label">Option disponible</div>
+      <div class="card cream">
+        <div class="opt-row">
+          <div class="o-name">Échange glace marquée, anti-reflet rayé et altéré</div>
+          <div class="o-price">430,00 €</div>
+        </div>
+        <div class="opt-sub">Si toutes les options sont retenues&nbsp;: <b>1 215,00 €</b></div>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div>
+        <div class="delay-label">Délais : 4 semaines après accord</div>
+        <div class="delay-sub">Sous réserve de disponibilité des pièces</div>
+      </div>
+      <div class="legal">
+        SARL DOUX Développement · Capital 15 245 €<br>
+        RCS Avignon 65 A 59 · TVA FR 313 152 15442
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

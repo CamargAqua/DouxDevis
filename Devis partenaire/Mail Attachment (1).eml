@@ -1,0 +1,318 @@
+Received: from PASP264MB5220.FRAP264.PROD.OUTLOOK.COM (2603:10a6:102:43d::17)
+ by PARP264MB5674.FRAP264.PROD.OUTLOOK.COM with HTTPS; Mon, 9 Mar 2026
+ 10:28:38 +0000
+Received: from MR1P264CA0200.FRAP264.PROD.OUTLOOK.COM (2603:10a6:501:57::17)
+ by PASP264MB5220.FRAP264.PROD.OUTLOOK.COM (2603:10a6:102:43d::17) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9678.25; Mon, 9 Mar
+ 2026 10:28:36 +0000
+Received: from MR1PEPF00000D58.FRAP264.PROD.OUTLOOK.COM
+ (2603:10a6:501:57:cafe::15) by MR1P264CA0200.outlook.office365.com
+ (2603:10a6:501:57::17) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9678.25 via Frontend Transport; Mon,
+ 9 Mar 2026 10:28:31 +0000
+Received: from AS8PR04CU009.outbound.protection.outlook.com
+ (2a01:111:f403:c201::3) by MR1PEPF00000D58.mail.protection.outlook.com
+ (2603:10a6:508:1::105) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9678.18 via Frontend Transport; Mon,
+ 9 Mar 2026 10:28:36 +0000
+Received: from PR3P194MB0745.EURP194.PROD.OUTLOOK.COM (2603:10a6:102:45::13)
+ by DU2PPFE06EAB88D.EURP194.PROD.OUTLOOK.COM (2603:10a6:18:3::96b) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9678.22; Mon, 9 Mar
+ 2026 10:28:31 +0000
+Received: from PR3P194MB0745.EURP194.PROD.OUTLOOK.COM
+ ([fe80::8efe:5ea6:301d:16ed]) by PR3P194MB0745.EURP194.PROD.OUTLOOK.COM
+ ([fe80::8efe:5ea6:301d:16ed%5]) with mapi id 15.20.9678.023; Mon, 9 Mar 2026
+ 10:28:30 +0000
+From: "sav@ginette-ny.com" <sav@ginette-ny.com>
+To: SERVICE APRES VENTE <sav@douxjoaillier.com>
+Subject: DEVIS 331999
+Thread-Topic: DEVIS 331999
+Thread-Index: AQHcr69yej1tlwOp6UKnxKADpDcKAw==
+Date: Mon, 9 Mar 2026 10:28:30 +0000
+Message-ID:
+ <PR3P194MB07450891F3F2638BA4EC78D98B79A@PR3P194MB0745.EURP194.PROD.OUTLOOK.COM>
+Accept-Language: es-ES, fr-FR, en-US
+Content-Language: es-ES
+X-MS-Exchange-Organization-AuthSource:
+ MR1PEPF00000D58.FRAP264.PROD.OUTLOOK.COM
+X-MS-Has-Attach:
+X-MS-Exchange-Organization-Network-Message-Id:
+ fdc53f1b-d56d-4837-592b-08de7dc69f48
+X-MS-TNEF-Correlator:
+X-MS-Exchange-Organization-RecordReviewCfmType: 0
+msip_labels:
+x-ms-publictraffictype: Email
+received-spf: Pass (protection.outlook.com: domain of ginette-ny.com
+ designates 2a01:111:f403:c201::3 as permitted sender)
+ receiver=protection.outlook.com; client-ip=2a01:111:f403:c201::3;
+ helo=AS8PR04CU009.outbound.protection.outlook.com; pr=C
+x-ms-exchange-organization-originalclientipaddress: 2a01:111:f403:c201::3
+x-ms-exchange-organization-originalserveripaddress: 2603:10a6:508:1::105
+arc-seal: i=1; a=rsa-sha256; s=arcselector10001; d=microsoft.com; cv=none;
+ b=GxO9tq+jwD+kcnwZ6kW5DSZ0k2zYwG0YuD/rfei0QMQ2PWvKLx+dkPkZ++CFP+DBz2qXSI3BrX9eJWJAShC4Ees2k70bqdKPfzE+buIiuh+Cqw+PLucLEWRhiosDuz56iwYnOWysW7RmFvY8uaGeQFgEVHdnay5Z6edMUKv+5yhVd2t3+4GEKozbIj7aengBnyLE9/CWLmqGPXSt0VKntH+iRA3CUbaiHFQd4qvEBT+b+Uzl0CCWqPqYWsOxaFP7MmApCz0iL/W6uf7/muPIURIyR+aXShY+kV3CQVuwQFM2e+bP55W1qfc3cpNugXjsNdTySK1hJf602IHQxwF2GQ==
+arc-message-signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=microsoft.com;
+ s=arcselector10001;
+ h=From:Date:Subject:Message-ID:Content-Type:MIME-Version:X-MS-Exchange-AntiSpam-MessageData-ChunkCount:X-MS-Exchange-AntiSpam-MessageData-0:X-MS-Exchange-AntiSpam-MessageData-1;
+ bh=gtukTOfqQ6rIm6OfFnO/tZSqlXUHcvMic8PSklTDld0=;
+ b=m2org0eBeYB76u7kcfkZBExIeFR2u3/gU8tNU4RUs/4KDz+ZXZevydr0GTfodMf32CNH85rXqnIUsY5YwEzjYMT98KAzcynpUXJ/xtCADCV48DgdQ9QhrALjNL41ZFlXZiGiBMgaPkIN+dJGIAqKJNtMm3HXUGCOYnG3equjlzU3xxbnX6/Ydc04L2LlZQw6cPFdspMBzy9MVtfv97KahwaK/ygG61YMOUeOQfZXCuGPevD0oz5thsr+pENrW/A9bzy2wvYMZbXZVLVoIP2sb4mRSg6/P0t7sMxrMRBdV+fVDuCz84QOLeeh86c+yPk/OxiaIEvcbE2QS67kXf9lEg==
+arc-authentication-results: i=1; mx.microsoft.com 1; spf=pass
+ smtp.mailfrom=ginette-ny.com; dmarc=pass action=none
+ header.from=ginette-ny.com; dkim=pass header.d=ginette-ny.com; arc=none
+authentication-results: spf=pass (sender IP is 2a01:111:f403:c201::3)
+ smtp.mailfrom=ginette-ny.com; dkim=pass (signature was verified)
+ header.d=redluxury.onmicrosoft.com;dmarc=pass action=none
+ header.from=ginette-ny.com;compauth=pass reason=100
+x-ms-office365-filtering-correlation-id: fdc53f1b-d56d-4837-592b-08de7dc69f48
+x-ms-traffictypediagnostic:
+ PR3P194MB0745:EE_|DU2PPFE06EAB88D:EE_|MR1PEPF00000D58:EE_|PASP264MB5220:EE_|PARP264MB5674:EE_
+x-ms-exchange-senderadcheck: 1
+x-ms-exchange-antispam-relay: 0
+x-microsoft-antispam: BCL:0;ARA:13230040|35042699022|8096899003;
+x-forefront-antispam-report:
+ CIP:2a01:111:f403:c201::3;CTRY:;LANG:fr;SCL:1;SRV:;IPV:NLI;SFV:NSPM;H:AS8PR04CU009.outbound.protection.outlook.com;PTR:mail-westeuropeazlp170110003.outbound.protection.outlook.com;CAT:NONE;SFS:(13230040)(35042699022)(8096899003);DIR:INB;
+x-ms-exchange-crosstenant-authas: Anonymous
+x-ms-exchange-crosstenant-authsource: MR1PEPF00000D58.FRAP264.PROD.OUTLOOK.COM
+x-ms-exchange-crosstenant-network-message-id:
+ fdc53f1b-d56d-4837-592b-08de7dc69f48
+x-ms-exchange-crosstenant-originalarrivaltime: 09 Mar 2026 10:28:36.1396 (UTC)
+x-ms-exchange-crosstenant-fromentityheader: Internet
+x-ms-exchange-crosstenant-id: cf539658-421a-46fe-8d85-4804a9f18aee
+x-ms-exchange-transport-crosstenantheadersstamped: PASP264MB5220
+x-ms-exchange-transport-endtoendlatency: 00:00:02.0021261
+x-ms-exchange-processed-by-bccfoldering: 15.20.9678.017
+X-Microsoft-Antispam-Mailbox-Delivery:
+ ucf:0;jmr:0;auth:0;dest:I;ENG:(910005)(944506478)(944626604)(920097)(930201)(20251009189)(140003);
+X-Microsoft-Antispam-Message-Info:
+ =?Windows-1252?Q?rSPr4qjQmMiQdFG98LEg/2jJhYFnxDY437xqkv9UfesGwHv8jE4ABDtz?=
+ =?Windows-1252?Q?fj/N8R9NmB0PG4ygMmYs8rZ4DdoPoEjuZFYYlQcxfoXpblr8jqDb6JPF?=
+ =?Windows-1252?Q?MJE1/MWgRUrEZG184Xud/Zdcn/DWZUkSfoKXN+bl1GNiSTssdD1yOgs6?=
+ =?Windows-1252?Q?DVNkOGR+FnQK4u+xSLS6GuPvWRYQJZyFIx2Nqg26bqYtQ1mKvivjjK54?=
+ =?Windows-1252?Q?jVaCyjUcb3s2QTcdgroXUQ2dwNoPXlF/jw/l96hK6UMwU68GI5MsyQ/c?=
+ =?Windows-1252?Q?C+nqawcUcSU/lsb9RP7yjiMnpgZ2c0uyELtnrUrO0SfIwHxhsTxmEo3L?=
+ =?Windows-1252?Q?5YbWln3X86GxDRpUy7b7JlhAHy0CD1xWSbDfPJeaWQo0MLy7UL8LUkl/?=
+ =?Windows-1252?Q?1eDM/FbsfGwmLvJS4vigN68fYqAgIKQ+amtQJoecHY2x4Z4Z1/O3ZjxE?=
+ =?Windows-1252?Q?XxklOaV5vQwtRMGhUbImfFSAyIQbfuH5Gahr+EBwQdAD1EQr+ocTe8v3?=
+ =?Windows-1252?Q?cxNRyCdZGPuNwTNTJw7beLuCoS0/fx3VNbE7kF5D6vTkdkK5cL6CmUvt?=
+ =?Windows-1252?Q?kmSKdWgZnanYV6Z+yH9Hl6nJY/sZRhFY8krX1RluVKLTnRs3UY3Nv0NM?=
+ =?Windows-1252?Q?nBQzRNxyZCW2xVGSNdtq5l9JSElch4ByOYLsl3dHGhYaMPj9FG+eXoUh?=
+ =?Windows-1252?Q?CER9b1CqcIrR/+ocMijLD6RlN/WJIj1Rns8M3/YsjTEuci/Wk4/4e88D?=
+ =?Windows-1252?Q?J3vx0Nyg1xx4xnOg79XOkenoB6DAiipOkqcM2ogz4sppwjH8qmKA5dln?=
+ =?Windows-1252?Q?/4yhgPg+Cg5QIBmsPO5Ly4mpfhSnEzLrLFiCLYto2Dkrjg1jVG7K9XtA?=
+ =?Windows-1252?Q?6YhR5kF/vIvUVKiK0q9XX75ATtz8DOxMs8fv8FsxGfHjGf/9Emh52wm9?=
+ =?Windows-1252?Q?/a4quqm5W7YkkxLmMM+/RQV03lUGyQ3Ue2cVDmqzAPlu2tyKyxu+vgjU?=
+ =?Windows-1252?Q?OUo4DOdGm3iJfiE07T1C+VLqDZLh6DQhJjqecfvC0CIcjpIaODQbriJl?=
+ =?Windows-1252?Q?her4cP+hM4iVCLvG1qPvr+EwISVYEiqIkqkMCrhU8GtD2IjTaisvKc6/?=
+ =?Windows-1252?Q?Is+saqrqFcW7WlXPbc9NEi+jSudXKhU4Q+zvOK/1B3yWI4ATHyiTgcML?=
+ =?Windows-1252?Q?W5uqRQ4/D6KniGan4w/AdooxI22s8aEwqqA47ltW+2gvu8VwPJmMD8+w?=
+ =?Windows-1252?Q?uvy6Q0co/s2K6iSKqLHLZR6/Nsirxv8tDOyQwl6OidvDE9z/KxgdQhlr?=
+ =?Windows-1252?Q?c5HNyZjm+IZYIqT3LWles14WugYhJVXWCVBcBrZ2X8STl7Sm5JPR02GE?=
+ =?Windows-1252?Q?m6UOPHMkWT6FbHJoOuKmyovBM6MebeW1Jr9dugjnFaOOICAQi30LvL7D?=
+ =?Windows-1252?Q?pUFpUdNrfZ38OsZwQ/C6GO8vnq4rrN2MN7UJVWkpn7ckBHuIkYgg3Xkl?=
+ =?Windows-1252?Q?808iXn/XnMbeCiKJ/9jJenVPCQFSFORpPbvlLUcBxmbwhCe3bbaYATrD?=
+ =?Windows-1252?Q?VV371qHi7Mddad85iNcdxkl2xJJ0SVR15H4Yu9WiGw6H7ZqpyVCpAeTX?=
+ =?Windows-1252?Q?4zlu+8ArdPzVdQ/x0r/WFBJ+JONz3+TCHPnBYTskZTJGdyRsL+2gfpes?=
+ =?Windows-1252?Q?f5847V3Rhr1A518KkXljBB0fhhqDuXd5aWQLDmSnn+BmIwYhstI4zV7u?=
+ =?Windows-1252?Q?yTRCMtvZvQBcoF2NQxbs5y6Gm//ZiVgDETlYhf1Caa6T/Y/HmMgdQAIX?=
+ =?Windows-1252?Q?G0VGK3AtHghO/QltLJuNGcJyW6kf/ASerHpBbtDCrqodvNeGh8dYIqp2?=
+ =?Windows-1252?Q?ab6DdodlKjT3FT/VW1cLQXz1X9eQbMNlKtN9yhyqbrnn28wCvZtUOuKD?=
+ =?Windows-1252?Q?z7IRPa5NtTqdzUlUZmb7o6ZvObvE18HtTiFIG1G89hSwOMx/XvQ14Dpf?=
+ =?Windows-1252?Q?fX6MbMr2P89yo7CEhNeg7Xtyas2a3gOQqetZqcXA8dEfpPjjJ535PWlh?=
+ =?Windows-1252?Q?TcHAvEiSTeJCaVuMcVvCtz/ZapXz0ljygGVHXnDmhlGxYEkl/ew/k2kj?=
+ =?Windows-1252?Q?iUq4ZRBDbslqqJMJPbRfU5nUgM1Ixs8hknyYsVfWSUvyaLs9B2IBpw7I?=
+ =?Windows-1252?Q?jLmn1CfGrexh/8hmxciQUk/JC2b51xmwdK59En/WvHTiOE3/tbZQMHPQ?=
+ =?Windows-1252?Q?FdcB1TdxaMshfE7u0aFrY8YG+DH8gL3sWVHyAV1vRDz/ixT0axKGLCip?=
+ =?Windows-1252?Q?Pkkf+o59rXTVRNiM/KQ5UeXwBs81ovWcqkIybAXFlHsRvL4kGoLXZ0ba?=
+ =?Windows-1252?Q?g1542iLlwnEyDxKy0tsyykzJRtaR3PZUTUHue93hJYaQqIecMF72bOMr?=
+ =?Windows-1252?Q?Mg4rb9V/zvd8m81rp7YFD0zdk9ZYQlPV3wwwVEQGihELj4zHpCUTm4rl?=
+ =?Windows-1252?Q?ZMy6ItH7DsXKSkIgT/jtA9Nts/TbzwV7So2bdYeTELckym/jabHxT4eF?=
+ =?Windows-1252?Q?tO8KV8MtrxViMCdzZm5E3qsaKeMFH0TTFlogJrrpJP7sVWk6351JagmD?=
+ =?Windows-1252?Q?Zetwk+LlmC/6E4Z9viu0vL4zTx0xjfa3U37p+aqawlJiy47YA9zvUnqB?=
+ =?Windows-1252?Q?zF9+34q+k15r58/5bVpuslVWxGOIUn4Tu/3B3jZlR1b3XWA4nWFbiQ?=
+ =?Windows-1252?Q?=3D=3D?=
+Content-Type: multipart/alternative;
+	boundary="_000_PR3P194MB07450891F3F2638BA4EC78D98B79APR3P194MB0745EURP_"
+MIME-Version: 1.0
+
+--_000_PR3P194MB07450891F3F2638BA4EC78D98B79APR3P194MB0745EURP_
+Content-Type: text/plain; charset="Windows-1252"
+Content-Transfer-Encoding: quoted-printable
+
+Bonjour,
+
+Merci de prendre note du devis demand=E9:
+
+331999
+DOUX JOAILLIER AVIGNON
+03/03/2026
+
+X
+CWFO2
+
+
+
+DEVIS 1: ECHANGE PENDENTIF A NEUF: 42=80 //// DEVIS 2: ECHANGE PENDENTIF A =
+NEUF+FOURNIR 1 CHAINE 70CM: 250=80
+
+
+Cordialement,
+
+
+
+Carmen Leiva
+SAV ATELIER GNY
+Ctra. Palma del R=EDo, Km. 3.5 Fase 7 Nave 43
+14005 C=F3rdoba (Espagne)
++34 678272168
+
+--_000_PR3P194MB07450891F3F2638BA4EC78D98B79APR3P194MB0745EURP_
+Content-Type: text/html; charset="Windows-1252"
+Content-ID: <6745B85A7C0B99418DFB6816356EEBB8@FRAP264.PROD.OUTLOOK.COM>
+Content-Transfer-Encoding: quoted-printable
+
+<html>
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3DWindows-1=
+252">
+<style type=3D"text/css" style=3D"display:none;"> P {margin-top:0;margin-bo=
+ttom:0;} </style>
+</head>
+<body dir=3D"ltr">
+<div style=3D"font-family: Calibri, Helvetica, sans-serif; font-size: 12pt;=
+ color: rgb(0, 0, 0);" class=3D"elementToProof">
+Bonjour,</div>
+<div style=3D"font-family: Calibri, Helvetica, sans-serif; font-size: 12pt;=
+ color: rgb(0, 0, 0);" class=3D"elementToProof">
+<br>
+</div>
+<div style=3D"font-family: Calibri, Helvetica, sans-serif; font-size: 12pt;=
+ color: rgb(0, 0, 0);" class=3D"elementToProof">
+Merci de prendre note du devis demand=E9:</div>
+<div style=3D"font-family: Calibri, Helvetica, sans-serif; font-size: 12pt;=
+ color: rgb(0, 0, 0);" class=3D"elementToProof">
+<br>
+</div>
+<table style=3D"width: 908pt; border-collapse: collapse; border-spacing: 0p=
+x; box-sizing: border-box;" border=3D"0" cellpadding=3D"0" cellspacing=3D"0=
+">
+<tbody>
+<tr>
+<td style=3D"width: 68pt; height: 45pt; text-align: left; white-space: nowr=
+ap; border-width: 0.5pt; border-style: solid; border-color: initial; backgr=
+ound-color: yellow; vertical-align: bottom;">
+<div style=3D"text-align: left; white-space: nowrap; font-family: Calibri, =
+Helvetica, sans-serif; font-size: 12pt; color: rgb(0, 0, 0);">
+331999</div>
+</td>
+<td style=3D"width: 187pt; height: 45px; text-align: left; white-space: now=
+rap; border-top: 0.5pt solid; border-right: 0.5pt solid; border-bottom: 0.5=
+pt solid; background-color: yellow; vertical-align: bottom;">
+<div style=3D"text-align: left; white-space: nowrap; font-family: Calibri, =
+Helvetica, sans-serif; font-size: 12pt; color: rgb(0, 0, 0);">
+DOUX JOAILLIER AVIGNON</div>
+</td>
+<td style=3D"width: 71pt; height: 45px; text-align: left; white-space: nowr=
+ap; border-top: 0.5pt solid; border-right: 0.5pt solid; border-bottom: 0.5p=
+t solid; background-color: yellow; vertical-align: bottom;">
+<div style=3D"text-align: left; white-space: nowrap; font-family: Calibri, =
+Helvetica, sans-serif; font-size: 12pt; color: rgb(0, 0, 0);">
+03/03/2026</div>
+</td>
+<td style=3D"width: 36pt; height: 45px; text-align: left; white-space: nowr=
+ap; border-top: 0.5pt solid; border-right: 0.5pt solid; border-bottom: 0.5p=
+t solid; background-color: yellow; vertical-align: bottom;">
+<div style=3D"text-align: left; white-space: nowrap; font-family: Calibri, =
+Helvetica, sans-serif; font-size: 12pt; color: rgb(0, 0, 0);">
+&nbsp;</div>
+</td>
+<td style=3D"width: 36pt; height: 45px; text-align: left; white-space: nowr=
+ap; border-top: 0.5pt solid; border-right: 0.5pt solid; border-bottom: 0.5p=
+t solid; background-color: yellow; vertical-align: bottom;">
+<div style=3D"text-align: left; white-space: nowrap; font-family: Calibri, =
+Helvetica, sans-serif; font-size: 12pt; color: rgb(0, 0, 0);">
+X</div>
+</td>
+<td style=3D"width: 127pt; height: 45px; text-align: left; white-space: now=
+rap; border-top: 0.5pt solid; border-right: 0.5pt solid; border-bottom: 0.5=
+pt solid; background-color: yellow; vertical-align: bottom;">
+<div style=3D"text-align: left; white-space: nowrap; font-family: Calibri, =
+Helvetica, sans-serif; font-size: 12pt; color: rgb(0, 0, 0);">
+CWFO2</div>
+</td>
+<td style=3D"width: 89pt; height: 45px; text-align: left; white-space: nowr=
+ap; border-top: 0.5pt solid; border-right: 0.5pt solid; border-bottom: 0.5p=
+t solid; background-color: yellow; vertical-align: bottom;">
+<div style=3D"text-align: left; white-space: nowrap; font-family: Calibri, =
+Helvetica, sans-serif; font-size: 12pt; color: rgb(0, 0, 0);">
+&nbsp;</div>
+</td>
+<td style=3D"width: 36pt; height: 45px; text-align: left; white-space: nowr=
+ap; border-top: 0.5pt solid; border-right: 0.5pt solid; border-bottom: 0.5p=
+t solid; background-color: yellow; vertical-align: bottom;">
+<div style=3D"text-align: left; white-space: nowrap; font-family: Calibri, =
+Helvetica, sans-serif; font-size: 12pt; color: rgb(0, 0, 0);">
+&nbsp;</div>
+</td>
+<td style=3D"width: 36pt; height: 45px; text-align: left; white-space: nowr=
+ap; border-top: 0.5pt solid; border-right: 0.5pt solid; border-bottom: 0.5p=
+t solid; background-color: yellow; vertical-align: bottom;">
+<div style=3D"text-align: left; white-space: nowrap; font-family: Calibri, =
+Helvetica, sans-serif; font-size: 12pt; color: rgb(0, 0, 0);">
+&nbsp;</div>
+</td>
+<td style=3D"width: 222pt; height: 45px; text-align: left; border-top: 0.5p=
+t solid; border-right: 0.5pt solid; border-bottom: 0.5pt solid; background-=
+color: yellow; vertical-align: bottom;">
+<div style=3D"text-align: left; font-family: Calibri, Helvetica, sans-serif=
+; font-size: 12pt; color: rgb(0, 0, 0);">
+DEVIS 1: ECHANGE PENDENTIF A NEUF: 42=80 //// DEVIS 2: ECHANGE PENDENTIF A =
+NEUF+FOURNIR 1 CHAINE 70CM: 250=80</div>
+</td>
+</tr>
+</tbody>
+</table>
+<div style=3D"font-family: Calibri, Helvetica, sans-serif; font-size: 12pt;=
+ color: rgb(0, 0, 0);" class=3D"elementToProof">
+<br>
+</div>
+<div style=3D"font-family: Calibri, Helvetica, sans-serif; font-size: 12pt;=
+ color: rgb(0, 0, 0);" class=3D"elementToProof">
+<br>
+</div>
+<div style=3D"font-family: Calibri, Helvetica, sans-serif; font-size: 12pt;=
+ color: rgb(0, 0, 0);" class=3D"elementToProof">
+Cordialement,</div>
+<div style=3D"font-family: Calibri, Helvetica, sans-serif; font-size: 12pt;=
+ color: rgb(0, 0, 0);" class=3D"elementToProof">
+<br>
+</div>
+<div style=3D"font-family: Calibri, Helvetica, sans-serif; font-size: 12pt;=
+ color: rgb(0, 0, 0);" class=3D"elementToProof">
+<br>
+</div>
+<div class=3D"elementToProof" id=3D"Signature">
+<div style=3D"font-family: Calibri, Helvetica, sans-serif; font-size: 12pt;=
+ color: rgb(0, 0, 0);" class=3D"elementToProof">
+<br>
+</div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(81, 167, 249);" class=3D"elementToProof">
+<b>Carmen Leiva</b></div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0);" class=3D"elementToProof">
+<b>SAV ATELIER GNY</b></div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0);" class=3D"elementToProof">
+<i>Ctra. Palma del R=EDo, Km. 3.5 Fase 7 Nave 43</i></div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0);" class=3D"elementToProof">
+<i>14005 C=F3rdoba (Espagne)</i></div>
+<div style=3D"font-family: Calibri, Arial, Helvetica, sans-serif; font-size=
+: 12pt; color: rgb(0, 0, 0);" class=3D"elementToProof">
+<i>+34 678272168</i></div>
+</div>
+</body>
+</html>
+
+--_000_PR3P194MB07450891F3F2638BA4EC78D98B79APR3P194MB0745EURP_--

@@ -215,6 +215,19 @@ textarea { resize: vertical; min-height: 90px; }
   .intervention-line { grid-template-columns: 1fr; }
 }
 
+.prix-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.prix-base-label {
+  font-size: 11px;
+  color: var(--ink-soft);
+  opacity: 0.75;
+  font-weight: 400;
+}
+
 .toggle-offert, .toggle-incl {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
