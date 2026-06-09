@@ -11,7 +11,7 @@ import anthropic
 
 MODEL = "claude-sonnet-4-5"
 
-EXTRACTION_SYSTEM = """Tu es un assistant chargé d'extraire les informations d'un devis de service après-vente (horlogerie ou joaillerie) envoyé par une marque partenaire à la bijouterie DOUX Joaillier (Avignon).
+EXTRACTION_SYSTEM = """Tu es un assistant chargé d'extraire les informations d'un devis de service après-vente (horlogerie ou joaillerie) envoyé par une marque partenaire à la bijouterie DOUX Joaillier (Avignon ou Nîmes).
 
 Le document peut être un PDF structuré ou un email en texte libre.
 
@@ -25,7 +25,7 @@ Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc m
   "sav": {
     "numero": "numéro SAV DOUX (6 chiffres, sans suffixe)",
     "date": "JJ.MM.AAAA",
-    "lieu": "Avignon"
+    "lieu": ""
   },
   "montre": {
     "modele": "nom du modèle ou du bijou en majuscules (ex: NAVITIMER, BAGUE FORCE10, PENDENTIF HAPPY DIAMONDS)",
@@ -136,6 +136,14 @@ Extraire uniquement la durée, format "X semaines" ou "X à Y semaines" :
 - "4 semaines après réception de votre accord" → "4 semaines"
 - "6 À 8 SEMAINES SOUS RÉSERVE..." → "6 à 8 semaines"
 - "10 jours" → "10 jours"
+
+═══ LIEU ═══
+Cherche dans le document la ville du point de vente DOUX concerné par ce devis.
+Elle apparaît dans des champs comme : "Point de vente", "Magasin", "Client", "Retailer", "Revendeur", adresse du destinataire.
+Valeurs attendues : "Avignon" ou "Nîmes".
+Si le document mentionne "NIMES", "Nîmes", "NÎMES" → retourner "Nîmes".
+Si le document mentionne "AVIGNON" → retourner "Avignon".
+Si non trouvée → chaîne vide (le formulaire appliquera la valeur par défaut).
 
 ═══ DATE ═══
 Format JJ.MM.AAAA. Si absente ou non trouvée, chaîne vide."""
@@ -271,11 +279,13 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
     # Marque : normaliser la casse / variantes
     data["marque"] = _normalize_brand(data.get("marque") or "Autre")
 
-    # SAV : supprimer le suffixe -1, -2, etc.
+    # SAV : supprimer le suffixe -1, -2, etc. + fallback lieu
     sav = data.get("sav") or {}
     num = str(sav.get("numero") or "")
     num = re.sub(r"-\d+$", "", num).strip()
     sav["numero"] = num
+    if not sav.get("lieu"):
+        sav["lieu"] = "Avignon"
     data["sav"] = sav
 
     _INCL_LABELS = {"incl.", "incl", "inclus", "included", "compris", "comprise"}
