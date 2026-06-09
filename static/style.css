@@ -222,12 +222,40 @@ textarea { resize: vertical; min-height: 90px; }
   gap: 6px;
 }
 
-.prix-base-label {
-  font-size: 12px;
+.prix-info-btn {
+  position: relative;
+  cursor: help;
+  font-size: 13px;
   color: var(--ink-soft);
-  opacity: 0.7;
-  font-weight: 400;
+  opacity: 0.6;
+  transition: opacity var(--transition);
+  display: inline-flex;
+  align-items: center;
+}
+
+.prix-info-btn:hover {
+  opacity: 1;
+}
+
+.prix-info-btn .tooltip {
+  position: absolute;
+  background: var(--ink);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
   white-space: nowrap;
+  z-index: 10;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+}
+
+.prix-info-btn:hover .tooltip {
+  opacity: 1;
 }
 
 .toggle-offert, .toggle-incl {

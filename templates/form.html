@@ -115,7 +115,9 @@
                      value="{{ display_val }}"
                      placeholder="0,00">
               {% if not (is_offert or is_incl) and line.prix %}
-              <span class="prix-base-label">({{ '%.2f'|format(line.prix or 0) }}€ HT)</span>
+              <span class="prix-info-btn" title="HT: {{ '%.2f'|format(line.prix or 0) }}€">ⓘ
+                <span class="tooltip">HT: {{ '%.2f'|format(line.prix or 0) }}€</span>
+              </span>
               {% endif %}
             </div>
             <input type="hidden" name="nec_base_prix[]" class="base-prix-input" value="{{ base_val }}">
@@ -212,7 +214,9 @@
                      value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
                      placeholder="0,00">
               {% if line.prix %}
-              <span class="prix-base-label">({{ '%.2f'|format(line.prix) }}€ HT)</span>
+              <span class="prix-info-btn" title="HT: {{ '%.2f'|format(line.prix) }}€">ⓘ
+                <span class="tooltip">HT: {{ '%.2f'|format(line.prix) }}€</span>
+              </span>
               {% endif %}
             </div>
             <input type="hidden" name="opt_base_prix[]" class="base-prix-input" value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}">
