@@ -49,6 +49,9 @@ body {
 .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 400; letter-spacing: 5px; }
 .brand-sub { font-size: 8px; font-weight: 700; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; }
 .topbar-right { font-size: 11px; color: var(--ink-soft); letter-spacing: 1.5px; text-transform: uppercase; }
+.topbar-link { font-size: 11px; color: var(--ink-mid); letter-spacing: 1.5px; text-transform: uppercase; text-decoration: none; transition: color var(--transition); }
+.topbar-link:hover { color: var(--gold); }
+.topbar-sep { color: var(--line-strong); margin: 0 8px; }
 
 /* ── Container ── */
 .container { max-width: 880px; margin: 40px auto 100px; padding: 0 24px; }

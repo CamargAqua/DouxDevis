@@ -464,6 +464,11 @@ def create_app() -> Flask:
         return send_from_directory(str(BASE_DIR / "static"), "cgv.pdf",
                                    mimetype="application/pdf")
 
+    @app.route("/guide")
+    def guide():
+        return render_template("guide.html")
+
+
     @app.errorhandler(413)
     def too_large(_):
         flash("Fichier trop volumineux (limite 25 Mo).", "error")
