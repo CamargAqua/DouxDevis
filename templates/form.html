@@ -250,9 +250,24 @@
       </div>
     </div>
 
+    <!-- ── VALIDATION BLOC ── -->
+    <div id="validation-bloc" style="margin-bottom:16px;display:none">
+      <div id="validation-errors" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px 18px;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:#b91c1c;letter-spacing:.5px;margin-bottom:8px">❌ ERREURS — Génération impossible</div>
+        <ul id="errors-list" style="margin:0;padding-left:18px;font-size:13px;color:#991b1b"></ul>
+      </div>
+      <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:14px 18px">
+        <div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:.5px;margin-bottom:8px">⚠️ Vérifiez avant de générer</div>
+        <ul style="margin:0;padding-left:18px;font-size:13px;color:#78350f">
+          <li>Le <strong>total HT partenaire</strong> correspond-il exactement au devis original ?</li>
+          <li>La <strong>marque</strong> est-elle correcte (détermine le coefficient) ?</li>
+        </ul>
+      </div>
+    </div>
+
     <div class="form-actions-sticky">
       <a href="{{ url_for('index') }}" class="btn btn-ghost">← Recommencer</a>
-      <button type="submit" class="btn btn-gold btn-lg">Générer le devis →</button>
+      <button type="submit" id="btn-generate" class="btn btn-gold btn-lg">Générer le devis →</button>
     </div>
   </form>
 </section>
@@ -733,6 +748,59 @@ document.getElementById('photo-input').addEventListener('change', function() {
   const r = new FileReader();
   r.onload = e => { const img = document.getElementById('photo-preview'); img.src = e.target.result; img.classList.add('visible'); };
   r.readAsDataURL(this.files[0]);
+});
+
+/* ── Validation avant génération ── */
+function validateForm() {
+  const errors = [];
+
+  // ERREUR BLOQUANTE : aucune intervention
+  const necLines = document.querySelectorAll('#nec-lines .intervention-line');
+  const hasInterventions = Array.from(necLines).some(line => {
+    const desc = line.querySelector('input[name="nec_description[]"]');
+    return desc && desc.value.trim() !== '';
+  });
+  if (!hasInterventions) errors.push('Aucune intervention n’est présente');
+
+  // ERREUR BLOQUANTE : coefficient invalide
+  const coeff = parseFloat(document.getElementById('coeff-input')?.value || 1);
+  if (isNaN(coeff) || coeff < 1 || coeff > 5) {
+    errors.push('Coefficient invalide (doit être entre 1 et 5)');
+  }
+
+  // Afficher/masquer bloc
+  const bloc = document.getElementById('validation-bloc');
+  const errorsDiv = document.getElementById('validation-errors');
+  const errorsList = document.getElementById('errors-list');
+  const btnGenerate = document.getElementById('btn-generate');
+
+  bloc.style.display = 'block';
+  bloc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  if (errors.length > 0) {
+    errorsList.innerHTML = errors.map(e => `<li>${e}</li>`).join('');
+    errorsDiv.style.display = 'block';
+    btnGenerate.disabled = true;
+    btnGenerate.style.opacity = '0.4';
+    btnGenerate.style.cursor = 'not-allowed';
+    return false;
+  } else {
+    errorsDiv.style.display = 'none';
+    btnGenerate.disabled = false;
+    btnGenerate.style.opacity = '';
+    btnGenerate.style.cursor = '';
+    return true;
+  }
+}
+
+// Déclencher au submit
+document.querySelector('form').addEventListener('submit', function(e) {
+  if (!validateForm()) e.preventDefault();
+});
+
+// Afficher le bloc de vigilance dès le chargement
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('validation-bloc').style.display = 'block';
 });
 </script>
 {% endblock %}
