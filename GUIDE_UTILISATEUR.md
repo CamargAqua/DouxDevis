@@ -58,8 +58,13 @@ L'outil vous affiche une page "**Vérification & ajustement**" où vous pouvez r
 - Liste de toutes les **interventions obligatoires**
 - Chaque intervention a :
   - Un intitulé (ex: "REVISION COMPLETE")
-  - Un prix (en €)
+  - Un prix (en €) avec un petit **ⓘ** au hover → affiche le prix HT partenaire
   - Une option : Normal / INCL (inclus) / OFFERT (gratuit)
+
+**ℹ️ Le petit ⓘ gris**
+- Passez votre souris dessus pour voir le **prix HT partenaire**
+- Exemple : `520€ ⓘ` → au hover → `HT: 260€`
+- Ça montre la transformation due à votre coefficient commercial
 
 🚨 **IMPORTANT — Quel prix rentrer ?**
 - **Rentrez TOUJOURS le prix HT du partenaire**, tel qu'indiqué dans son devis
