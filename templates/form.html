@@ -97,6 +97,13 @@
       <div class="form-section-header" onclick="toggleSection(this)">
         <span class="section-icon">🔧</span>
         <span class="section-title">Travail nécessaire</span>
+        <label class="toggle-switch-wrap section-header-toggle" onclick="event.stopPropagation()">
+          <span class="toggle-switch">
+            <input type="checkbox" id="coeff-nec-toggle" {{ '' if data.coeff_nec_enabled is sameas false else 'checked' }}>
+            <span class="toggle-slider"></span>
+          </span>
+          <span class="toggle-switch-lbl">Coeff.</span>
+        </label>
         <span class="section-badge nec">Facturation</span>
         <span class="section-chevron">▾</span>
       </div>
@@ -158,24 +165,6 @@
             <span id="coeff-brand-tag" class="coeff-brand-tag" style="display:none"></span>
           </div>
 
-          <!-- Ligne 1bis : activer/désactiver le coefficient par section -->
-          <div class="coeff-toggles-row">
-            <label class="toggle-switch-wrap">
-              <span class="toggle-switch">
-                <input type="checkbox" id="coeff-nec-toggle" {{ '' if data.coeff_nec_enabled is sameas false else 'checked' }}>
-                <span class="toggle-slider"></span>
-              </span>
-              <span class="toggle-switch-lbl">Coefficient Travail</span>
-            </label>
-            <label class="toggle-switch-wrap">
-              <span class="toggle-switch">
-                <input type="checkbox" id="coeff-opt-toggle" {{ '' if data.coeff_opt_enabled is sameas false else 'checked' }}>
-                <span class="toggle-slider"></span>
-              </span>
-              <span class="toggle-switch-lbl">Coefficient Options</span>
-            </label>
-          </div>
-
           <!-- Ligne 2 : presets + champ perso (masqué si coeff Travail désactivé) -->
           <div class="coeff-controls" id="coeff-controls">
             <div class="seg-ctrl" id="coeff-presets">
@@ -194,7 +183,7 @@
           </div>
 
           <!-- Ligne 3 : prix partenaire → prix client -->
-          <div class="coeff-prices-row" id="coeff-prices-row" style="display:none">
+          <div class="coeff-prices-row" id="coeff-prices-row">
             <div class="coeff-price-item">
               <span class="coeff-price-lbl">Prix partenaire</span>
               <span class="coeff-price-val">€&nbsp;<span id="total-display">0,00</span></span>
@@ -222,6 +211,13 @@
       <div class="form-section-header" onclick="toggleSection(this)">
         <span class="section-icon">✨</span>
         <span class="section-title">Travail optionnel</span>
+        <label class="toggle-switch-wrap section-header-toggle" onclick="event.stopPropagation()">
+          <span class="toggle-switch">
+            <input type="checkbox" id="coeff-opt-toggle" {{ '' if data.coeff_opt_enabled is sameas false else 'checked' }}>
+            <span class="toggle-slider"></span>
+          </span>
+          <span class="toggle-switch-lbl">Coeff.</span>
+        </label>
         <span class="section-badge opt">Options</span>
         <span class="section-chevron">▾</span>
       </div>
@@ -489,7 +485,6 @@ function syncCoeffToggleUI() {
   document.getElementById('coeff-nec-enabled-hidden').value = necOn ? '1' : '0';
   document.getElementById('coeff-opt-enabled-hidden').value = optOn ? '1' : '0';
   document.getElementById('coeff-controls').style.display = necOn ? 'flex' : 'none';
-  if (!necOn) document.getElementById('coeff-prices-row').style.display = 'none';
   document.querySelectorAll('#nec-lines .prix-info-btn').forEach(b => b.style.display = necOn ? '' : 'none');
   document.querySelectorAll('#opt-lines .prix-info-btn').forEach(b => b.style.display = optOn ? '' : 'none');
 }
@@ -588,8 +583,8 @@ function refreshTotals() {
     const inp = line.querySelector('.prix-input');
     const b = parseFloat((inp.dataset.base || '0').replace(',','.'));
     const v = parseFloat((inp.value    || '0').replace(',','.'));
+    if (!isNaN(b)) base += b; // prix fournisseur — toujours calculé, même coeff Travail désactivé
     if (necOn) {
-      if (!isNaN(b)) base       += b;
       if (!isNaN(b) && b > 0) clientBrut += Math.round(b * coeff); else if (!isNaN(v)) clientBrut += Math.round(v);
     } else if (!isNaN(v)) {
       // Coeff Travail désactivé : la valeur saisie est directement le prix client final
@@ -616,8 +611,7 @@ function refreshTotals() {
   document.getElementById('total-override-input').value = clientTTCRounded.toFixed(2);
   document.getElementById('coeff-hidden').value = coeff.toFixed(4);
 
-  const pricesRow = document.getElementById('coeff-prices-row');
-  pricesRow.style.display = (necOn && base > 0) ? 'flex' : 'none';
+  document.getElementById('coeff-prices-row').style.display = 'flex';
 
   const gain = clientTTCRounded - base;
   const gainEl = document.getElementById('coeff-gain');

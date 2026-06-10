@@ -31,7 +31,17 @@
       "Bash(git commit -m 'docs: add user guide and technical README *)",
       "Bash(git commit -m 'docs: add vigilance checklist to user guide *)",
       "Bash(git commit -m 'docs: add critical warning about price entry in guide *)",
-      "Bash(git commit -m 'feat: display partner HT price discreetly under each line *)"
+      "Bash(git commit -m 'feat: display partner HT price discreetly under each line *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:5000/)",
+      "Bash(curl -s http://127.0.0.1:5000/dev-preview -I)",
+      "Bash(powershell -Command \"Stop-Process -Id 6748 -Force\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess\")",
+      "Bash(git fetch *)",
+      "mcp__Claude_in_Chrome__read_console_messages",
+      "mcp__Claude_in_Chrome__find",
+      "mcp__Claude_in_Chrome__file_upload",
+      "mcp__Claude_in_Chrome__read_network_requests",
+      "mcp__Claude_in_Chrome__get_page_text"
     ]
   }
 }

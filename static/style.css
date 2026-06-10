@@ -153,8 +153,20 @@ body {
 }
 .form-section-header:hover { background: var(--gold-ultra); }
 .section-icon { font-size: 18px; }
-.section-title { font-weight: 700; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold); flex: 1; }
+.section-title {
+  font-weight: 700; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gold);
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .section-chevron { color: var(--ink-soft); font-size: 13px; transition: transform var(--transition); }
+.section-header-toggle {
+  flex-shrink: 0; gap: 6px;
+}
+.section-header-toggle .toggle-switch-lbl {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+}
+@media(max-width: 480px) {
+  .section-header-toggle .toggle-switch-lbl { display: none; }
+}
 .form-section.collapsed .section-chevron { transform: rotate(-90deg); }
 .form-section.collapsed .form-section-body { display: none; }
 .form-section-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
@@ -286,9 +298,6 @@ textarea { resize: vertical; min-height: 90px; }
 }
 .coeff-top-row {
   display: flex; align-items: center; gap: 10px;
-}
-.coeff-toggles-row {
-  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
 }
 .toggle-switch-wrap {
   display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
