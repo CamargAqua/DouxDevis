@@ -264,6 +264,8 @@ def create_app() -> Flask:
             token = uuid.uuid4().hex
             session["token"] = token
             session["data"]  = data
+            session["source_kind"] = "text"
+            session["source_text"] = paste_text
             return redirect(url_for("review"))
 
         # ── Mode fichier ────────────────────────────────────────────────────
@@ -281,12 +283,14 @@ def create_app() -> Flask:
             return redirect(url_for("index"))
 
         ext = upload_file.filename.rsplit(".", 1)[-1].lower()
+        source_kind = "pdf"
+        source_payload: bytes | str = file_bytes
         try:
             if ext == "eml":
-                data = extract_from_eml(file_bytes, api_key=api_key, filename=upload_file.filename)
+                data, source_kind, source_payload = extract_from_eml(file_bytes, api_key=api_key, filename=upload_file.filename)
             elif ext == "msg":
                 from pdf_extractor import extract_from_msg
-                data = extract_from_msg(file_bytes, api_key=api_key, filename=upload_file.filename)
+                data, source_kind, source_payload = extract_from_msg(file_bytes, api_key=api_key, filename=upload_file.filename)
             else:
                 data = extract_from_pdf(file_bytes, api_key=api_key, filename=upload_file.filename)
         except ValueError as exc:
@@ -321,14 +325,19 @@ def create_app() -> Flask:
 
 
         token = uuid.uuid4().hex
-        session_dir = UPLOAD_DIR / token
-        session_dir.mkdir(parents=True, exist_ok=True)
-        file_path = session_dir / secure_filename(upload_file.filename)
-        file_path.write_bytes(file_bytes)
-
         session["token"] = token
         session["data"] = data
-        session["source_pdf"] = file_path.name
+
+        if source_kind == "pdf":
+            session_dir = UPLOAD_DIR / token
+            session_dir.mkdir(parents=True, exist_ok=True)
+            file_path = session_dir / "source.pdf"
+            file_path.write_bytes(source_payload)
+            session["source_kind"] = "pdf"
+            session["source_pdf"] = file_path.name
+        else:
+            session["source_kind"] = "text"
+            session["source_text"] = source_payload
 
         return redirect(url_for("review"))
 
@@ -370,7 +379,10 @@ def create_app() -> Flask:
         if not data:
             return redirect(url_for("index"))
         return render_template("form.html", data=data, marques=MARQUES,
-                               coefficients_json=json.dumps(_load_coefficients(), ensure_ascii=False))
+                               coefficients_json=json.dumps(_load_coefficients(), ensure_ascii=False),
+                               source_kind=session.get("source_kind", "none"),
+                               source_text=session.get("source_text", ""),
+                               token=session.get("token"))
 
     @app.route("/generate", methods=["POST"])
     def generate():
@@ -430,6 +442,16 @@ def create_app() -> Flask:
         if not (directory / safe_name).is_file():
             abort(404)
         return send_from_directory(directory, safe_name, as_attachment=True)
+
+    @app.route("/source/<token>")
+    def source_file(token: str):
+        if token != session.get("token") or session.get("source_kind") != "pdf":
+            abort(404)
+        directory = UPLOAD_DIR / secure_filename(token)
+        filename = secure_filename(session.get("source_pdf", ""))
+        if not filename or not (directory / filename).is_file():
+            abort(404)
+        return send_from_directory(directory, filename, mimetype="application/pdf")
 
     @app.route("/prepare-signature", methods=["POST"])
     def prepare_signature():
@@ -543,6 +565,8 @@ def _form_to_data(form) -> dict:
     except (ValueError, TypeError):
         coeff_opt = coeff
     coeff_base = (form.get("coeff_base") or "ttc").lower()  # "ht" ou "ttc"
+    coeff_nec_enabled = (form.get("coeff_nec_enabled") or "1") == "1"
+    coeff_opt_enabled = (form.get("coeff_opt_enabled") or "1") == "1"
 
     # Les inputs soumettent déjà les prix clients appliqués dans le JS :
     # - marques TTC : inp.value = prix_partenaire_TTC × coeff
@@ -574,36 +598,39 @@ def _form_to_data(form) -> dict:
             line["prix_client"] = float(line.get("prix") or 0)
     priced_opts = [l for l in optionnelles if (l.get("prix_label") or "") not in ("OFFERT", "INCL")]
 
-    # ── NÉCESSAIRES : algo ceil5 avec dernière ligne compensatrice ──
+    # ── NÉCESSAIRES : algo ceil5 avec dernière ligne compensatrice (si coeff actif) ──
     # T = ceil5(sum_HT × coeff) ; lignes[:-1] → ceil5 individuel ; dernière = T − somme
+    # Si le coefficient est désactivé, le prix saisi = prix client final (passthrough).
     if priced_nec:
-        sum_ht = sum(l.get("_base_prix") or 0 for l in priced_nec)
-        if sum_ht > 0:
-            T = _ceil5(sum_ht * coeff)
-            other_sum = 0.0
-            for l in priced_nec[:-1]:
-                base = l.get("_base_prix") or 0
-                pc = _ceil5(base * coeff) if base > 0 else _ceil5(l["prix_client"])
-                l["prix_client"] = pc
-                other_sum += pc
-            priced_nec[-1]["prix_client"] = T - other_sum
-        else:
-            # Fallback si pas de _base_prix (ligne ajoutée manuellement)
-            T = _ceil5(sum(l["prix_client"] for l in priced_nec))
-            other_sum = 0.0
-            for l in priced_nec[:-1]:
-                pc = _ceil5(l["prix_client"])
-                l["prix_client"] = pc
-                other_sum += pc
-            priced_nec[-1]["prix_client"] = T - other_sum
+        if coeff_nec_enabled:
+            sum_ht = sum(l.get("_base_prix") or 0 for l in priced_nec)
+            if sum_ht > 0:
+                T = _ceil5(sum_ht * coeff)
+                other_sum = 0.0
+                for l in priced_nec[:-1]:
+                    base = l.get("_base_prix") or 0
+                    pc = _ceil5(base * coeff) if base > 0 else _ceil5(l["prix_client"])
+                    l["prix_client"] = pc
+                    other_sum += pc
+                priced_nec[-1]["prix_client"] = T - other_sum
+            else:
+                # Fallback si pas de _base_prix (ligne ajoutée manuellement)
+                T = _ceil5(sum(l["prix_client"] for l in priced_nec))
+                other_sum = 0.0
+                for l in priced_nec[:-1]:
+                    pc = _ceil5(l["prix_client"])
+                    l["prix_client"] = pc
+                    other_sum += pc
+                priced_nec[-1]["prix_client"] = T - other_sum
         total_client = float(sum(l["prix_client"] for l in priced_nec))
     else:
         total_client = 0.0
 
-    # ── OPTIONS : ceil5 par ligne avec coeff_opt si défini ──
-    for l in priced_opts:
-        base = l.get("_base_prix") or 0
-        l["prix_client"] = _ceil5(base * coeff_opt) if base > 0 else _ceil5(l["prix_client"])
+    # ── OPTIONS : ceil5 par ligne avec coeff_opt si défini (si coeff actif) ──
+    if coeff_opt_enabled:
+        for l in priced_opts:
+            base = l.get("_base_prix") or 0
+            l["prix_client"] = _ceil5(base * coeff_opt) if base > 0 else _ceil5(l["prix_client"])
 
     # Fixer prix (HT partenaire) sur toutes les lignes
     for line in necessaires + optionnelles:
@@ -641,6 +668,8 @@ def _form_to_data(form) -> dict:
         "coeff": coeff,
         "coeff_opt": coeff_opt if coeff_opt != coeff else None,
         "coeff_base": coeff_base,
+        "coeff_nec_enabled": coeff_nec_enabled,
+        "coeff_opt_enabled": coeff_opt_enabled,
         "delai": form.get("delai", "4 à 6 semaines").strip() or "4 à 6 semaines",
     }
 

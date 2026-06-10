@@ -543,11 +543,14 @@ def _extract_from_text(text: str, api_key: str | None = None,
 
 
 def extract_from_eml(eml_bytes: bytes, api_key: str | None = None,
-                     filename: str | None = None) -> dict[str, Any]:
+                     filename: str | None = None) -> tuple[dict[str, Any], str, Any]:
     """Extrait les donnees structurees depuis un email .eml.
 
     Si le mail contient un PDF en piece jointe, delegue a extract_from_pdf.
     Sinon extrait le corps texte et l'envoie au LLM.
+
+    Retourne (data, source_kind, source_payload) ou source_kind vaut
+    "pdf" (source_payload = bytes du PDF) ou "text" (source_payload = texte source).
     """
 
     import email as _email_lib
@@ -562,7 +565,8 @@ def extract_from_eml(eml_bytes: bytes, api_key: str | None = None,
             pdf_bytes = part.get_payload(decode=True)
             if pdf_bytes:
                 pdf_fn = part.get_filename() or filename or "attachment.pdf"
-                return extract_from_pdf(pdf_bytes, api_key=api_key, filename=pdf_fn)
+                data = extract_from_pdf(pdf_bytes, api_key=api_key, filename=pdf_fn)
+                return data, "pdf", pdf_bytes
 
     # 2. Extraire le corps texte
     body = ""
@@ -600,15 +604,18 @@ def extract_from_eml(eml_bytes: bytes, api_key: str | None = None,
                 data["marque"] = detected
                 break
 
-    return data
+    return data, "text", email_context
 
 
 def extract_from_msg(msg_bytes: bytes, api_key: str | None = None,
-                     filename: str | None = None) -> dict[str, Any]:
+                     filename: str | None = None) -> tuple[dict[str, Any], str, Any]:
     """Extrait les données depuis un email Outlook .msg (drag & drop depuis Outlook).
 
     Si le .msg contient un PDF en pièce jointe, délègue à extract_from_pdf.
     Sinon extrait le corps texte comme pour un .eml.
+
+    Retourne (data, source_kind, source_payload) ou source_kind vaut
+    "pdf" (source_payload = bytes du PDF) ou "text" (source_payload = texte source).
     """
     try:
         import extract_msg as _msg_lib
@@ -630,7 +637,8 @@ def extract_from_msg(msg_bytes: bytes, api_key: str | None = None,
         if name.endswith(".pdf"):
             pdf_bytes = att.data
             if pdf_bytes:
-                return extract_from_pdf(pdf_bytes, api_key=api_key, filename=name)
+                data = extract_from_pdf(pdf_bytes, api_key=api_key, filename=name)
+                return data, "pdf", pdf_bytes
 
     # 2. Extraire le corps texte
     body = msg.body or ""
@@ -652,4 +660,4 @@ def extract_from_msg(msg_bytes: bytes, api_key: str | None = None,
                 data["marque"] = detected
                 break
 
-    return data
+    return data, "text", email_context

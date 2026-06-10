@@ -21,7 +21,9 @@
   },
   "Omega": {
     "coeff": 1.6,
-    "base": "ht"
+    "base": "ht",
+    "coeff_nec_default": false,
+    "coeff_opt_default": false
   },
   "IWC Schaffhausen": {
     "coeff": 2.1,
@@ -54,7 +56,8 @@
   "Breitling": {
     "coeff": 1.1764,
     "coeff_opt": 1.333,
-    "base": "ht"
+    "base": "ht",
+    "coeff_nec_default": false
   },
   "Chanel": {
     "coeff": 2.1,

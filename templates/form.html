@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Vérification — DOUX Joaillier{% endblock %}
+{% block container_class %}container-review{% endblock %}
 {% block content %}
+<div class="review-layout">
+<div class="review-form-col">
 <section class="card">
   <header style="margin-bottom:28px">
     <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;margin-bottom:6px">Vérification &amp; ajustement</h1>
@@ -155,8 +158,26 @@
             <span id="coeff-brand-tag" class="coeff-brand-tag" style="display:none"></span>
           </div>
 
-          <!-- Ligne 2 : presets + champ perso -->
-          <div class="coeff-controls">
+          <!-- Ligne 1bis : activer/désactiver le coefficient par section -->
+          <div class="coeff-toggles-row">
+            <label class="toggle-switch-wrap">
+              <span class="toggle-switch">
+                <input type="checkbox" id="coeff-nec-toggle" {{ '' if data.coeff_nec_enabled is sameas false else 'checked' }}>
+                <span class="toggle-slider"></span>
+              </span>
+              <span class="toggle-switch-lbl">Coefficient Travail</span>
+            </label>
+            <label class="toggle-switch-wrap">
+              <span class="toggle-switch">
+                <input type="checkbox" id="coeff-opt-toggle" {{ '' if data.coeff_opt_enabled is sameas false else 'checked' }}>
+                <span class="toggle-slider"></span>
+              </span>
+              <span class="toggle-switch-lbl">Coefficient Options</span>
+            </label>
+          </div>
+
+          <!-- Ligne 2 : presets + champ perso (masqué si coeff Travail désactivé) -->
+          <div class="coeff-controls" id="coeff-controls">
             <div class="seg-ctrl" id="coeff-presets">
               <button type="button" class="seg-btn" data-coeff="1.30" onclick="setCoeff(1.30)">×1,30</button>
               <button type="button" class="seg-btn" data-coeff="1.40" onclick="setCoeff(1.40)">×1,40</button>
@@ -191,6 +212,8 @@
         <input type="hidden" name="coeff"        id="coeff-hidden"        value="{{ data.coeff or 1.0 }}">
         <input type="hidden" name="coeff_opt"    id="coeff-opt-hidden"    value="{{ data.coeff_opt or '' }}">
         <input type="hidden" name="coeff_base"   id="coeff-base-hidden"   value="{{ data.coeff_base or 'ttc' }}">
+        <input type="hidden" name="coeff_nec_enabled" id="coeff-nec-enabled-hidden" value="{{ '0' if data.coeff_nec_enabled is sameas false else '1' }}">
+        <input type="hidden" name="coeff_opt_enabled" id="coeff-opt-enabled-hidden" value="{{ '0' if data.coeff_opt_enabled is sameas false else '1' }}">
       </div>
     </div>
 
@@ -271,6 +294,27 @@
     </div>
   </form>
 </section>
+</div>
+
+{% if source_kind == "pdf" %}
+<aside class="review-source-col">
+  <iframe class="source-pdf-frame" src="{{ url_for('source_file', token=token) }}" title="Devis source (PDF)"></iframe>
+</aside>
+{% elif source_kind == "text" %}
+<aside class="review-source-col">
+  <div class="source-text-card">
+    <div class="eq-header">
+      <span class="eq-icon">📨</span>
+      <div class="eq-meta">
+        <div class="eq-title">Devis source</div>
+        <div class="eq-subtitle">Texte d'origine (email)</div>
+      </div>
+    </div>
+    <pre>{{ source_text }}</pre>
+  </div>
+</aside>
+{% endif %}
+</div>
 
 <script>
 /* ═══════════════════════════════════════════════
@@ -435,6 +479,21 @@ function findBrandKey(query) {
   return null;
 }
 
+/* ── Toggles coefficient Travail / Options ── */
+function necCoeffEnabled() { return document.getElementById('coeff-nec-toggle').checked; }
+function optCoeffEnabled() { return document.getElementById('coeff-opt-toggle').checked; }
+
+function syncCoeffToggleUI() {
+  const necOn = necCoeffEnabled();
+  const optOn = optCoeffEnabled();
+  document.getElementById('coeff-nec-enabled-hidden').value = necOn ? '1' : '0';
+  document.getElementById('coeff-opt-enabled-hidden').value = optOn ? '1' : '0';
+  document.getElementById('coeff-controls').style.display = necOn ? 'flex' : 'none';
+  if (!necOn) document.getElementById('coeff-prices-row').style.display = 'none';
+  document.querySelectorAll('#nec-lines .prix-info-btn').forEach(b => b.style.display = necOn ? '' : 'none');
+  document.querySelectorAll('#opt-lines .prix-info-btn').forEach(b => b.style.display = optOn ? '' : 'none');
+}
+
 /* ── Toggle OFFERT ── */
 function toggleOffert(btn) {
   const line   = btn.closest('.intervention-line');
@@ -493,12 +552,17 @@ function fmt(n) { return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maxim
 // Applique le coefficient sur chaque ligne (répartition proportionnelle du delta = x coeff)
 // Pour Omega (base HT) : inp.value = prix_HT × coeff ; pour les autres : prix_TTC × coeff
 function applyCoeffToLines(coeff, force) {
-  ['#nec-lines', '#opt-lines'].forEach(selector => {
+  const sections = [
+    ['#nec-lines', necCoeffEnabled()],
+    ['#opt-lines', optCoeffEnabled()],
+  ];
+  sections.forEach(([selector, enabled]) => {
     document.querySelectorAll(selector + ' .intervention-line').forEach(line => {
       const lbl = line.querySelector('.label-input').value;
       if (lbl === 'OFFERT' || lbl === 'INCL') return;
       const inp = line.querySelector('.prix-input');
       if (!inp.dataset.base && inp.value) inp.dataset.base = inp.value;
+      if (!enabled) return; // coeff désactivé : la valeur saisie = prix client final
       const base = parseFloat((inp.dataset.base || '0').replace(',','.'));
       if (!isNaN(base) && base > 0) {
         // Sur le chargement initial (force=false), ne pas écraser si value est déjà
@@ -515,6 +579,7 @@ function applyCoeffToLines(coeff, force) {
 function refreshTotals() {
   const coeff     = parseFloat(document.getElementById('coeff-input').value) || 1.0;
   const coeffBase = document.getElementById('coeff-base-hidden').value || 'ttc';
+  const necOn     = necCoeffEnabled();
 
   let base = 0, clientBrut = 0;
   document.querySelectorAll('#nec-lines .intervention-line').forEach(line => {
@@ -523,15 +588,23 @@ function refreshTotals() {
     const inp = line.querySelector('.prix-input');
     const b = parseFloat((inp.dataset.base || '0').replace(',','.'));
     const v = parseFloat((inp.value    || '0').replace(',','.'));
-    if (!isNaN(b)) base       += b;
-    if (!isNaN(b) && b > 0) clientBrut += Math.round(b * coeff); else if (!isNaN(v)) clientBrut += Math.round(v);
+    if (necOn) {
+      if (!isNaN(b)) base       += b;
+      if (!isNaN(b) && b > 0) clientBrut += Math.round(b * coeff); else if (!isNaN(v)) clientBrut += Math.round(v);
+    } else if (!isNaN(v)) {
+      // Coeff Travail désactivé : la valeur saisie est directement le prix client final
+      clientBrut += Math.round(v);
+    }
   });
 
   // Pour Omega (HT) : prix_HT × coeff = prix_TTC_client directement (pas de ×1.20 supplémentaire)
   // Le coefficient intègre déjà la conversion HT→TTC
   const clientTTC = clientBrut;
-  // Total client arrondi au multiple de 5 supérieur (le backend ajuste la dernière ligne)
-  const clientTTCRounded = clientTTC > 0 ? Math.ceil(clientTTC / 5 - 1e-9) * 5 : clientTTC;
+  // Total client arrondi au multiple de 5 supérieur (le backend ajuste la dernière ligne).
+  // Si le coeff Travail est désactivé, les prix saisis sont déjà définitifs : pas de ré-arrondi.
+  const clientTTCRounded = necOn
+    ? (clientTTC > 0 ? Math.ceil(clientTTC / 5 - 1e-9) * 5 : clientTTC)
+    : clientTTC;
 
   const pLblEl = document.querySelector('.coeff-price-item:first-child .coeff-price-lbl');
   const cLblEl = document.querySelector('.coeff-price-item--gold .coeff-price-lbl');
@@ -544,14 +617,14 @@ function refreshTotals() {
   document.getElementById('coeff-hidden').value = coeff.toFixed(4);
 
   const pricesRow = document.getElementById('coeff-prices-row');
-  pricesRow.style.display = base > 0 ? 'flex' : 'none';
+  pricesRow.style.display = (necOn && base > 0) ? 'flex' : 'none';
 
   const gain = clientTTCRounded - base;
   const gainEl = document.getElementById('coeff-gain');
   gainEl.textContent = gain > 0.01 ? `+ ${fmt(gain)} €` : '';
   gainEl.style.color = gain > 0.01 ? '#4CAF7D' : 'transparent';
 
-  const coeffLabel = `×${coeff.toFixed(2).replace('.',',')}`;
+  const coeffLabel = necOn ? `×${coeff.toFixed(2).replace('.',',')}` : 'OFF';
   document.getElementById('coeff-header-badge').textContent = coeffLabel;
 
   document.querySelectorAll('#coeff-presets .seg-btn').forEach(b =>
@@ -565,10 +638,11 @@ function roundInputs() {
   var coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
 
   // ── NÉCESSAIRES : ceil5 sur le TOTAL (sum_HT × coeff), dernière ligne ajustée ──
-  var necLines = [...document.querySelectorAll('#nec-lines .intervention-line')].filter(function(l) {
+  // Si le coeff Travail est désactivé, les valeurs saisies sont définitives : pas d'arrondi.
+  var necLines = necCoeffEnabled() ? [...document.querySelectorAll('#nec-lines .intervention-line')].filter(function(l) {
     var lbl = l.querySelector('.label-input').value;
     return lbl !== 'OFFERT' && lbl !== 'INCL';
-  });
+  }) : [];
   if (necLines.length > 0) {
     // Total cible = ceil5(sum des bases HT × coeff)
     var totalHT = 0;
@@ -593,24 +667,31 @@ function roundInputs() {
   }
 
   // ── OPTIONS : ceil5 par ligne avec coeff_opt si dispo ──
-  var coeffOptRaw = document.getElementById('coeff-opt-hidden').value;
-  var coeffOpt = coeffOptRaw ? (parseFloat(coeffOptRaw) || coeff) : coeff;
-  document.querySelectorAll('#opt-lines .intervention-line').forEach(function(line) {
-    var lbl = line.querySelector('.label-input').value;
-    if (lbl === 'OFFERT' || lbl === 'INCL') return;
-    var inp  = line.querySelector('.prix-input');
-    var base = parseFloat((inp.dataset.base || '0').replace(',', '.')) || 0;
-    var v    = base > 0 ? ceil5(base * coeffOpt) : ceil5(parseFloat(inp.value || '0') || 0);
-    if (v > 0) inp.value = v.toFixed(2);
-  });
+  // Si le coeff Options est désactivé, les valeurs saisies sont définitives : pas d'arrondi.
+  if (optCoeffEnabled()) {
+    var coeffOptRaw = document.getElementById('coeff-opt-hidden').value;
+    var coeffOpt = coeffOptRaw ? (parseFloat(coeffOptRaw) || coeff) : coeff;
+    document.querySelectorAll('#opt-lines .intervention-line').forEach(function(line) {
+      var lbl = line.querySelector('.label-input').value;
+      if (lbl === 'OFFERT' || lbl === 'INCL') return;
+      var inp  = line.querySelector('.prix-input');
+      var base = parseFloat((inp.dataset.base || '0').replace(',', '.')) || 0;
+      var v    = base > 0 ? ceil5(base * coeffOpt) : ceil5(parseFloat(inp.value || '0') || 0);
+      if (v > 0) inp.value = v.toFixed(2);
+    });
+  }
 }
 
 function updateTotal(force) {
+  syncCoeffToggleUI();
   const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
   applyCoeffToLines(coeff, force !== false);
   roundInputs();
   refreshTotals();
 }
+
+document.getElementById('coeff-nec-toggle').addEventListener('change', () => updateTotal(true));
+document.getElementById('coeff-opt-toggle').addEventListener('change', () => updateTotal(true));
 
 function setCoeff(val) {
   document.getElementById('coeff-input').value = val;
@@ -659,6 +740,12 @@ window.selectMarque = function(val) {
   document.getElementById('coeff-hidden').value      = coeff.toFixed(4);
   document.getElementById('coeff-opt-hidden').value  = coeffOpt ? coeffOpt.toFixed(4) : '';
   document.getElementById('coeff-base-hidden').value = base;
+
+  const necDefault = typeof brandData === 'object' ? (brandData.coeff_nec_default !== false) : true;
+  const optDefault = typeof brandData === 'object' ? (brandData.coeff_opt_default !== false) : true;
+  document.getElementById('coeff-nec-toggle').checked = necDefault;
+  document.getElementById('coeff-opt-toggle').checked = optDefault;
+
   updateTotal(true);
 };
 
