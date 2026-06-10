@@ -48,6 +48,30 @@ document.querySelectorAll('#nec-lines .intervention-line').forEach(...)
 **Erreur :** `pdf_generator.py` et `docx_generator.py` affichaient les sous-points `service_complet_description` sous la première intervention quelle qu'elle soit. Pour un devis Chopard avec "ECHANGE DU FERMOIR" en premier, les sous-points du POLISSAGE apparaissaient sous l'échange du fermoir.
 **Règle :** Afficher `service_complet_description` uniquement si la description contient SERVICE, RÉVISION, OVERHAUL ou ENTRETIEN. Un échange de fermoir ou une réparation de pendentif ne doit jamais avoir de sous-points.
 
+## 2026-06-03 — Arrondi multi-lignes : algo ceil5 avec dernière ligne compensatrice
+
+**Règle validée sur exemples Chanel et Rolex :**
+
+Pour les lignes nécessaires avec plusieurs prix :
+1. `T = ceil5(sum_HT × coeff)` — total cible (cohérent avec le tarif partenaire)
+2. Toutes les lignes sauf la dernière → `ceil5(ligne_HT × coeff)`
+3. Dernière ligne → `T − somme(autres)` — automatiquement multiple de 5 (différence de multiples de 5)
+
+**Pourquoi :** sum(ceil5 par ligne) > ceil5(sum × coeff) — chaque ceil5 individuel arrondit vers le haut, le cumul dépasse le total cible.
+**La dernière ligne absorbe l'excédent** : elle peut être légèrement inférieure à ceil5(sa ligne × coeff), mais reste multiple de 5 et le total est exact.
+
+**Exemple Chanel (coeff 2.1, total HT 525.50€) :**
+- Lignes 1-5 → ceil5 individuel : 525, 245, 25, 130, 85
+- Maillon (dernière) : 1105 − 1010 = **95** (au lieu de 105)
+- Total : **1105** ✅ (au lieu de 1115 avec ceil5 par ligne)
+
+**Exemple Rolex (coeff 1.2, total HT 988€) :**
+- Lignes 1-4 → ceil5 individuel : 780, 85, 170, 115
+- TEST PRESSION (dernière) : 1190 − 1150 = **40** (au lieu de 45)
+- Total : **1190** ✅
+
+**Pour les options :** ceil5 par ligne indépendamment (prix unitaire à la carte, pas de total cible à respecter).
+
 ## 2026-05-26 — Règle HT universelle pour toutes les marques
 **Erreur antérieure :** Le coeff_base="ht" était uniquement forcé pour Omega dans `_clean()`. Toutes les autres marques restaient en "ttc", causant une double-conversion (coeff × HT × 1.20).
 **Règle :** `_clean()` dans `pdf_extractor.py` doit toujours poser `coeff_base = "ht"` sans condition de marque. Le prompt force l'extraction HT universellement (colonnes FR/EN/DE). `coefficients.json` : tous les `"base"` à `"ht"`. `form.html` : default `coeff-base-hidden` à `"ht"`.

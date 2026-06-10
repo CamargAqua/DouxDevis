@@ -58,6 +58,7 @@
 - [x] Créer README.md — documentation technique (stack, installation, déploiement, structure code, troubleshooting)
 
 ## Backlog
+- [ ] Arrondi multi-lignes : algo ceil5 avec dernière ligne compensatrice
 - [ ] Section signature (Yousign) — à ajouter plus tard
 - [ ] Tests unitaires pdf_extractor
 - [ ] Screenshots intégrées au GUIDE_UTILISATEUR.md
