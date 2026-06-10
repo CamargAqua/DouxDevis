@@ -52,8 +52,8 @@
     "base": "ht"
   },
   "Breitling": {
-    "coeff": 1.333,
-    "coeff_opt": 1.1764,
+    "coeff": 1.1764,
+    "coeff_opt": 1.333,
     "base": "ht"
   },
   "Chanel": {
