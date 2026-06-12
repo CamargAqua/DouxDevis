@@ -3,5 +3,7 @@ __pycache__/
 *.pyc
 uploads/
 generated/
+flask_sessions/
 .venv/
 venv/
+.claude/worktrees/

@@ -49,12 +49,23 @@
           <div class="guide-critical-body">
             <p><strong>Le total HT partenaire</strong> est le chiffre de référence. S'il correspond exactement au devis original reçu, tout le reste est juste.</p>
             <ol class="guide-list guide-list-ordered" style="margin-top:10px;">
-              <li>Ouvrez le devis partenaire original</li>
+              <li>Regardez le devis partenaire affiché dans le panneau de droite</li>
               <li>Repérez son total HT</li>
               <li>Comparez avec <em>« PRIX PARTENAIRE (HT) »</em> dans DouxDevis</li>
               <li>Ils doivent être <strong>identiques</strong></li>
             </ol>
           </div>
+        </div>
+
+        <!-- Source panel tip -->
+        <div class="guide-tip" style="margin-top:0;">
+          <span class="guide-tip-icon">▣</span>
+          <span>
+            <strong>Devis source toujours visible :</strong> le document partenaire (PDF ou email) reste affiché
+            dans le <strong>panneau de droite</strong> pendant toute la vérification. Plus besoin d'ouvrir un autre
+            onglet — comparez les prix côte à côte. Les boutons en haut du panneau permettent de le télécharger
+            ou de l'ouvrir en plein écran.
+          </span>
         </div>
 
         <!-- HT rule -->
@@ -106,10 +117,78 @@
           <span><strong>Coefficient :</strong> il est automatiquement rempli selon la marque sélectionnée. Chaque marque partenaire a son propre coefficient (ex. Rolex ≠ Omega). Vous pouvez toujours l'ajuster manuellement si besoin.</span>
         </div>
 
+        <!-- Toggle coeff -->
+        <div class="guide-rule" style="margin-top:16px;">
+          <div class="guide-rule-title">Activer / désactiver le coefficient</div>
+          <div style="padding:16px;font-size:14px;line-height:1.7;color:var(--ink);">
+            <p>Chaque section — <strong>Travail nécessaire</strong> et <strong>Travail optionnel</strong> — possède un interrupteur <strong>« Coeff. »</strong> :</p>
+            <ul class="guide-list" style="margin-top:10px;">
+              <li><strong>Activé</strong> (cas le plus courant) — le coefficient s'applique sur le prix HT partenaire et le total est arrondi au multiple de 5.</li>
+              <li><strong>Désactivé</strong> — le prix que vous saisissez devient directement le <strong>prix client final</strong>, sans coefficient ni arrondi. Pratique quand le tarif est déjà fixé.</li>
+            </ul>
+
+            <div class="guide-shot">
+              <div class="guide-shot-item">
+                <div class="form-section guide-shot-demo">
+                  <div class="form-section-header">
+                    <span class="section-icon">🔧</span>
+                    <span class="section-title">Travail nécessaire</span>
+                    <span class="toggle-switch-wrap section-header-toggle">
+                      <span class="toggle-switch">
+                        <input type="checkbox" checked tabindex="-1" aria-hidden="true">
+                        <span class="toggle-slider"></span>
+                      </span>
+                      <span class="toggle-switch-lbl">Coeff.</span>
+                    </span>
+                    <span class="section-badge nec">Facturation</span>
+                    <span class="section-chevron">▾</span>
+                  </div>
+                </div>
+                <div class="guide-shot-cap"><span class="tag-on">Activé</span> — interrupteur doré. Le coefficient s'applique, total arrondi au multiple de 5.</div>
+              </div>
+              <div class="guide-shot-item">
+                <div class="form-section guide-shot-demo">
+                  <div class="form-section-header">
+                    <span class="section-icon">🔧</span>
+                    <span class="section-title">Travail nécessaire</span>
+                    <span class="toggle-switch-wrap section-header-toggle">
+                      <span class="toggle-switch">
+                        <input type="checkbox" tabindex="-1" aria-hidden="true">
+                        <span class="toggle-slider"></span>
+                      </span>
+                      <span class="toggle-switch-lbl">Coeff.</span>
+                    </span>
+                    <span class="section-badge nec">Facturation</span>
+                    <span class="section-chevron">▾</span>
+                  </div>
+                </div>
+                <div class="guide-shot-cap"><span class="tag-off">Désactivé</span> — interrupteur gris. Le prix saisi = prix client final, sans calcul.</div>
+              </div>
+            </div>
+
+            <p style="margin-top:10px;">Certaines marques s'ouvrent <strong>désactivées</strong> automatiquement (ex. <em>Breitling</em>, <em>Omega</em>) car leur tarification est négociée différemment. Vous pouvez basculer l'interrupteur à tout moment, par devis.</p>
+          </div>
+        </div>
+
         <!-- Tooltip tip -->
         <div class="guide-tip">
           <span class="guide-tip-icon">ⓘ</span>
-          <span>Passez la souris sur le petit <strong>ⓘ</strong> gris à côté d'un prix pour voir le montant HT partenaire correspondant.</span>
+          <span>Passez la souris sur le petit <strong>ⓘ</strong> gris à côté d'un prix pour voir le montant HT partenaire correspondant — visible que le coefficient soit activé ou non.</span>
+        </div>
+
+        <div class="guide-shot">
+          <div class="guide-shot-item">
+            <div class="guide-shot-tipdemo">
+              <input type="text" value="Révision complète calibre" readonly tabindex="-1">
+              <div class="prix-wrapper">
+                <input type="text" class="prix-input" value="900,00" readonly tabindex="-1">
+                <span class="prix-info-btn">ⓘ
+                  <span class="tooltip">HT : 766,67 €</span>
+                </span>
+              </div>
+            </div>
+            <div class="guide-shot-cap">Le prix affiché est le <span class="tag-on">prix client</span> ; la bulle du <strong>ⓘ</strong> rappelle le <strong>HT partenaire</strong> d'origine — pratique pour vérifier d'un coup d'œil.</div>
+          </div>
         </div>
 
       </div>
@@ -137,6 +216,44 @@
 
   </div><!-- /guide-steps -->
 
+  <!-- Administration -->
+  <div class="guide-section">
+    <h2 class="guide-section-title">Modifier les coefficients</h2>
+    <p style="color:var(--ink-mid);font-size:15px;line-height:1.7;margin-bottom:20px;">
+      Les coefficients par marque sont modifiables depuis un espace protégé — utile quand un partenaire
+      renégocie ses tarifs ou pour ajouter une nouvelle marque.
+    </p>
+
+    <div class="guide-rule">
+      <div class="guide-rule-title">Y accéder</div>
+      <div style="padding:16px;font-size:14px;line-height:1.7;color:var(--ink);">
+        <p>Cliquez sur <strong>« Coefficients »</strong> dans la barre en haut de page (ou rendez-vous sur
+        <em>/admin/coefficients</em>). L'accès est <strong>protégé par mot de passe</strong> — seules les
+        personnes autorisées peuvent ouvrir cette page.</p>
+      </div>
+    </div>
+
+    <div class="guide-checklist" style="margin-top:20px;">
+      <div class="guide-checklist-title">Ce que vous pouvez régler</div>
+      <table class="guide-table">
+        <thead>
+          <tr><th>Champ</th><th>Effet</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Coeff.</strong></td><td>Marge appliquée sur le prix HT partenaire (prix client)</td></tr>
+          <tr><td><strong>Coeff. options</strong></td><td>Coefficient propre au travail optionnel (vide = même que le principal)</td></tr>
+          <tr><td><strong>+ Ajouter une marque</strong></td><td>Crée une nouvelle marque avec son coefficient</td></tr>
+          <tr><td><strong>×</strong></td><td>Supprime une marque de la liste</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="guide-tip" style="background:var(--gold-ultra);border-color:var(--gold-light);">
+      <span class="guide-tip-icon" style="color:var(--gold);">✓</span>
+      <span>Après <strong>« Enregistrer »</strong>, les nouveaux coefficients s'appliquent immédiatement à tous les devis suivants. L'activation/désactivation du coefficient, elle, reste un réglage <strong>par devis</strong> à l'étape 2.</span>
+    </div>
+  </div>
+
   <!-- FAQ -->
   <div class="guide-section">
     <h2 class="guide-section-title">Questions fréquentes</h2>
@@ -160,6 +277,18 @@
       <div class="guide-faq-item">
         <div class="guide-faq-q">Pourquoi le total affiché est-il différent de la somme des lignes ?</div>
         <div class="guide-faq-a">Le total est arrondi au multiple de 5 supérieur. L'ajustement est réparti sur la dernière ligne — c'est normal et intentionnel.</div>
+      </div>
+      <div class="guide-faq-item">
+        <div class="guide-faq-q">À quoi sert l'interrupteur « Coeff. » ?</div>
+        <div class="guide-faq-a">Activé, le coefficient s'applique sur le prix HT partenaire (avec arrondi). Désactivé, le prix saisi devient directement le prix client final, sans coefficient ni arrondi. Réglage par devis, à l'étape 2.</div>
+      </div>
+      <div class="guide-faq-item">
+        <div class="guide-faq-q">Comment changer le coefficient d'une marque ?</div>
+        <div class="guide-faq-a">Via le lien <strong>« Coefficients »</strong> en haut de page (espace protégé par mot de passe). Vous y modifiez le coefficient de chaque marque, en ajoutez ou en supprimez. Voir la section <em>« Modifier les coefficients »</em> ci-dessus.</div>
+      </div>
+      <div class="guide-faq-item">
+        <div class="guide-faq-q">Puis-je consulter le devis partenaire pendant la vérification ?</div>
+        <div class="guide-faq-a">Oui. Le document d'origine (PDF ou email) reste affiché dans le panneau de droite. Pour un email, seules les lignes chiffrées sont mises en avant, avec un bouton pour déplier le message complet.</div>
       </div>
     </div>
   </div>
@@ -348,5 +477,24 @@
   color: var(--ink); margin-bottom: 8px;
 }
 .guide-support-sub { color: var(--ink-mid); font-size: 14px; margin-bottom: 20px; }
+
+/* Screenshots / démos de composants réels — empilés pleine largeur */
+.guide-shot { display: flex; flex-direction: column; gap: 16px; margin: 16px 0 4px; }
+.guide-shot-demo { pointer-events: none; margin: 0 0 8px; background: var(--surface); }
+.guide-shot-demo .form-section-header { cursor: default; }
+.guide-shot-cap { font-size: 12.5px; line-height: 1.55; color: var(--ink-mid); padding-left: 2px; }
+.guide-shot-cap .tag-on  { color: var(--gold-deep); font-weight: 700; }
+.guide-shot-cap .tag-off { color: var(--ink-soft); font-weight: 700; }
+
+/* Démo ⓘ : ligne de prix avec bulle HT toujours visible */
+.guide-shot-tipdemo {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 38px 14px 14px; pointer-events: none; margin-bottom: 8px;
+}
+.guide-shot-tipdemo > input:first-child { flex: 1; }
+.guide-shot-tipdemo .prix-input { width: 96px; text-align: right; }
+.guide-shot-tipdemo .prix-info-btn { opacity: 1; }
+.guide-shot-tipdemo .prix-info-btn .tooltip { opacity: 1; }
 </style>
 {% endblock %}

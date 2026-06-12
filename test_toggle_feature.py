@@ -14,7 +14,7 @@ from app import app, _form_to_data
 def has_aside(html: str) -> str:
     if 'class="source-pdf-frame"' in html:
         return "pdf"
-    if 'class="source-text-card"' in html:
+    if 'class="source-mail-card"' in html:
         return "text"
     return "none"
 

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Coefficients — Administration{% endblock %}
+{% block container_class %}container-review{% endblock %}
+{% block content %}
+<section class="card">
+  <header style="display:flex;align-items:flex-start;gap:16px;margin-bottom:20px">
+    <div style="flex:1">
+      <h1 style="font-family:Georgia,serif;font-size:24px;font-weight:400;margin-bottom:6px">Coefficients par marque</h1>
+      <p class="lead" style="color:var(--ink-mid);font-size:14px">
+        Le coefficient s'applique sur le prix HT partenaire pour obtenir le prix client.
+        Le « coeff. options » s'applique aux interventions optionnelles — laisser vide pour réutiliser le coefficient principal.
+      </p>
+    </div>
+    <a href="{{ url_for('admin_logout') }}" class="btn btn-ghost" style="flex-shrink:0">Déconnexion</a>
+  </header>
+
+  <form method="post" id="coeff-form">
+    <div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th>Marque</th>
+            <th>Coeff.</th>
+            <th>Coeff. options</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="coeff-rows">
+          {% for name, val in coefficients.items() %}
+          {% set e = val if val is mapping else {'coeff': val} %}
+          <tr class="adm-row">
+            <td>
+              <input type="text" name="brand[]" value="{{ name }}" placeholder="Marque">
+              <input type="hidden" name="nec_default[]" value="{{ '1' if e.get('coeff_nec_default', True) else '0' }}">
+              <input type="hidden" name="opt_default[]" value="{{ '1' if e.get('coeff_opt_default', True) else '0' }}">
+            </td>
+            <td><input type="text" name="coeff[]" inputmode="decimal" value="{{ e.coeff }}" placeholder="1,40" style="max-width:90px"></td>
+            <td><input type="text" name="coeff_opt[]" inputmode="decimal" value="{{ e.coeff_opt if e.coeff_opt is defined else '' }}" placeholder="—" style="max-width:90px"></td>
+            <td><button type="button" class="btn-remove" onclick="this.closest('tr').remove()" aria-label="Supprimer la marque">×</button></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="adm-actions">
+      <button type="button" class="btn btn-ghost" onclick="admAddRow()">+ Ajouter une marque</button>
+      <button type="submit" class="btn btn-gold">Enregistrer</button>
+    </div>
+  </form>
+</section>
+
+<template id="adm-row-tpl">
+  <tr class="adm-row">
+    <td>
+      <input type="text" name="brand[]" value="" placeholder="Marque">
+      <input type="hidden" name="nec_default[]" value="1">
+      <input type="hidden" name="opt_default[]" value="1">
+    </td>
+    <td><input type="text" name="coeff[]" inputmode="decimal" value="" placeholder="1,40" style="max-width:90px"></td>
+    <td><input type="text" name="coeff_opt[]" inputmode="decimal" value="" placeholder="—" style="max-width:90px"></td>
+    <td><button type="button" class="btn-remove" onclick="this.closest('tr').remove()" aria-label="Supprimer la marque">×</button></td>
+  </tr>
+</template>
+
+<script>
+function admAddRow() {
+  const tpl = document.getElementById('adm-row-tpl');
+  document.getElementById('coeff-rows').appendChild(tpl.content.cloneNode(true));
+  const rows = document.querySelectorAll('#coeff-rows .adm-row');
+  rows[rows.length - 1].querySelector('input[name="brand[]"]').focus();
+}
+</script>
+{% endblock %}

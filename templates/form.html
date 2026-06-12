@@ -177,7 +177,7 @@
             </div>
             <label class="coeff-perso-wrap">
               <span class="coeff-perso-lbl">Perso</span>
-              <input type="number" id="coeff-input" min="1" max="5" step="0.001" value="1.00">
+              <input type="number" id="coeff-input" min="1" max="5" step="0.0001" value="1.00">
               <span class="coeff-perso-unit">×</span>
             </label>
           </div>
@@ -294,21 +294,103 @@
 
 {% if source_kind == "pdf" %}
 <aside class="review-source-col">
-  <iframe class="source-pdf-frame" src="{{ url_for('source_file', token=token) }}" title="Devis source (PDF)"></iframe>
+  <div class="source-pdf-card">
+    <div class="source-pdf-bar">
+      <span class="source-pdf-icon" aria-hidden="true">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>
+      </span>
+      <div class="source-pdf-meta">
+        <div class="source-pdf-title">Devis source{% if data.marque %} — {{ data.marque }}{% endif %}</div>
+        <div class="source-pdf-sub">Document partenaire (PDF)</div>
+      </div>
+      <div class="source-pdf-actions">
+        <a class="source-pdf-btn" href="{{ url_for('source_file', token=token) }}" download title="Télécharger" aria-label="Télécharger le PDF">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </a>
+        <a class="source-pdf-btn" href="{{ url_for('source_file', token=token) }}" target="_blank" rel="noopener" title="Ouvrir dans un nouvel onglet" aria-label="Ouvrir dans un nouvel onglet">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
+        </a>
+      </div>
+    </div>
+    <iframe class="source-pdf-frame" src="{{ url_for('source_file', token=token) }}#toolbar=0&navpanes=0&view=FitH" title="Devis source (PDF)"></iframe>
+  </div>
 </aside>
 {% elif source_kind == "text" %}
 <aside class="review-source-col">
-  <div class="source-text-card">
-    <div class="eq-header">
-      <span class="eq-icon">📨</span>
-      <div class="eq-meta">
-        <div class="eq-title">Devis source</div>
-        <div class="eq-subtitle">Texte d'origine (email)</div>
+  <div class="source-mail-card">
+    <div class="mail-head">
+      <div class="mail-avatar" id="mail-avatar">@</div>
+      <div class="mail-head-meta">
+        <div class="mail-subject" id="mail-subject">Devis source</div>
+        <div class="mail-sender" id="mail-sender">Email d'origine</div>
       </div>
     </div>
-    <pre>{{ source_text }}</pre>
+    <div class="mail-body">
+      <div class="mail-key-label" id="mail-key-label" hidden>Lignes chiffrées détectées</div>
+      <div class="mail-key-list" id="mail-key-list"></div>
+      <button type="button" class="mail-toggle" id="mail-toggle" hidden aria-expanded="false">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        <span>Voir l'email complet</span>
+      </button>
+      <pre class="mail-full" id="mail-full" hidden></pre>
+    </div>
+    <div hidden id="mail-raw">{{ source_text }}</div>
   </div>
 </aside>
+<script>
+(function() {
+  const rawEl = document.getElementById('mail-raw');
+  if (!rawEl) return;
+  const norm = (rawEl.textContent || '').replace(/\r\n/g, '\n');
+
+  let sender = '', subject = '';
+  const lines = norm.split('\n');
+  let i = 0;
+  for (; i < lines.length; i++) {
+    if (/^Exp[ée]diteur\s*:/i.test(lines[i]))   sender  = lines[i].split(':').slice(1).join(':').trim();
+    else if (/^Objet\s*:/i.test(lines[i]))      subject = lines[i].split(':').slice(1).join(':').trim();
+    else break;
+  }
+  while (i < lines.length && lines[i].trim() === '') i++;
+  const body = lines.slice(i).join('\n').trim();
+
+  function initials(s) {
+    const email = (s.match(/[\w.+-]+@[\w.-]+/) || [])[0];
+    if (email) { const [loc, dom] = email.split('@'); return ((loc[0] || '') + (dom[0] || '')).toUpperCase(); }
+    const p = s.trim().split(/\s+/);
+    return (((p[0] || '')[0] || '') + ((p[1] || '')[0] || '')).toUpperCase() || '@';
+  }
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  const AMOUNT = /(\d[\d  ]*(?:[.,]\d+)?\s*(?:€|euros?)(?:\s*(?:HT|TTC))?|€\s*\d[\d  ]*(?:[.,]\d+)?)/gi;
+  function highlight(line) { return esc(line).replace(AMOUNT, '<span class="mail-amt">$1</span>'); }
+  function isKey(line) { return /€/.test(line) || /\d[\d  .,]*\s*(?:euros?|HT|TTC)\b/i.test(line); }
+
+  if (subject) document.getElementById('mail-subject').textContent = subject;
+  if (sender)  document.getElementById('mail-sender').textContent  = sender;
+  document.getElementById('mail-avatar').textContent = initials(sender || subject || '@');
+
+  const keyLines = body.split('\n').map(l => l.trim()).filter(l => l && isKey(l));
+  const list = document.getElementById('mail-key-list');
+  const fullEl = document.getElementById('mail-full');
+  fullEl.textContent = body;
+
+  if (keyLines.length > 0) {
+    document.getElementById('mail-key-label').hidden = false;
+    list.innerHTML = keyLines.map(l => `<div class="mail-key-row">${highlight(l)}</div>`).join('');
+    const toggle = document.getElementById('mail-toggle');
+    toggle.hidden = false;
+    toggle.addEventListener('click', () => {
+      const open = fullEl.hidden;
+      fullEl.hidden = !open;
+      toggle.classList.toggle('open', open);
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.querySelector('span').textContent = open ? "Masquer l'email complet" : "Voir l'email complet";
+    });
+  } else {
+    fullEl.hidden = false;
+  }
+})();
+</script>
 {% endif %}
 </div>
 
@@ -485,8 +567,6 @@ function syncCoeffToggleUI() {
   document.getElementById('coeff-nec-enabled-hidden').value = necOn ? '1' : '0';
   document.getElementById('coeff-opt-enabled-hidden').value = optOn ? '1' : '0';
   document.getElementById('coeff-controls').style.display = necOn ? 'flex' : 'none';
-  document.querySelectorAll('#nec-lines .prix-info-btn').forEach(b => b.style.display = necOn ? '' : 'none');
-  document.querySelectorAll('#opt-lines .prix-info-btn').forEach(b => b.style.display = optOn ? '' : 'none');
 }
 
 /* ── Toggle OFFERT ── */
@@ -557,7 +637,14 @@ function applyCoeffToLines(coeff, force) {
       if (lbl === 'OFFERT' || lbl === 'INCL') return;
       const inp = line.querySelector('.prix-input');
       if (!inp.dataset.base && inp.value) inp.dataset.base = inp.value;
-      if (!enabled) return; // coeff désactivé : la valeur saisie = prix client final
+      if (!enabled) {
+        // coeff désactivé : revenir au prix HT d'origine trouvé sur le devis
+        if (force) {
+          const base = parseFloat((inp.dataset.base || '0').replace(',','.'));
+          if (!isNaN(base) && base > 0) inp.value = base.toFixed(2);
+        }
+        return;
+      }
       const base = parseFloat((inp.dataset.base || '0').replace(',','.'));
       if (!isNaN(base) && base > 0) {
         // Sur le chargement initial (force=false), ne pas écraser si value est déjà
@@ -698,12 +785,16 @@ document.getElementById('coeff-input').addEventListener('input', () => updateTot
 // Quand l'utilisateur saisit un prix manuellement → valeur = HT partenaire
 // Le coefficient est appliqué par roundInputs() sur blur
 ['nec-lines', 'opt-lines'].forEach(id => {
+  const coeffEnabled = id === 'nec-lines' ? necCoeffEnabled : optCoeffEnabled;
   document.getElementById(id).addEventListener('input', e => {
     if (e.target.classList.contains('prix-input')) {
       const v = parseFloat(e.target.value || '0');
-      e.target.dataset.base = v.toFixed(2);  // valeur saisie = prix HT
-      const hidden = e.target.closest('.intervention-line').querySelector('.base-prix-input');
-      if (hidden) hidden.value = v.toFixed(2);
+      if (coeffEnabled()) {
+        e.target.dataset.base = v.toFixed(2);  // valeur saisie = prix HT
+        const hidden = e.target.closest('.intervention-line').querySelector('.base-prix-input');
+        if (hidden) hidden.value = v.toFixed(2);
+      }
+      // coeff désactivé : on ne touche pas au prix HT fournisseur (dataset.base / base-prix-input)
       refreshTotals();
     }
   });

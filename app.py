@@ -1,10 +1,13 @@
 """Flask app — Devis DOUX Joaillier."""
 from __future__ import annotations
 
+import functools
+import hmac
 import math
 import os
 import re
 import secrets
+import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -47,6 +50,20 @@ UPLOAD_DIR = RUNTIME_DIR / "uploads"
 GENERATED_DIR = RUNTIME_DIR / "generated"
 UPLOAD_DIR.mkdir(exist_ok=True)
 GENERATED_DIR.mkdir(exist_ok=True)
+
+# Coefficients : graine versionnée (repo) + stockage persistant via GitHub Gist.
+# Sur Render (disque éphémère), définir GIST_ID + GITHUB_TOKEN (scope « gist »)
+# pour que les modifications faites depuis l'admin survivent aux redémarrages.
+# Sans token (dev local), on lit/écrit le fichier du repo directement.
+COEFFICIENTS_SEED = BASE_DIR / "coefficients.json"
+COEFFICIENTS_PATH = Path(os.environ.get("COEFFICIENTS_PATH") or (RUNTIME_DIR / "coefficients.json"))
+
+GIST_ID = os.environ.get("GIST_ID")
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+GIST_FILENAME = os.environ.get("GIST_FILENAME", "coefficients.json")
+_GIST_API = "https://api.github.com/gists"
+_COEFF_TTL = 60.0  # cache lecture (secondes)
+_coeff_cache: dict = {"data": None, "ts": 0.0}
 
 ALLOWED_DOC = {"pdf", "eml", "msg"}
 
@@ -186,12 +203,117 @@ def _create_yousign_signature_request(pdf_bytes: bytes, client_email: str, devis
         return None
 
 
-def _load_coefficients() -> dict:
-    path = BASE_DIR / "coefficients.json"
+def _gist_enabled() -> bool:
+    return bool(GIST_ID and GITHUB_TOKEN)
+
+
+def _gist_headers() -> dict:
+    return {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+
+def _seed_coefficients() -> dict:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(COEFFICIENTS_SEED.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+
+def _load_coefficients() -> dict:
+    """Charge les coefficients : Gist si configuré, sinon fichier local du repo.
+
+    La lecture Gist est mise en cache 60 s. Toute erreur réseau retombe sur le
+    dernier cache, puis sur la graine versionnée — jamais de liste vide servie.
+    """
+    if not _gist_enabled():
+        try:
+            return json.loads(COEFFICIENTS_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            return _seed_coefficients()
+
+    now = time.time()
+    if _coeff_cache["data"] is not None and now - _coeff_cache["ts"] < _COEFF_TTL:
+        return _coeff_cache["data"]
+    try:
+        resp = requests.get(f"{_GIST_API}/{GIST_ID}", headers=_gist_headers(), timeout=8)
+        resp.raise_for_status()
+        f = (resp.json().get("files") or {}).get(GIST_FILENAME)
+        if not f or not f.get("content"):
+            raise ValueError("fichier coefficients absent du gist")
+        data = json.loads(f["content"])
+        _coeff_cache.update(data=data, ts=now)
+        return data
+    except Exception as exc:
+        print(f"WARN _load_coefficients (gist): {exc}")
+        if _coeff_cache["data"] is not None:
+            return _coeff_cache["data"]
+        return _seed_coefficients()
+
+
+def _save_coefficients(data: dict) -> None:
+    """Persiste les coefficients : Gist si configuré, sinon fichier local (atomique)."""
+    payload = json.dumps(data, ensure_ascii=False, indent=2)
+    if not _gist_enabled():
+        COEFFICIENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = COEFFICIENTS_PATH.with_name(COEFFICIENTS_PATH.name + ".tmp")
+        tmp.write_text(payload, encoding="utf-8")
+        tmp.replace(COEFFICIENTS_PATH)
+    else:
+        resp = requests.patch(
+            f"{_GIST_API}/{GIST_ID}",
+            headers=_gist_headers(),
+            json={"files": {GIST_FILENAME: {"content": payload}}},
+            timeout=10,
+        )
+        resp.raise_for_status()
+    _coeff_cache.update(data=data, ts=time.time())
+
+
+def _coefficients_from_form(form) -> dict:
+    """Reconstruit le dict coefficients depuis les tableaux du formulaire admin.
+
+    Conserve la convention du fichier : `coeff_opt` et les `*_default` ne sont
+    écrits que lorsqu'ils diffèrent du défaut (absent = true / pas d'option).
+    """
+    brands     = form.getlist("brand[]")
+    coeffs     = form.getlist("coeff[]")
+    coeff_opts = form.getlist("coeff_opt[]")
+    nec_defs   = form.getlist("nec_default[]")
+    opt_defs   = form.getlist("opt_default[]")
+
+    def _num(values, i):
+        raw = (values[i] if i < len(values) else "").strip().replace(",", ".")
+        if not raw:
+            return None
+        try:
+            return float(raw)
+        except ValueError:
+            return None
+
+    new: dict = {}
+    for i, name in enumerate(brands):
+        name = (name or "").strip()
+        if not name:
+            continue
+        coeff = _num(coeffs, i)
+        if coeff is None or coeff <= 0:
+            continue
+        entry: dict = {
+            "coeff": round(coeff, 4),
+            "base": "ht",
+        }
+        coeff_opt = _num(coeff_opts, i)
+        if coeff_opt is not None and coeff_opt > 0:
+            entry["coeff_opt"] = round(coeff_opt, 4)
+        if (nec_defs[i] if i < len(nec_defs) else "1") != "1":
+            entry["coeff_nec_default"] = False
+        if (opt_defs[i] if i < len(opt_defs) else "1") != "1":
+            entry["coeff_opt_default"] = False
+        new[name] = entry
+    return new
 
 
 def _has_extension(filename: str, allowed: set[str]) -> bool:
@@ -489,6 +611,61 @@ def create_app() -> Flask:
     @app.route("/guide")
     def guide():
         return render_template("guide.html")
+
+    # ── Administration : édition protégée des coefficients ────────────────────
+    def _admin_password_ok(submitted: str) -> bool:
+        expected = os.environ.get("ADMIN_PASSWORD") or ""
+        return bool(expected) and hmac.compare_digest(submitted, expected)
+
+    def admin_required(view):
+        @functools.wraps(view)
+        def wrapped(*args, **kwargs):
+            if not session.get("is_admin"):
+                return redirect(url_for("admin_login", next=request.path))
+            return view(*args, **kwargs)
+        return wrapped
+
+    @app.route("/admin/login", methods=["GET", "POST"])
+    def admin_login():
+        if session.get("is_admin"):
+            return redirect(url_for("admin_coefficients"))
+        if request.method == "POST":
+            if not os.environ.get("ADMIN_PASSWORD"):
+                flash("Aucun mot de passe admin n'est configuré (variable ADMIN_PASSWORD).", "error")
+            elif _admin_password_ok(request.form.get("password", "")):
+                session["is_admin"] = True
+                dest = request.args.get("next")
+                if not dest or not dest.startswith("/"):
+                    dest = url_for("admin_coefficients")
+                return redirect(dest)
+            else:
+                flash("Mot de passe incorrect.", "error")
+        return render_template("admin_login.html")
+
+    @app.route("/admin/logout")
+    def admin_logout():
+        session.pop("is_admin", None)
+        return redirect(url_for("index"))
+
+    @app.route("/admin/coefficients", methods=["GET"])
+    @admin_required
+    def admin_coefficients():
+        return render_template("admin_coefficients.html", coefficients=_load_coefficients())
+
+    @app.route("/admin/coefficients", methods=["POST"])
+    @admin_required
+    def admin_coefficients_save():
+        new = _coefficients_from_form(request.form)
+        if not new:
+            flash("Aucune marque valide à enregistrer — modifications ignorées.", "error")
+            return redirect(url_for("admin_coefficients"))
+        try:
+            _save_coefficients(new)
+        except Exception as exc:
+            flash(f"Échec de l'enregistrement : {exc}", "error")
+            return redirect(url_for("admin_coefficients"))
+        flash(f"{len(new)} marque(s) enregistrée(s).", "success")
+        return redirect(url_for("admin_coefficients"))
 
 
     @app.errorhandler(413)

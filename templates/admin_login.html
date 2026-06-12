@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Administration — DOUX Joaillier{% endblock %}
+{% block content %}
+<section class="card" style="max-width:420px;margin:60px auto;">
+  <h1 style="font-family:Georgia,serif;font-size:24px;font-weight:400;margin-bottom:6px">Espace administration</h1>
+  <p class="lead" style="color:var(--ink-mid);font-size:14px;margin-bottom:24px">
+    Accès réservé. Saisissez le mot de passe pour modifier les coefficients par marque.
+  </p>
+  <form method="post" class="form">
+    <label for="password" style="font-size:12px;color:var(--ink-mid);font-weight:600;letter-spacing:.3px;margin-bottom:8px;display:block">Mot de passe</label>
+    <input type="password" name="password" id="password" autofocus autocomplete="current-password" placeholder="••••••••" style="margin-bottom:20px">
+    <button type="submit" class="btn btn-gold btn-lg">Se connecter →</button>
+  </form>
+</section>
+{% endblock %}

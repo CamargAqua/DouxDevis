@@ -180,7 +180,7 @@ label.field {
   display: flex; flex-direction: column; gap: 6px;
   font-size: 12px; color: var(--ink-mid); font-weight: 600; letter-spacing: .3px;
 }
-input[type="text"], select, textarea {
+input[type="text"], input[type="password"], input[type="number"], select, textarea {
   font: inherit; color: var(--ink);
   padding: 10px 13px;
   border: 1.5px solid var(--line-strong);
@@ -189,7 +189,7 @@ input[type="text"], select, textarea {
   width: 100%;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
-input[type="text"]:focus, select:focus, textarea:focus {
+input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--gold-light);
   box-shadow: 0 0 0 3px rgba(184,150,46,.12);
@@ -680,31 +680,115 @@ textarea { resize: vertical; min-height: 90px; }
 .review-form-col { flex: 1.4; min-width: 0; }
 .review-source-col { flex: 1; min-width: 0; position: sticky; top: 20px; max-height: calc(100vh - 40px); }
 
-.source-pdf-frame {
-  width: 100%; height: calc(100vh - 80px);
+.source-pdf-card {
   border: 1px solid var(--line); border-radius: var(--r-lg);
+  background: var(--surface); box-shadow: var(--shadow-sm);
+  overflow: hidden; height: calc(100vh - 40px);
+  display: flex; flex-direction: column;
+}
+.source-pdf-bar {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-bottom: 1px solid var(--line);
+  background: #FCFBF8;
+}
+.source-pdf-icon { display: inline-flex; line-height: 1; color: var(--gold); }
+.source-pdf-meta { line-height: 1.25; min-width: 0; }
+.source-pdf-title {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.source-pdf-sub { font-size: 11px; color: var(--ink-soft); }
+.source-pdf-actions { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+.source-pdf-btn {
+  width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: 8px;
+  color: var(--ink-mid); text-decoration: none;
+  transition: all var(--transition);
+}
+.source-pdf-btn:hover {
+  color: var(--gold); border-color: var(--gold-light); background: var(--gold-ultra);
+}
+.source-pdf-frame {
+  width: 100%; flex: 1; min-height: 0; border: 0;
   background: var(--surface);
 }
 
-.source-text-card {
+.source-mail-card {
   border: 1px solid var(--line); border-radius: var(--r-lg);
   background: var(--surface); box-shadow: var(--shadow-sm);
   overflow: hidden; max-height: calc(100vh - 40px);
   display: flex; flex-direction: column;
 }
-.source-text-card .eq-header {
-  flex: 0 0 auto;
+.mail-head {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px; border-bottom: 1px solid var(--line); background: #FCFBF8;
 }
-.source-text-card .eq-icon { font-size: 18px; line-height: 1; }
-.source-text-card pre {
-  margin: 0; padding: 18px; flex: 1; overflow: auto;
+.mail-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--gold-ultra); color: var(--gold-deep);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 600; flex-shrink: 0;
+}
+.mail-head-meta { min-width: 0; line-height: 1.3; }
+.mail-subject {
+  font-size: 14px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mail-sender {
+  font-size: 12px; color: var(--ink-mid);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mail-body { padding: 14px 16px; overflow: auto; flex: 1; min-height: 0; }
+.mail-key-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .4px;
+  color: var(--ink-soft); text-transform: uppercase; margin-bottom: 10px;
+}
+.mail-key-list { display: flex; flex-direction: column; gap: 8px; }
+.mail-key-row {
+  font-size: 13px; line-height: 1.6; color: var(--ink);
+  padding: 8px 12px; background: #FAFAF8;
+  border: 1px solid var(--line); border-radius: 8px;
+  word-break: break-word;
+}
+.mail-amt {
+  background: var(--gold-ultra); color: var(--gold-deep);
+  font-weight: 600; padding: 1px 6px; border-radius: 4px; white-space: nowrap;
+}
+.mail-toggle {
+  margin-top: 14px; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 500; color: var(--ink-mid);
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px;
+  background: var(--surface); cursor: pointer; font-family: inherit;
+  transition: all var(--transition);
+}
+.mail-toggle:hover { color: var(--gold); border-color: var(--gold-light); background: var(--gold-ultra); }
+.mail-toggle svg { transition: transform var(--transition); }
+.mail-toggle.open svg { transform: rotate(180deg); }
+.mail-full {
+  margin: 12px 0 0; padding-top: 12px; border-top: 1px solid var(--line);
   font-family: inherit; font-size: 13px; line-height: 1.6; color: var(--ink);
-  white-space: pre-wrap; word-break: break-word; background: #fafaf9;
+  white-space: pre-wrap; word-break: break-word;
 }
 
 @media(max-width: 1100px) {
   .review-layout { flex-direction: column; }
   .review-source-col { position: static; max-height: 50vh; width: 100%; }
-  .source-pdf-frame { height: 70vh; }
+  .source-pdf-card { height: 70vh; }
 }
 .section-badge.nec { background: #E8F0FE; color: #1a56db; }
+
+/* ── Admin : tableau des coefficients ── */
+.adm-table-wrap { overflow-x: auto; margin: 8px 0 22px; }
+.adm-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.adm-table th {
+  text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .4px;
+  text-transform: uppercase; color: var(--ink-soft); white-space: nowrap;
+  padding: 8px 10px; border-bottom: 1px solid var(--line);
+}
+.adm-table td {
+  padding: 7px 10px; vertical-align: middle; border-bottom: 1px solid var(--line);
+}
+.adm-table input, .adm-table select { padding: 8px 10px; }
+.adm-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
