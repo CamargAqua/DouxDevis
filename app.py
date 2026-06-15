@@ -272,12 +272,21 @@ def _save_coefficients(data: dict) -> None:
     _coeff_cache.update(data=data, ts=time.time())
 
 
-def _coefficients_from_form(form) -> dict:
+# Champs gérés par le formulaire admin — tout le reste (ex: coeff_split_nec,
+# coeff_opt_base) est une option avancée non exposée et doit être préservé tel
+# quel depuis l'entrée existante lors d'une sauvegarde.
+_ADMIN_MANAGED_KEYS = {"coeff", "base", "coeff_opt", "coeff_nec_default", "coeff_opt_default"}
+
+
+def _coefficients_from_form(form, existing: dict | None = None) -> dict:
     """Reconstruit le dict coefficients depuis les tableaux du formulaire admin.
 
     Conserve la convention du fichier : `coeff_opt` et les `*_default` ne sont
     écrits que lorsqu'ils diffèrent du défaut (absent = true / pas d'option).
+    Les champs avancés non gérés par ce formulaire (ex: `coeff_split_nec`) sont
+    repris depuis `existing` pour ne pas être perdus à la sauvegarde.
     """
+    existing = existing or {}
     brands     = form.getlist("brand[]")
     coeffs     = form.getlist("coeff[]")
     coeff_opts = form.getlist("coeff_opt[]")
@@ -312,6 +321,11 @@ def _coefficients_from_form(form) -> dict:
             entry["coeff_nec_default"] = False
         if (opt_defs[i] if i < len(opt_defs) else "1") != "1":
             entry["coeff_opt_default"] = False
+        old_entry = existing.get(name)
+        if isinstance(old_entry, dict):
+            for k, v in old_entry.items():
+                if k not in _ADMIN_MANAGED_KEYS:
+                    entry[k] = v
         new[name] = entry
     return new
 
@@ -655,7 +669,7 @@ def create_app() -> Flask:
     @app.route("/admin/coefficients", methods=["POST"])
     @admin_required
     def admin_coefficients_save():
-        new = _coefficients_from_form(request.form)
+        new = _coefficients_from_form(request.form, existing=_load_coefficients())
         if not new:
             flash("Aucune marque valide à enregistrer — modifications ignorées.", "error")
             return redirect(url_for("admin_coefficients"))
