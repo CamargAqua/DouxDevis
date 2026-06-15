@@ -201,6 +201,8 @@
         <input type="hidden" name="coeff"        id="coeff-hidden"        value="{{ data.coeff or 1.0 }}">
         <input type="hidden" name="coeff_opt"    id="coeff-opt-hidden"    value="{{ data.coeff_opt or '' }}">
         <input type="hidden" name="coeff_base"   id="coeff-base-hidden"   value="{{ data.coeff_base or 'ttc' }}">
+        <input type="hidden" name="coeff_opt_base" id="coeff-opt-base-hidden" value="{{ data.coeff_opt_base or '' }}">
+        <input type="hidden" name="coeff_split_nec" id="coeff-split-nec-hidden" value="{{ '1' if data.coeff_split_nec else '0' }}">
         <input type="hidden" name="coeff_nec_enabled" id="coeff-nec-enabled-hidden" value="{{ '0' if data.coeff_nec_enabled is sameas false else '1' }}">
         <input type="hidden" name="coeff_opt_enabled" id="coeff-opt-enabled-hidden" value="{{ '0' if data.coeff_opt_enabled is sameas false else '1' }}">
       </div>
@@ -624,19 +626,45 @@ function toggleIncl(btn) {
 /* ── Coefficient : delta réparti proportionnellement sur les lignes ── */
 function fmt(n) { return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
+// Coeff Options courant (fallback sur coeff Travail si non défini pour la marque)
+function getCoeffOpt(coeff) {
+  const raw = document.getElementById('coeff-opt-hidden').value;
+  return raw ? (parseFloat(raw) || coeff) : coeff;
+}
+
+// Breitling (coeff_split_nec) : la ligne "SERVICE COMPLET" / "RÉVISION COMPLÈTE"
+// (1ère ligne nécessaire si service_complet_description renseigné) part du prix HT
+// partenaire converti en TTC (×1.20, TVA 20%) puis multiplié par le coeff Travail ;
+// toutes les autres lignes nécessaire utilisent le coeff Options (base HT), comme
+// la section Options.
+const TVA_RATE = 1.20;
+function splitNecActive() {
+  return document.getElementById('coeff-split-nec-hidden').value === '1';
+}
+function hasServiceComplet() {
+  const inp = document.querySelector('input[name="service_complet"]');
+  return !!(inp && inp.value.trim());
+}
+function necLineCoeff(idx, coeff, coeffOpt) {
+  if (!splitNecActive()) return coeff;
+  return (idx === 0 && hasServiceComplet()) ? (coeff * TVA_RATE) : coeffOpt;
+}
+
 // Applique le coefficient sur chaque ligne (répartition proportionnelle du delta = x coeff)
 // Pour Omega (base HT) : inp.value = prix_HT × coeff ; pour les autres : prix_TTC × coeff
 function applyCoeffToLines(coeff, force) {
+  const coeffOpt = getCoeffOpt(coeff);
   const sections = [
-    ['#nec-lines', necCoeffEnabled()],
-    ['#opt-lines', optCoeffEnabled()],
+    ['#nec-lines', necCoeffEnabled(), true],
+    ['#opt-lines', optCoeffEnabled(), false],
   ];
-  sections.forEach(([selector, enabled]) => {
-    document.querySelectorAll(selector + ' .intervention-line').forEach(line => {
+  sections.forEach(([selector, enabled, isNec]) => {
+    document.querySelectorAll(selector + ' .intervention-line').forEach((line, idx) => {
       const lbl = line.querySelector('.label-input').value;
       if (lbl === 'OFFERT' || lbl === 'INCL') return;
       const inp = line.querySelector('.prix-input');
       if (!inp.dataset.base && inp.value) inp.dataset.base = inp.value;
+      const lineCoeff = isNec ? necLineCoeff(idx, coeff, coeffOpt) : coeff;
       if (!enabled) {
         // coeff désactivé : revenir au prix HT d'origine trouvé sur le devis
         if (force) {
@@ -650,7 +678,7 @@ function applyCoeffToLines(coeff, force) {
         // Sur le chargement initial (force=false), ne pas écraser si value est déjà
         // le prix_client (différent de la base HT) — évite le drift de précision.
         const current = parseFloat((inp.value || '0').replace(',','.'));
-        const computed = Math.round(base * coeff * 100) / 100;
+        const computed = Math.round(base * lineCoeff * 100) / 100;
         if (force || Math.abs(current - computed) > 0.5 || current === base)
           inp.value = computed.toFixed(2);
       }
@@ -660,19 +688,21 @@ function applyCoeffToLines(coeff, force) {
 
 function refreshTotals() {
   const coeff     = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+  const coeffOpt  = getCoeffOpt(coeff);
   const coeffBase = document.getElementById('coeff-base-hidden').value || 'ttc';
   const necOn     = necCoeffEnabled();
 
   let base = 0, clientBrut = 0;
-  document.querySelectorAll('#nec-lines .intervention-line').forEach(line => {
+  document.querySelectorAll('#nec-lines .intervention-line').forEach((line, idx) => {
     const lbl = line.querySelector('.label-input').value;
     if (lbl === 'OFFERT' || lbl === 'INCL') return;
     const inp = line.querySelector('.prix-input');
     const b = parseFloat((inp.dataset.base || '0').replace(',','.'));
     const v = parseFloat((inp.value    || '0').replace(',','.'));
     if (!isNaN(b)) base += b; // prix fournisseur — toujours calculé, même coeff Travail désactivé
+    const lineCoeff = necLineCoeff(idx, coeff, coeffOpt);
     if (necOn) {
-      if (!isNaN(b) && b > 0) clientBrut += Math.round(b * coeff); else if (!isNaN(v)) clientBrut += Math.round(v);
+      if (!isNaN(b) && b > 0) clientBrut += Math.round(b * lineCoeff); else if (!isNaN(v)) clientBrut += Math.round(v);
     } else if (!isNaN(v)) {
       // Coeff Travail désactivé : la valeur saisie est directement le prix client final
       clientBrut += Math.round(v);
@@ -717,41 +747,60 @@ function ceil5(v) { return v > 0 ? Math.ceil((Math.round(v * 100) / 100 - 0.01) 
 
 function roundInputs() {
   var coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+  var coeffOpt = getCoeffOpt(coeff);
 
-  // ── NÉCESSAIRES : ceil5 sur le TOTAL (sum_HT × coeff), dernière ligne ajustée ──
+  // ── NÉCESSAIRES ──
   // Si le coeff Travail est désactivé, les valeurs saisies sont définitives : pas d'arrondi.
   var necLines = necCoeffEnabled() ? [...document.querySelectorAll('#nec-lines .intervention-line')].filter(function(l) {
     var lbl = l.querySelector('.label-input').value;
     return lbl !== 'OFFERT' && lbl !== 'INCL';
   }) : [];
   if (necLines.length > 0) {
-    // Total cible = ceil5(sum des bases HT × coeff)
-    var totalHT = 0;
-    necLines.forEach(function(l) {
-      totalHT += parseFloat((l.querySelector('.prix-input').dataset.base || '0').replace(',', '.')) || 0;
-    });
-    var totalCible = ceil5(totalHT * coeff);
+    if (splitNecActive()) {
+      // Ligne "service complet" : prix HT partenaire converti en TTC (×1.20) puis
+      // ×coeff ; les autres lignes nécessaire suivent le coeff Options (HT), ceil5
+      // par ligne — comme la section Options.
+      var restLines = necLines;
+      if (hasServiceComplet()) {
+        var serviceInp = necLines[0].querySelector('.prix-input');
+        var serviceBase = parseFloat((serviceInp.dataset.base || '0').replace(',', '.')) || 0;
+        var serviceVal = serviceBase > 0 ? ceil5(serviceBase * TVA_RATE * coeff) : ceil5(parseFloat(serviceInp.value || '0') || 0);
+        if (serviceVal > 0) serviceInp.value = serviceVal.toFixed(2);
+        restLines = necLines.slice(1);
+      }
+      restLines.forEach(function(l) {
+        var inp  = l.querySelector('.prix-input');
+        var base = parseFloat((inp.dataset.base || '0').replace(',', '.')) || 0;
+        var v    = base > 0 ? ceil5(base * coeffOpt) : ceil5(parseFloat(inp.value || '0') || 0);
+        if (v > 0) inp.value = v.toFixed(2);
+      });
+    } else {
+      // ceil5 sur le TOTAL (sum_HT × coeff), dernière ligne ajustée
+      var totalHT = 0;
+      necLines.forEach(function(l) {
+        totalHT += parseFloat((l.querySelector('.prix-input').dataset.base || '0').replace(',', '.')) || 0;
+      });
+      var totalCible = ceil5(totalHT * coeff);
 
-    // Toutes les lignes sauf la dernière → ceil5(base HT × coeff)
-    var otherSum = 0;
-    necLines.slice(0, -1).forEach(function(l) {
-      var inp  = l.querySelector('.prix-input');
-      var base = parseFloat((inp.dataset.base || '0').replace(',', '.')) || 0;
-      var v    = base > 0 ? ceil5(base * coeff) : ceil5(parseFloat(inp.value || '0') || 0);
-      inp.value = v.toFixed(2);
-      otherSum += v;
-    });
-    // Dernière ligne = totalCible − somme des autres (automatiquement multiple de 5)
-    var lastInp = necLines[necLines.length - 1].querySelector('.prix-input');
-    var lastVal = totalCible - otherSum;
-    if (lastVal > 0) lastInp.value = lastVal.toFixed(2);
+      // Toutes les lignes sauf la dernière → ceil5(base HT × coeff)
+      var otherSum = 0;
+      necLines.slice(0, -1).forEach(function(l) {
+        var inp  = l.querySelector('.prix-input');
+        var base = parseFloat((inp.dataset.base || '0').replace(',', '.')) || 0;
+        var v    = base > 0 ? ceil5(base * coeff) : ceil5(parseFloat(inp.value || '0') || 0);
+        inp.value = v.toFixed(2);
+        otherSum += v;
+      });
+      // Dernière ligne = totalCible − somme des autres (automatiquement multiple de 5)
+      var lastInp = necLines[necLines.length - 1].querySelector('.prix-input');
+      var lastVal = totalCible - otherSum;
+      if (lastVal > 0) lastInp.value = lastVal.toFixed(2);
+    }
   }
 
   // ── OPTIONS : ceil5 par ligne avec coeff_opt si dispo ──
   // Si le coeff Options est désactivé, les valeurs saisies sont définitives : pas d'arrondi.
   if (optCoeffEnabled()) {
-    var coeffOptRaw = document.getElementById('coeff-opt-hidden').value;
-    var coeffOpt = coeffOptRaw ? (parseFloat(coeffOptRaw) || coeff) : coeff;
     document.querySelectorAll('#opt-lines .intervention-line').forEach(function(line) {
       var lbl = line.querySelector('.label-input').value;
       if (lbl === 'OFFERT' || lbl === 'INCL') return;
@@ -809,15 +858,22 @@ window.selectMarque = function(val) {
   _origSelectMarque(val);
   const brandKey  = findBrandKey(val) || val;
   const brandData = BRAND_COEFFS_RAW[brandKey] || {};
-  const coeff     = typeof brandData === 'object' ? (brandData.coeff     || DEFAULT_COEFF) : (brandData || DEFAULT_COEFF);
-  const coeffOpt  = typeof brandData === 'object' ? (brandData.coeff_opt || null)          : null;
-  const base      = typeof brandData === 'object' ? (brandData.base      || 'ttc')         : 'ttc';
+  const coeff       = typeof brandData === 'object' ? (brandData.coeff     || DEFAULT_COEFF) : (brandData || DEFAULT_COEFF);
+  const coeffOpt    = typeof brandData === 'object' ? (brandData.coeff_opt || null)          : null;
+  const base        = typeof brandData === 'object' ? (brandData.base      || 'ttc')         : 'ttc';
+  const coeffOptBase = typeof brandData === 'object' ? (brandData.coeff_opt_base || base)     : base;
+  const splitNec    = typeof brandData === 'object' && brandData.coeff_split_nec === true;
 
   const tag = document.getElementById('coeff-brand-tag');
-  let tagText = base === 'ht'
-    ? `${val} → ×${coeff.toFixed(4).replace('.',',')} HT`
-    : `${val} → ×${coeff.toFixed(4).replace('.',',')}`;
-  if (coeffOpt) tagText += ` | options ×${coeffOpt.toFixed(4).replace('.',',')}`;
+  let tagText;
+  if (splitNec) {
+    tagText = `${val} → service complet ×${coeff.toFixed(4).replace('.',',')} (HT×1,20 → TTC) | autres + options ×${(coeffOpt || coeff).toFixed(4).replace('.',',')} (HT)`;
+  } else {
+    tagText = base === 'ht'
+      ? `${val} → ×${coeff.toFixed(4).replace('.',',')} HT`
+      : `${val} → ×${coeff.toFixed(4).replace('.',',')}`;
+    if (coeffOpt) tagText += ` | options ×${coeffOpt.toFixed(4).replace('.',',')}`;
+  }
   tag.textContent = tagText;
   tag.style.display = 'inline-flex';
 
@@ -825,6 +881,8 @@ window.selectMarque = function(val) {
   document.getElementById('coeff-hidden').value      = coeff.toFixed(4);
   document.getElementById('coeff-opt-hidden').value  = coeffOpt ? coeffOpt.toFixed(4) : '';
   document.getElementById('coeff-base-hidden').value = base;
+  document.getElementById('coeff-opt-base-hidden').value = coeffOptBase;
+  document.getElementById('coeff-split-nec-hidden').value = splitNec ? '1' : '0';
 
   const necDefault = typeof brandData === 'object' ? (brandData.coeff_nec_default !== false) : true;
   const optDefault = typeof brandData === 'object' ? (brandData.coeff_opt_default !== false) : true;

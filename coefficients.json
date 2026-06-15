@@ -57,6 +57,7 @@
     "coeff": 1.1764,
     "coeff_opt": 1.333,
     "base": "ht",
+    "coeff_split_nec": true,
     "coeff_nec_default": false
   },
   "Chanel": {

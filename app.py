@@ -742,8 +742,11 @@ def _form_to_data(form) -> dict:
     except (ValueError, TypeError):
         coeff_opt = coeff
     coeff_base = (form.get("coeff_base") or "ttc").lower()  # "ht" ou "ttc"
+    coeff_opt_base = (form.get("coeff_opt_base") or coeff_base).lower()
+    coeff_split_nec = (form.get("coeff_split_nec") or "0") == "1"
     coeff_nec_enabled = (form.get("coeff_nec_enabled") or "1") == "1"
     coeff_opt_enabled = (form.get("coeff_opt_enabled") or "1") == "1"
+    service_complet_description = form.get("service_complet", "").strip()
 
     # Les inputs soumettent déjà les prix clients appliqués dans le JS :
     # - marques TTC : inp.value = prix_partenaire_TTC × coeff
@@ -778,27 +781,46 @@ def _form_to_data(form) -> dict:
     # ── NÉCESSAIRES : algo ceil5 avec dernière ligne compensatrice (si coeff actif) ──
     # T = ceil5(sum_HT × coeff) ; lignes[:-1] → ceil5 individuel ; dernière = T − somme
     # Si le coefficient est désactivé, le prix saisi = prix client final (passthrough).
+    #
+    # Cas coeff_split_nec (Breitling) : la ligne "SERVICE COMPLET" / "RÉVISION COMPLÈTE"
+    # (1ère ligne nécessaire si service_complet_description renseigné) part du prix HT
+    # partenaire, converti en TTC (×1.20, TVA 20%) puis multiplié par `coeff` ; les
+    # autres lignes nécessaire (s'il y en a) utilisent `coeff_opt` (base HT) avec un
+    # ceil5 par ligne, comme les options.
     if priced_nec:
         if coeff_nec_enabled:
-            sum_ht = sum(l.get("_base_prix") or 0 for l in priced_nec)
-            if sum_ht > 0:
-                T = _ceil5(sum_ht * coeff)
-                other_sum = 0.0
-                for l in priced_nec[:-1]:
+            if coeff_split_nec:
+                if service_complet_description:
+                    service_line, *rest_nec = priced_nec
+                    base = service_line.get("_base_prix") or 0
+                    service_line["prix_client"] = (
+                        _ceil5(base * 1.20 * coeff) if base > 0 else _ceil5(service_line["prix_client"])
+                    )
+                else:
+                    rest_nec = priced_nec
+                for l in rest_nec:
                     base = l.get("_base_prix") or 0
-                    pc = _ceil5(base * coeff) if base > 0 else _ceil5(l["prix_client"])
-                    l["prix_client"] = pc
-                    other_sum += pc
-                priced_nec[-1]["prix_client"] = T - other_sum
+                    l["prix_client"] = _ceil5(base * coeff_opt) if base > 0 else _ceil5(l["prix_client"])
             else:
-                # Fallback si pas de _base_prix (ligne ajoutée manuellement)
-                T = _ceil5(sum(l["prix_client"] for l in priced_nec))
-                other_sum = 0.0
-                for l in priced_nec[:-1]:
-                    pc = _ceil5(l["prix_client"])
-                    l["prix_client"] = pc
-                    other_sum += pc
-                priced_nec[-1]["prix_client"] = T - other_sum
+                sum_ht = sum(l.get("_base_prix") or 0 for l in priced_nec)
+                if sum_ht > 0:
+                    T = _ceil5(sum_ht * coeff)
+                    other_sum = 0.0
+                    for l in priced_nec[:-1]:
+                        base = l.get("_base_prix") or 0
+                        pc = _ceil5(base * coeff) if base > 0 else _ceil5(l["prix_client"])
+                        l["prix_client"] = pc
+                        other_sum += pc
+                    priced_nec[-1]["prix_client"] = T - other_sum
+                else:
+                    # Fallback si pas de _base_prix (ligne ajoutée manuellement)
+                    T = _ceil5(sum(l["prix_client"] for l in priced_nec))
+                    other_sum = 0.0
+                    for l in priced_nec[:-1]:
+                        pc = _ceil5(l["prix_client"])
+                        l["prix_client"] = pc
+                        other_sum += pc
+                    priced_nec[-1]["prix_client"] = T - other_sum
         total_client = float(sum(l["prix_client"] for l in priced_nec))
     else:
         total_client = 0.0
@@ -835,7 +857,7 @@ def _form_to_data(form) -> dict:
             "taille": form.get("taille", "").strip(),
             "etat": etat_lines,
         },
-        "service_complet_description": form.get("service_complet", "").strip(),
+        "service_complet_description": service_complet_description,
         "interventions_necessaires": (
             [l for l in necessaires if (l.get("prix_label") or "") != "OFFERT"] +
             [l for l in necessaires if (l.get("prix_label") or "") == "OFFERT"]
@@ -845,6 +867,8 @@ def _form_to_data(form) -> dict:
         "coeff": coeff,
         "coeff_opt": coeff_opt if coeff_opt != coeff else None,
         "coeff_base": coeff_base,
+        "coeff_opt_base": coeff_opt_base,
+        "coeff_split_nec": coeff_split_nec,
         "coeff_nec_enabled": coeff_nec_enabled,
         "coeff_opt_enabled": coeff_opt_enabled,
         "delai": form.get("delai", "4 à 6 semaines").strip() or "4 à 6 semaines",
