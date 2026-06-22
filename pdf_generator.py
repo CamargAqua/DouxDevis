@@ -213,18 +213,22 @@ def _logo_path(name: str) -> Path | None:
     return None
 
 
-def _logo_img(path: Path, max_w: float, max_h: float) -> Image:
+def _logo_img(path: Path, max_w: float, max_h: float, width_first: bool = False) -> Image:
     """Charge un logo, rogne les bordures vides (transparentes ou blanches), et scale."""
     from io import BytesIO as _BIO
     src: str | _BIO = str(path)
     try:
-        from PIL import Image as _PIL
+        from PIL import Image as _PIL, ImageOps as _IOps
         pil = _PIL.open(str(path)).convert("RGBA")
         r, g, b, a = pil.split()
-        # Rogner les pixels transparents
+        # Crop transparent borders first
         bbox = a.getbbox()
         if bbox and bbox != (0, 0, pil.width, pil.height):
             pil = pil.crop(bbox)
+        # Crop white borders (logos sur fond blanc)
+        white_bbox = _IOps.invert(pil.convert("L")).getbbox()
+        if white_bbox and white_bbox != (0, 0, pil.width, pil.height):
+            pil = pil.crop(white_bbox)
         buf = _BIO()
         pil.save(buf, format="PNG")
         buf.seek(0)
@@ -234,12 +238,20 @@ def _logo_img(path: Path, max_w: float, max_h: float) -> Image:
 
     img = Image(src)
     ratio = img.imageWidth / img.imageHeight
-    # Toujours remplir max_h en priorité, contraindre par max_w si trop large
-    h = max_h
-    w = h * ratio
-    if w > max_w:
+    if width_first:
+        # Priorité largeur — logos partenaires souvent très horizontaux
         w = max_w
         h = w / ratio
+        if h > max_h:
+            h = max_h
+            w = h * ratio
+    else:
+        # Priorité hauteur — logo DOUX
+        h = max_h
+        w = h * ratio
+        if w > max_w:
+            w = max_w
+            h = w / ratio
     img._restrictSize(w, h)
     return img
 
@@ -361,8 +373,8 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     # Logo DOUX (gauche) — Image ou texte
     doux_logo = _logo_path("doux")
     _LOGO_MAX_W   = 8 * cm
-    _DOUX_MAX_H   = 1.0 * cm   # DOUX plus discret
-    _BRAND_MAX_H  = 1.4 * cm   # marque partenaire plus visible
+    _DOUX_MAX_H   = 1.2 * cm
+    _BRAND_MAX_H  = 1.6 * cm
 
     if doux_logo:
         left_cell = _logo_img(doux_logo, _LOGO_MAX_W, _DOUX_MAX_H)
@@ -378,7 +390,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     else:
         brand_logo = _logo_path(marque_raw)
         if brand_logo:
-            right_cell = _logo_img(brand_logo, _LOGO_MAX_W, _BRAND_MAX_H)
+            right_cell = _logo_img(brand_logo, _LOGO_MAX_W, _BRAND_MAX_H, width_first=True)
             right_cell.hAlign = 'RIGHT'
         else:
             right_cell = _html(
@@ -387,7 +399,7 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
             )
 
     hdr = Table([[left_cell, right_cell]], colWidths=[9 * cm, 9 * cm],
-                rowHeights=[1.6 * cm])
+                rowHeights=[2.0 * cm])
     hdr.setStyle(TableStyle([
         ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
         ("ALIGN",         (1, 0), (1, 0),   "RIGHT"),
