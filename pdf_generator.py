@@ -299,7 +299,7 @@ _CGV_PHRASE = (
 )
 
 
-_QR_PATH = Path(__file__).parent / "static" / "qr_cgv.png"
+_QR_DIR = Path(__file__).parent / "static"
 _QR_SIZE  = 18 * mm  # taille du QR code dans le PDF
 
 
@@ -327,10 +327,12 @@ def _make_draw_footer(lieu: str):
         p2.wrap(text_w, 10 * mm)
         p2.drawOn(canvas, 15 * mm, 4 * mm)
         # QR code CGV — bas droite
-        if _QR_PATH.exists():
+        qr_file = "qr_cgv_nimes.png" if "nimes" in lieu.lower() or "nîmes" in lieu.lower() else "qr_cgv_avignon.png"
+        qr_path = _QR_DIR / qr_file
+        if qr_path.exists():
             qr_x = A4[0] - 15 * mm - _QR_SIZE
             qr_y = 3 * mm
-            canvas.drawImage(str(_QR_PATH), qr_x, qr_y,
+            canvas.drawImage(str(qr_path), qr_x, qr_y,
                              width=_QR_SIZE, height=_QR_SIZE,
                              preserveAspectRatio=True, mask="auto")
         canvas.restoreState()

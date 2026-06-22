@@ -899,54 +899,50 @@ def _build_filename(data: dict) -> str:
 
 
 def _generate_qr_cgv() -> None:
-    """Génère static/qr_cgv.png pointant vers CGV_URL (GitHub Pages) ou APP_URL/cgv."""
-    # CGV_URL prioritaire (GitHub Pages) — sinon fallback sur l'app
-    cgv_url = os.environ.get("CGV_URL", "https://bit.ly/Doux-cgv")
-    if not cgv_url.startswith("http"):
-        return
-    try:
-        import qrcode  # type: ignore
-        from qrcode.image.styledpil import StyledPilImage  # type: ignore
-        from qrcode.image.styles.moduledrawers.pil import CircleModuleDrawer, RoundedModuleDrawer  # type: ignore
-        from qrcode.image.styles.colormasks import SolidFillColorMask  # type: ignore
-
-        GOLD = (200, 160, 40)   # #C8A028 — or DOUX
-        DARK = (26, 24, 20)     # #1A1814 — quasi-noir
-        WHITE = (255, 255, 255)
-
-        url = cgv_url
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_M,
-            box_size=8,
-            border=2,
-        )
-        qr.add_data(url)
-        qr.make(fit=True)
-
-        img = qr.make_image(
-            image_factory=StyledPilImage,
-            module_drawer=CircleModuleDrawer(),
-            color_mask=SolidFillColorMask(
-                front_color=DARK,
-                back_color=WHITE,
-            ),
-        )
-        img.save(str(BASE_DIR / "static" / "qr_cgv.png"))
-    except Exception as e:
-        # Fallback sans style si la version de qrcode ne supporte pas StyledPilImage
-        print(f"[QR] Style non supporté ({e}), génération classique.")
+    """Génère static/qr_cgv_avignon.png et qr_cgv_nimes.png."""
+    urls = {
+        "avignon": os.environ.get("CGV_URL_AVIGNON", "https://www.douxjoaillier.com/fr/cgv-service-apres-vente"),
+        "nimes": os.environ.get("CGV_URL_NIMES", "https://www.douxjoaillier.com/fr/conditions-generales-de-service-apres-vente-nimes"),
+    }
+    for boutique, url in urls.items():
+        if not url.startswith("http"):
+            continue
+        out_path = str(BASE_DIR / "static" / f"qr_cgv_{boutique}.png")
         try:
-            import qrcode as _qr  # type: ignore
-            url = cgv_url
-            q = _qr.QRCode(version=1, error_correction=_qr.constants.ERROR_CORRECT_M,
-                            box_size=8, border=2)
-            q.add_data(url)
-            q.make(fit=True)
-            q.make_image(fill_color="#1A1814", back_color="white").save(
-                str(BASE_DIR / "static" / "qr_cgv.png"))
-        except Exception as e2:
-            print(f"[QR] Génération échouée : {e2}")
+            import qrcode  # type: ignore
+            from qrcode.image.styledpil import StyledPilImage  # type: ignore
+            from qrcode.image.styles.moduledrawers.pil import CircleModuleDrawer  # type: ignore
+            from qrcode.image.styles.colormasks import SolidFillColorMask  # type: ignore
+
+            DARK = (26, 24, 20)
+            WHITE = (255, 255, 255)
+
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_M,
+                box_size=8,
+                border=2,
+            )
+            qr.add_data(url)
+            qr.make(fit=True)
+            img = qr.make_image(
+                image_factory=StyledPilImage,
+                module_drawer=CircleModuleDrawer(),
+                color_mask=SolidFillColorMask(front_color=DARK, back_color=WHITE),
+            )
+            img.save(out_path)
+            print(f"[QR] {boutique} -> {out_path}")
+        except Exception as e:
+            print(f"[QR] Style non supporté pour {boutique} ({e}), génération classique.")
+            try:
+                import qrcode as _qr  # type: ignore
+                q = _qr.QRCode(version=1, error_correction=_qr.constants.ERROR_CORRECT_M,
+                                box_size=8, border=2)
+                q.add_data(url)
+                q.make(fit=True)
+                q.make_image(fill_color="#1A1814", back_color="white").save(out_path)
+            except Exception as e2:
+                print(f"[QR] Génération échouée pour {boutique} : {e2}")
 
 
 app = create_app()
