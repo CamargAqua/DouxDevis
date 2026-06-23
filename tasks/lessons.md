@@ -84,6 +84,16 @@ Pour les lignes nécessaires avec plusieurs prix :
 ## 2026-06-06 — Supprimer stats/feedback : retirer aussi supabase de requirements.txt
 **Règle :** Quand on supprime des routes liées à Supabase (feedback, stats), penser à retirer la dépendance `supabase` de requirements.txt — sinon Render installe un package inutile à chaque déploiement.
 
+## 2026-06-23 — PDF généré par ReportLab, pas depuis le DOCX
+**Erreur :** Modifications apportées à `docx_generator.py` (ex: bloc notes) ne se reflètent PAS dans le PDF final. `pdf_generator.py::render_pdf()` construit le PDF directement depuis `data` via ReportLab. `docx_to_pdf` est un alias de `render_pdf`, pas une conversion du DOCX.
+**Règle :** Toute nouvelle section à afficher dans le PDF DOIT être ajoutée dans `pdf_generator.py::render_pdf()`. Le DOCX est secondaire (download uniquement).
+
+## 2026-06-23 — Notes partenaire : filtrage strict
+**Règle :** `notes_partenaire` = uniquement notes liées à l'état de la pièce ou indications techniques sur la réparation. Exclure : délais, CGV, conditions de garantie, clauses de responsabilité, mentions légales, infos de facturation. Précisé dans le prompt EXTRACTION_SYSTEM section "NOTES DU DEVIS PARTENAIRE".
+
+## 2026-06-23 — Rolex : colonne "Prix public max." et non "Prix facturé"
+**Règle :** Sur les devis Rolex, deux colonnes prix : "Prix public max. (EUR)" = prix public recommandé HT à utiliser. "Prix facturé (EUR)" = prix Rolex→Doux, à ignorer. Précisé dans le prompt EXTRACTION_SYSTEM section "ROLEX".
+
 ## 2026-05-22 — Emails : prix HT vs TTC
 **Règle :** Les partenaires envoient leurs prix en HT dans les emails (prix revendeur). Détecter `\d HT` dans le corps → poser `coeff_base="ht"`. Le coefficient DOUX convertit directement HT → prix client TTC, sans ajouter la TVA en plus.
 **Attention :** Le prix public TTC entre parenthèses (ex: "prix public recommandé 530€TTC") est à ignorer complètement.

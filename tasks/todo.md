@@ -57,8 +57,20 @@
 - [x] Créer GUIDE_UTILISATEUR.md — documentation client-friendly (workflow, règles métier, FAQ, contact)
 - [x] Créer README.md — documentation technique (stack, installation, déploiement, structure code, troubleshooting)
 
+## Session 2026-06-23
+
+- [x] Sync repo local avec origin/main (2 commits en retard : QR codes + fix logos)
+- [x] Règle Rolex : extraire "Prix public max. (EUR)" et non "Prix facturé" dans le prompt d'extraction
+- [x] Champ `notes_partenaire` dans le schéma JSON d'extraction Claude
+- [x] Règle extraction : notes liées à l'état de la pièce ou indications techniques uniquement (exclure CGV, délais, admin)
+- [x] Step 2 (form.html) : section Notes pré-remplie si extraites (badge "Auto"), saisie manuelle sinon, repliée si vide
+- [x] app.py `_form_to_data` : lecture et transmission de `notes_partenaire`
+- [x] Bug fix PDF notes : le PDF est généré par `render_pdf` (ReportLab) et non depuis le DOCX — notes ajoutées dans `pdf_generator.py`
+- [x] docx_generator.py : notes aussi ajoutées dans le DOCX (entre montre et travaux)
+- [x] Modèle extraction : claude-sonnet-4-5 → claude-sonnet-4-6 (plus rapide)
+- [x] max_tokens extraction : 1024 → 700 (JSON output < 600 tokens en pratique)
+
 ## Backlog
-- [ ] Arrondi multi-lignes : algo ceil5 avec dernière ligne compensatrice
 - [ ] Section signature (Yousign) — à ajouter plus tard
 - [ ] Tests unitaires pdf_extractor
 - [ ] Screenshots intégrées au GUIDE_UTILISATEUR.md

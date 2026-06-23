@@ -854,6 +854,8 @@ def _form_to_data(form) -> dict:
             line["prix"] = round(line["prix_client"] / coeff, 2)
         line.pop("_base_prix", None)  # nettoyer le champ intermédiaire
 
+    notes_partenaire = form.get("notes_partenaire", "").strip()
+
     return {
         "marque": (form.get("marque_custom") or form.get("marque") or "Autre").strip(),
         "client": {"nom": form.get("client_nom", "").strip()},
@@ -872,6 +874,7 @@ def _form_to_data(form) -> dict:
             "etat": etat_lines,
         },
         "service_complet_description": service_complet_description,
+        "notes_partenaire": notes_partenaire,
         "interventions_necessaires": (
             [l for l in necessaires if (l.get("prix_label") or "") != "OFFERT"] +
             [l for l in necessaires if (l.get("prix_label") or "") == "OFFERT"]

@@ -9,7 +9,7 @@ from typing import Any
 
 import anthropic
 
-MODEL = "claude-sonnet-4-5"
+MODEL = "claude-sonnet-4-6"
 
 EXTRACTION_SYSTEM = """Tu es un assistant chargé d'extraire les informations d'un devis de service après-vente (horlogerie ou joaillerie) envoyé par une marque partenaire à la bijouterie DOUX Joaillier (Avignon ou Nîmes).
 
@@ -37,6 +37,7 @@ Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc m
     "etat": ["CONSTAT 1 EN MAJUSCULES", "CONSTAT 2 EN MAJUSCULES"]
   },
   "service_complet_description": "sous-points du service complet, un par ligne (sans puces ni tirets)",
+  "notes_partenaire": "notes ou remarques présentes dans le devis partenaire, une par ligne, ou chaîne vide",
   "interventions_necessaires": [
     {"description": "INTITULÉ EN MAJUSCULES", "prix": 0.00}
   ],
@@ -71,8 +72,16 @@ Le numéro SAV DOUX est un nombre à 6 chiffres, parfois suivi d'un suffixe à i
 - Emails → chercher dans l'objet ou le corps : "SAV 330624-1" → "330624"
 Supprime toujours le suffixe "-1", "-2", etc.
 
+═══ ⚠️ ROLEX — PRIX PUBLIC RECOMMANDÉ (RÈGLE SPÉCIFIQUE) ⚠️ ═══
+Sur les devis Rolex, il y a deux colonnes de prix :
+  - "Prix public max. (EUR)"  = prix public recommandé HT → C'EST CETTE COLONNE QU'IL FAUT UTILISER
+  - "Prix facturé (EUR)"      = prix Rolex → Doux HT → À IGNORER
+→ Toujours extraire la valeur de la colonne "Prix public max." comme prix HT
+→ Ne JAMAIS utiliser la colonne "Prix facturé" pour Rolex
+→ EXEMPLE : Prix public max. = 1 341,67 | Prix facturé = 1 118,06 → retourner 1341.67
+
 ═══ ⚠️ RÈGLE UNIVERSELLE — PRIX HT OBLIGATOIRE (NE PAS IGNORER) ⚠️ ═══
-Pour TOUTES les marques, sans exception :
+Pour TOUTES les marques, sans exception (Rolex : cf. règle spécifique ci-dessus) :
   → Tu DOIS extraire le prix HORS TAXES (HT) — jamais le prix TTC
   → Le coefficient appliqué par DOUX convertit HT → TTC client : ne pas faire cette conversion toi-même
   → Si le document affiche à la fois HT et TTC, prendre UNIQUEMENT le HT
@@ -130,6 +139,13 @@ Si la première intervention est un "service complet" ou "révision complète" a
 Si le nom du modèle n'est pas écrit, l'inférer de la référence si possible :
 - H2569 → J12 | A3535016 → NAVITIMER HERITAGE | CJF7110 → FORMULA 1
 Pour un bijou : utiliser la description complète (ex: "BAGUE FORCE10 RUBAN PM OR ROSE").
+
+═══ NOTES DU DEVIS PARTENAIRE ═══
+Extraire UNIQUEMENT les notes qui concernent directement la pièce ou la réparation :
+  ✅ À inclure : état particulier de la pièce, indications techniques sur le travail à réaliser, précisions sur les pièces détachées, avertissements sur la faisabilité ou le résultat attendu, disponibilité de pièces spécifiques, remarques sur l'ancienneté ou la rareté de la montre.
+  ❌ À EXCLURE absolument : délais de livraison, conditions générales, clauses de responsabilité, informations de facturation, coordonnées, mentions légales, textes administratifs génériques, conditions de garantie.
+→ Une note par ligne, sans puces ni tirets
+→ Si aucune note pertinente : chaîne vide ""
 
 ═══ DÉLAI ═══
 Extraire uniquement la durée, format "X semaines" ou "X à Y semaines" :
@@ -360,6 +376,10 @@ def _clean(data: dict[str, Any]) -> dict[str, Any]:
     delai = re.sub(r"\s+", " ", delai)
     data["delai"] = delai
 
+    # Notes partenaire : normaliser (string, strip)
+    notes = (data.get("notes_partenaire") or "").strip()
+    data["notes_partenaire"] = notes
+
     return data
 
 
@@ -463,7 +483,7 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
 
     response = client.messages.create(
         model=MODEL,
-        max_tokens=1024,
+        max_tokens=700,
         timeout=60.0,
         system=[
             {
@@ -530,7 +550,7 @@ def _extract_from_text(text: str, api_key: str | None = None,
 
     response = client.messages.create(
         model=MODEL,
-        max_tokens=1024,
+        max_tokens=700,
         timeout=60.0,
         system=[{
             "type": "text",

@@ -463,6 +463,25 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     _add_section_title(doc, "INFORMATIONS DE LA MONTRE")
     _add_montre_table(doc, montre, photo_bytes, marque=marque)
 
+    notes = (data.get("notes_partenaire") or "").strip()
+    note_lines = [l.strip() for l in notes.splitlines() if l.strip()] if notes else []
+    if note_lines:
+        p_notes = doc.add_paragraph()
+        p_notes.paragraph_format.space_before = Pt(6)
+        p_notes.paragraph_format.space_after = Pt(4)
+        r_label = p_notes.add_run("Note : ")
+        r_label.bold = True
+        r_label.font.name = "Arial"
+        r_label.font.size = Pt(10)
+        r_content = p_notes.add_run(note_lines[0])
+        r_content.font.name = "Arial"
+        r_content.font.size = Pt(10)
+        for line in note_lines[1:]:
+            p_extra = doc.add_paragraph()
+            p_extra.paragraph_format.space_before = Pt(0)
+            p_extra.paragraph_format.space_after = Pt(2)
+            _add_run(p_extra, line, size=10)
+
     necessaires = data.get("interventions_necessaires") or []
     intro = (data.get("service_complet_description") or "").strip() or None
     total_ttc = data.get("total_ttc")
