@@ -290,12 +290,12 @@ _FOOTERS: dict[str, str] = {
     "nimes": (
         "SAS DIANE DOUX — Siret 354 089 419 00049 — APE 4777 Z "
         "— 2 PLACE DE LA MAISON CARRÉE, 30000 NÎMES "
-        "| sav@douxjoaillier.com"
+        "| sav.nimes@douxjoaillier.com"
     ),
     "nîmes": (
         "SAS DIANE DOUX — Siret 354 089 419 00049 — APE 4777 Z "
         "— 2 PLACE DE LA MAISON CARRÉE, 30000 NÎMES "
-        "| sav@douxjoaillier.com"
+        "| sav.nimes@douxjoaillier.com"
     ),
 }
 _FOOTER_DEFAULT = _FOOTERS["avignon"]

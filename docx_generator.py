@@ -375,7 +375,9 @@ def _add_footer_block(doc: Document, delai: str, frais_refus: int | None = None,
     legal2.alignment = WD_ALIGN_PARAGRAPH.CENTER
     if footer_lines[1]:
         _add_run(legal2, footer_lines[1], size=8)
-    _add_run(legal2, "sav@douxjoaillier.com", size=8, color=RGBColor(0x05, 0x63, 0xC1))
+    _lieu_key = (lieu or "").strip().lower()
+    _sav_mail = "sav.nimes@douxjoaillier.com" if _lieu_key in ("nimes", "nîmes") else "sav@douxjoaillier.com"
+    _add_run(legal2, _sav_mail, size=8, color=RGBColor(0x05, 0x63, 0xC1))
 
     # Ligne CGV + QR code côte à côte
     cgv_table = doc.add_table(rows=1, cols=2)
