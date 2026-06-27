@@ -375,7 +375,9 @@ def _add_footer_block(doc: Document, delai: str, frais_refus: int | None = None,
     legal2.alignment = WD_ALIGN_PARAGRAPH.CENTER
     if footer_lines[1]:
         _add_run(legal2, footer_lines[1], size=8)
-    _add_run(legal2, "sav@douxjoaillier.com", size=8, color=RGBColor(0x05, 0x63, 0xC1))
+    _lieu_key = (lieu or "").strip().lower()
+    _sav_mail = "sav.nimes@douxjoaillier.com" if _lieu_key in ("nimes", "nîmes") else "sav@douxjoaillier.com"
+    _add_run(legal2, _sav_mail, size=8, color=RGBColor(0x05, 0x63, 0xC1))
 
     # Ligne CGV + QR code côte à côte
     cgv_table = doc.add_table(rows=1, cols=2)
@@ -463,6 +465,25 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     _add_section_title(doc, "INFORMATIONS concernant votre pièce")
 
     _add_montre_table(doc, montre, photo_bytes, marque=marque)
+
+    notes = (data.get("notes_partenaire") or "").strip()
+    note_lines = [l.strip() for l in notes.splitlines() if l.strip()] if notes else []
+    if note_lines:
+        p_notes = doc.add_paragraph()
+        p_notes.paragraph_format.space_before = Pt(6)
+        p_notes.paragraph_format.space_after = Pt(4)
+        r_label = p_notes.add_run("Note : ")
+        r_label.bold = True
+        r_label.font.name = "Arial"
+        r_label.font.size = Pt(10)
+        r_content = p_notes.add_run(note_lines[0])
+        r_content.font.name = "Arial"
+        r_content.font.size = Pt(10)
+        for line in note_lines[1:]:
+            p_extra = doc.add_paragraph()
+            p_extra.paragraph_format.space_before = Pt(0)
+            p_extra.paragraph_format.space_after = Pt(2)
+            _add_run(p_extra, line, size=10)
 
     necessaires = data.get("interventions_necessaires") or []
     intro = (data.get("service_complet_description") or "").strip() or None

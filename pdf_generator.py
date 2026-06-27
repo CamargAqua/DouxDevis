@@ -290,12 +290,12 @@ _FOOTERS: dict[str, str] = {
     "nimes": (
         "SAS DIANE DOUX — Siret 354 089 419 00049 — APE 4777 Z "
         "— 2 PLACE DE LA MAISON CARRÉE, 30000 NÎMES "
-        "| sav@douxjoaillier.com"
+        "| sav.nimes@douxjoaillier.com"
     ),
     "nîmes": (
         "SAS DIANE DOUX — Siret 354 089 419 00049 — APE 4777 Z "
         "— 2 PLACE DE LA MAISON CARRÉE, 30000 NÎMES "
-        "| sav@douxjoaillier.com"
+        "| sav.nimes@douxjoaillier.com"
     ),
 }
 _FOOTER_DEFAULT = _FOOTERS["avignon"]
@@ -539,6 +539,19 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         montre_tbl.setStyle(ts_base)
     story.append(montre_tbl)
     story.append(Spacer(1, 5 * mm))
+
+    # ── NOTES PARTENAIRE ─────────────────────────────────────────────────────
+    notes = (data.get("notes_partenaire") or "").strip()
+    note_lines = [l.strip() for l in notes.splitlines() if l.strip()]
+    if note_lines:
+        note_style = ParagraphStyle("note", fontName="Helvetica", fontSize=9, leading=13,
+                                    textColor=colors.HexColor("#3A3830"))
+        def _esc(t):
+            return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        story.append(_html(f'<b>Note : </b>{_esc(note_lines[0])}', note_style))
+        for line in note_lines[1:]:
+            story.append(_p(line, note_style))
+        story.append(Spacer(1, 4 * mm))
 
     # ── TRAVAIL NÉCESSAIRE ────────────────────────────────────────────────────
     hdr_nec = Table([[
