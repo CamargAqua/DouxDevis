@@ -460,7 +460,8 @@ def build_docx(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
              "nos préconisations de remise en état.",
              italic=True, size=10)
 
-    _add_section_title(doc, "INFORMATIONS DE LA MONTRE")
+    _add_section_title(doc, "INFORMATIONS concernant votre pièce")
+
     _add_montre_table(doc, montre, photo_bytes, marque=marque)
 
     necessaires = data.get("interventions_necessaires") or []
