@@ -474,8 +474,9 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     ))
     story.append(Spacer(1, 4 * mm))
 
-    # ── INFORMATIONS DE LA MONTRE ─────────────────────────────────────────────
-    story.append(_html("<b><u>INFORMATIONS DE LA MONTRE</u></b>", bold))
+    # ── INFORMATIONS concernant votre pièce ─────────────────────────────────────────────
+    story.append(_html("<b><u>INFORMATIONS concernant votre pièce</u></b>", bold))
+
     story.append(Spacer(1, 2 * mm))
     ref         = montre.get("reference", "")
 
