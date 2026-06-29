@@ -302,6 +302,10 @@ _FOOTER_DEFAULT = _FOOTERS["avignon"]
 
 
 def _footer_for(lieu: str) -> str:
+    import os as _os
+    if _os.environ.get("DEMO_MAISON"):
+        maison = _os.environ["DEMO_MAISON"]
+        return f"{maison} — Démonstration logiciel DouxDevis"
     return _FOOTERS.get((lieu or "").strip().lower(), _FOOTER_DEFAULT)
 
 
@@ -370,8 +374,8 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     marque_raw = (data.get("marque") or "PARTENAIRE")
     marque_up  = marque_raw.upper()
 
-    # Logo DOUX (gauche) — Image ou texte
-    doux_logo = _logo_path("doux")
+    # Logo DOUX (gauche) — doux_demo remplace doux si présent (mode démo)
+    doux_logo = _logo_path("doux_demo") or _logo_path("doux")
     _LOGO_MAX_W   = 8 * cm
     _DOUX_MAX_H   = 1.2 * cm
     _BRAND_MAX_H  = 1.6 * cm
@@ -380,7 +384,8 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
         left_cell = _logo_img(doux_logo, _LOGO_MAX_W, _DOUX_MAX_H)
         left_cell.hAlign = 'LEFT'
     else:
-        left_cell = _html('<font face="Helvetica-Bold" size="28">DOUX JOAILLIER</font>', base)
+        _maison = os.environ.get("DEMO_MAISON", "DOUX JOAILLIER").upper()
+        left_cell = _html(f'<font face="Helvetica-Bold" size="28">{_maison}</font>', base)
 
     # Logo marque partenaire (droite) — Image ou nom en or
     # Rolex : ni logo ni mention — cellule vide

@@ -483,7 +483,7 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
 
     response = client.messages.create(
         model=MODEL,
-        max_tokens=700,
+        max_tokens=2000,
         timeout=60.0,
         system=[
             {
@@ -550,7 +550,7 @@ def _extract_from_text(text: str, api_key: str | None = None,
 
     response = client.messages.create(
         model=MODEL,
-        max_tokens=700,
+        max_tokens=2000,
         timeout=60.0,
         system=[{
             "type": "text",

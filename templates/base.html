@@ -3,14 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Devis DOUX Joaillier{% endblock %}</title>
+  <title>{% block title %}Devis {{ maison_name }}{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <header class="topbar">
     <a href="{{ url_for('index') }}" class="brand">
-      <span class="brand-name">DOUX</span>
-      <span class="brand-sub">JOAILLIER</span>
+      <span class="brand-name">{{ maison_name }}</span>
     </a>
     <nav class="topbar-right">
       <a href="{{ url_for('guide') }}" class="topbar-link">Guide</a>

@@ -361,6 +361,10 @@ def create_app() -> Flask:
     app.config["SESSION_USE_SIGNER"] = True
     Session(app)
 
+    @app.context_processor
+    def inject_maison():
+        return {"maison_name": os.environ.get("DEMO_MAISON", "DOUX Joaillier")}
+
     @app.route("/", methods=["GET"])
     def index():
         return render_template("index.html", marques=MARQUES)
@@ -896,7 +900,8 @@ def _build_filename(data: dict) -> str:
     nom = (data.get("client") or {}).get("nom", "").strip() or "CLIENT"
     sav = (data.get("sav") or {}).get("numero", "").strip() or datetime.now().strftime("%Y%m%d")
     nom_short = "_".join(nom.split()[:2])  # max 2 mots du nom
-    raw = f"DEVIS_DOUX_{nom_short}_{sav}"
+    prefix = os.environ.get("DEMO_MAISON", "DOUX").upper().split()[0]
+    raw = f"DEVIS_{prefix}_{nom_short}_{sav}"
     safe = re.sub(r"[^A-Za-z0-9_-]+", "_", raw).strip("_")
     return (safe or "DEVIS_DOUX")[:80]  # cap 80 chars
 
