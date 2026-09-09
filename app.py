@@ -4,6 +4,7 @@ from __future__ import annotations
 import functools
 import hmac
 import math
+import mimetypes
 import os
 import re
 import secrets
@@ -336,6 +337,28 @@ def _has_extension(filename: str, allowed: set[str]) -> bool:
     return filename.rsplit(".", 1)[1].lower() in allowed
 
 
+def _flash_extraction_error(exc: Exception) -> None:
+    """Classe une exception d'extraction par TYPE (pas par sous-chaîne du message —
+    trop fragile, ex: un timeout Anthropic dont le texte ne contient ni "api" ni
+    "anthropic") et logue toujours le détail côté serveur pour pouvoir diagnostiquer.
+    """
+    import anthropic as _anthropic
+    print(f"[extract] {type(exc).__name__}: {exc}")
+    exc_str = str(exc).lower()
+    if isinstance(exc, (_anthropic.APITimeoutError, TimeoutError)):
+        flash("L'extraction a pris trop de temps. Essayez un fichier plus simple.", "error")
+    elif isinstance(exc, _anthropic.AnthropicError):
+        flash("Service temporairement indisponible. Réessayez dans 1 minute.", "error")
+    elif "empty" in exc_str or "no data" in exc_str:
+        flash("Le fichier semble vide. Vérifiez que c'est un devis valide.", "error")
+    elif "non-json" in exc_str:
+        flash("Réponse d'extraction incomplète (document trop complexe). Réessayez.", "error")
+    elif "parse" in exc_str or "format" in exc_str:
+        flash("Impossible de lire ce fichier. Essayez un email (.eml) à la place.", "error")
+    else:
+        flash("Erreur lors de l'extraction. Essayez un autre fichier.", "error")
+
+
 def create_app() -> Flask:
     template_folder = str(BASE_DIR / "templates")
     static_folder = str(BASE_DIR / "static")
@@ -377,24 +400,23 @@ def create_app() -> Flask:
             return redirect(url_for("index"))
 
         paste_text = request.form.get("paste_text", "").strip()
+        pasted_image_files = [f for f in request.files.getlist("pasted_images") if f and f.filename]
 
-        # ── Mode "coller un email" ──────────────────────────────────────────
-        if paste_text:
-            from pdf_extractor import _extract_from_text, _detect_brand_from_text
+        # ── Mode "coller un email" (texte et/ou image(s) collée(s)) ─────────
+        if paste_text or pasted_image_files:
+            from pdf_extractor import extract_from_paste, _detect_brand_from_text
             import re as _re
+            pasted_images = [(f.read(), f.filename) for f in pasted_image_files]
             try:
-                data = _extract_from_text(paste_text, api_key=api_key)
+                data = extract_from_paste(paste_text, pasted_images, api_key=api_key)
             except Exception as exc:
-                exc_str = str(exc).lower()
-                if "api" in exc_str or "anthropic" in exc_str:
-                    flash("Service temporairement indisponible. Réessayez dans 1 minute.", "error")
-                else:
-                    flash("Impossible d'extraire les données de ce texte. Vérifiez que c'est bien un devis.", "error")
+                _flash_extraction_error(exc)
                 return redirect(url_for("index"))
             if _re.search(r"\d[\s ]*[€$]?\s*HT\b|\bHT\s*[:=]\s*\d", paste_text, _re.IGNORECASE):
                 data["coeff_base"] = "ht"
             if data.get("marque", "Autre").lower() in ("autre", ""):
-                detected = _detect_brand_from_text(paste_text[:500])
+                brand_hint = paste_text[:500] or (pasted_image_files[0].filename if pasted_image_files else "")
+                detected = _detect_brand_from_text(brand_hint)
                 if detected:
                     data["marque"] = detected
             if not (data.get("sav") or {}).get("date"):
@@ -405,7 +427,7 @@ def create_app() -> Flask:
             session["token"] = token
             session["data"]  = data
             session["source_kind"] = "text"
-            session["source_text"] = paste_text
+            session["source_text"] = paste_text or f"[{len(pasted_images)} image(s) collée(s), sans texte]"
             return redirect(url_for("review"))
 
         # ── Mode fichier ────────────────────────────────────────────────────
@@ -413,8 +435,8 @@ def create_app() -> Flask:
         if not upload_file or not upload_file.filename:
             flash("Veuillez sélectionner un fichier ou coller un email.", "error")
             return redirect(url_for("index"))
-        if not _has_extension(upload_file.filename, ALLOWED_DOC):
-            flash("Le fichier doit être un PDF, un email (.eml) ou un message Outlook (.msg).", "error")
+        if not _has_extension(upload_file.filename, ALLOWED_DOC | ALLOWED_IMG):
+            flash("Le fichier doit être un PDF, une image (jpg/png), un email (.eml) ou un message Outlook (.msg).", "error")
             return redirect(url_for("index"))
 
         file_bytes = upload_file.read()
@@ -431,24 +453,17 @@ def create_app() -> Flask:
             elif ext == "msg":
                 from pdf_extractor import extract_from_msg
                 data, source_kind, source_payload = extract_from_msg(file_bytes, api_key=api_key, filename=upload_file.filename)
+            elif ext in ALLOWED_IMG:
+                from pdf_extractor import extract_from_image
+                data = extract_from_image(file_bytes, api_key=api_key, filename=upload_file.filename)
+                source_kind = "image"
             else:
                 data = extract_from_pdf(file_bytes, api_key=api_key, filename=upload_file.filename)
         except ValueError as exc:
             flash(f"Format invalide : {str(exc)}", "error")
             return redirect(url_for("index"))
-        except TimeoutError:
-            flash("L'extraction a pris trop de temps. Essayez un fichier plus simple.", "error")
-            return redirect(url_for("index"))
         except Exception as exc:
-            exc_str = str(exc).lower()
-            if "empty" in exc_str or "no data" in exc_str:
-                flash("Le fichier semble vide. Vérifiez que c'est un devis valide.", "error")
-            elif "parse" in exc_str or "format" in exc_str:
-                flash("Impossible de lire ce PDF. Essayez un email (.eml) à la place.", "error")
-            elif "api" in exc_str or "anthropic" in exc_str:
-                flash("Service temporairement indisponible. Réessayez dans 1 minute.", "error")
-            else:
-                flash("Erreur lors de l'extraction. Essayez un autre fichier.", "error")
+            _flash_extraction_error(exc)
             return redirect(url_for("index"))
 
         # Date du jour si absente ou vide
@@ -474,6 +489,13 @@ def create_app() -> Flask:
             file_path = session_dir / "source.pdf"
             file_path.write_bytes(source_payload)
             session["source_kind"] = "pdf"
+            session["source_pdf"] = file_path.name
+        elif source_kind == "image":
+            session_dir = UPLOAD_DIR / token
+            session_dir.mkdir(parents=True, exist_ok=True)
+            file_path = session_dir / f"source.{ext}"
+            file_path.write_bytes(source_payload)
+            session["source_kind"] = "image"
             session["source_pdf"] = file_path.name
         else:
             session["source_kind"] = "text"
@@ -585,13 +607,15 @@ def create_app() -> Flask:
 
     @app.route("/source/<token>")
     def source_file(token: str):
-        if token != session.get("token") or session.get("source_kind") != "pdf":
+        kind = session.get("source_kind")
+        if token != session.get("token") or kind not in ("pdf", "image"):
             abort(404)
         directory = UPLOAD_DIR / secure_filename(token)
         filename = secure_filename(session.get("source_pdf", ""))
         if not filename or not (directory / filename).is_file():
             abort(404)
-        return send_from_directory(directory, filename, mimetype="application/pdf")
+        mimetype = "application/pdf" if kind == "pdf" else mimetypes.guess_type(filename)[0]
+        return send_from_directory(directory, filename, mimetype=mimetype)
 
     @app.route("/prepare-signature", methods=["POST"])
     def prepare_signature():

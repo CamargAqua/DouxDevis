@@ -374,8 +374,11 @@ def render_pdf(data: dict[str, Any], photo_bytes: bytes | None = None) -> bytes:
     marque_raw = (data.get("marque") or "PARTENAIRE")
     marque_up  = marque_raw.upper()
 
-    # Logo DOUX (gauche) — doux_demo remplace doux si présent (mode démo)
-    doux_logo = _logo_path("doux_demo") or _logo_path("doux")
+    # Logo DOUX (gauche) — doux_demo remplace doux UNIQUEMENT en mode démo
+    # (DEMO_MAISON défini) : la simple présence du fichier ne doit pas suffire,
+    # sinon un logo de démo laissé sur le disque écrase le vrai logo DOUX en prod.
+    import os as _os
+    doux_logo = (_logo_path("doux_demo") if _os.environ.get("DEMO_MAISON") else None) or _logo_path("doux")
     _LOGO_MAX_W   = 8 * cm
     _DOUX_MAX_H   = 1.2 * cm
     _BRAND_MAX_H  = 1.6 * cm

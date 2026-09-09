@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import html as _html_lib
 import json
 import os
 import re
@@ -446,45 +447,46 @@ def confidence_score(data: dict[str, Any]) -> tuple[int, list[str]]:
     return score, missing
 
 
-def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
-                     filename: str | None = None) -> dict[str, Any]:
-    """Envoie le PDF à Claude et renvoie un dict structuré.
+_IMAGE_MEDIA_TYPES: dict[str, str] = {
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "webp": "image/webp",
+    "gif": "image/gif",
+}
 
-    Args:
-        pdf_bytes: Contenu brut du PDF.
-        api_key: Clé API Anthropic (lit ANTHROPIC_API_KEY si omise).
-        filename: Nom du fichier PDF (aide à la reconnaissance de marque).
-    """
+
+def _image_block(image_bytes: bytes, filename: str | None) -> dict:
+    ext = (filename or "").rsplit(".", 1)[-1].lower() if filename and "." in filename else "jpeg"
+    media_type = _IMAGE_MEDIA_TYPES.get(ext, "image/jpeg")
+    return {
+        "type": "image",
+        "source": {
+            "type": "base64",
+            "media_type": media_type,
+            "data": base64.standard_b64encode(image_bytes).decode("utf-8"),
+        },
+    }
+
+
+def _run_extraction(user_content: list[dict], api_key: str | None,
+                    filename: str | None = None) -> dict[str, Any]:
+    """Envoie un contenu (texte/document/image, un ou plusieurs blocs) à Claude."""
     api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         raise RuntimeError(
             "Clé API Anthropic manquante. "
             "Récupérez-la sur console.anthropic.com."
         )
+    if not user_content:
+        raise RuntimeError("Aucun contenu à analyser (ni texte, ni fichier, ni image).")
 
     client = anthropic.Anthropic(api_key=api_key)
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
-
-    user_content: list[dict] = [
-        {
-            "type": "document",
-            "source": {
-                "type": "base64",
-                "media_type": "application/pdf",
-                "data": pdf_b64,
-            },
-        },
-    ]
-    if filename:
-        user_content.append({
-            "type": "text",
-            "text": f"Nom du fichier PDF : {filename}",
-        })
 
     response = client.messages.create(
         model=MODEL,
-        max_tokens=2000,
-        timeout=60.0,
+        max_tokens=4096,  # marge contre la troncature JSON sur les devis avec beaucoup d'interventions/images
+        timeout=90.0,     # marge contre les timeouts sur les emails avec plusieurs images jointes
         system=[
             {
                 "type": "text",
@@ -495,18 +497,7 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
         messages=[{"role": "user", "content": user_content}],
     )
 
-    raw = response.content[0].text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```", 2)[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip().rstrip("`").strip()
-
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Réponse Claude non-JSON : {raw[:500]}") from exc
-
+    data = _parse_claude_response(response.content[0].text)
     cleaned = _clean(data)
 
     # Fallback brand detection depuis le nom de fichier si le modèle n'a pas trouvé
@@ -515,11 +506,64 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
         if detected:
             cleaned["marque"] = detected
 
-    # Toutes les marques : les prix extraits sont TOUJOURS en HT
-    cleaned["coeff_base"] = "ht"
-
     return cleaned
 
+
+def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
+                     filename: str | None = None) -> dict[str, Any]:
+    """Envoie le PDF à Claude et renvoie un dict structuré.
+
+    Args:
+        pdf_bytes: Contenu brut du PDF.
+        api_key: Clé API Anthropic (lit ANTHROPIC_API_KEY si omise).
+        filename: Nom du fichier PDF (aide à la reconnaissance de marque).
+    """
+    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
+    user_content: list[dict] = [{
+        "type": "document",
+        "source": {
+            "type": "base64",
+            "media_type": "application/pdf",
+            "data": pdf_b64,
+        },
+    }]
+    if filename:
+        user_content.append({"type": "text", "text": f"Nom du fichier : {filename}"})
+    cleaned = _run_extraction(user_content, api_key, filename)
+    # Devis structuré (PDF partenaire) : les prix extraits sont TOUJOURS en HT
+    cleaned["coeff_base"] = "ht"
+    return cleaned
+
+
+def extract_from_image(image_bytes: bytes, api_key: str | None = None,
+                       filename: str | None = None) -> dict[str, Any]:
+    """Envoie une photo/capture d'écran de devis (jpg, png, webp, gif) à Claude.
+
+    Utile quand le SAV reçoit une image au lieu d'un PDF (capture d'écran d'email, etc.).
+    """
+    user_content: list[dict] = [_image_block(image_bytes, filename)]
+    if filename:
+        user_content.append({"type": "text", "text": f"Nom du fichier : {filename}"})
+    cleaned = _run_extraction(user_content, api_key, filename)
+    # Comme pour le PDF : une image de devis structuré affiche des prix en HT
+    cleaned["coeff_base"] = "ht"
+    return cleaned
+
+
+def extract_from_paste(text: str, images: list[tuple[bytes, str | None]] | None = None,
+                       api_key: str | None = None) -> dict[str, Any]:
+    """Extraction depuis le mode "Coller un email" : texte, image(s) collée(s), ou les deux.
+
+    Cas d'usage : le SAV colle le texte d'un mail dont une image fait partie du corps
+    (capture d'écran, image intégrée) — le navigateur extrait l'image et l'envoie ici
+    en plus du texte, pour que Claude analyse les deux ensemble.
+    """
+    user_content: list[dict] = []
+    if text and text.strip():
+        user_content.append({"type": "text", "text": text.strip()})
+    for image_bytes, image_name in (images or []):
+        user_content.append(_image_block(image_bytes, image_name))
+    return _run_extraction(user_content, api_key)
 
 
 def _parse_claude_response(raw: str) -> dict[str, Any]:
@@ -539,27 +583,36 @@ def _parse_claude_response(raw: str) -> dict[str, Any]:
 def _extract_from_text(text: str, api_key: str | None = None,
                        hint: str | None = None) -> dict[str, Any]:
     """Envoie un texte brut à Claude pour extraction structurée (emails, etc.)."""
-    api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise RuntimeError("Clé API Anthropic manquante.")
-
-    client = anthropic.Anthropic(api_key=api_key)
     user_content: list[dict] = [{"type": "text", "text": text}]
     if hint:
         user_content.append({"type": "text", "text": f"Contexte : {hint}"})
+    return _run_extraction(user_content, api_key)
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=2000,
-        timeout=60.0,
-        system=[{
-            "type": "text",
-            "text": EXTRACTION_SYSTEM,
-            "cache_control": {"type": "ephemeral"},
-        }],
-        messages=[{"role": "user", "content": user_content}],
-    )
-    return _clean(_parse_claude_response(response.content[0].text))
+
+# Taille min. pour qu'une pièce jointe image soit considérée comme le devis
+# (en dessous : logos/icônes de signature, quasi systématiques dans les mails HTML).
+_MIN_INLINE_IMAGE_BYTES = 3000
+_MAX_INLINE_IMAGES = 8
+
+
+def _html_to_text(html: bytes | str | None) -> str:
+    """Convertit un corps HTML en texte brut (repli quand il n'y a pas de text/plain)."""
+    if not html:
+        return ""
+    if isinstance(html, bytes):
+        for enc in ("utf-8", "latin-1", "cp1252"):
+            try:
+                html = html.decode(enc)
+                break
+            except (UnicodeDecodeError, AttributeError):
+                continue
+        else:
+            return ""
+    text = re.sub(r"(?is)<(script|style).*?</\1>", " ", html)
+    text = re.sub(r"(?i)<br\s*/?>|</p>|</div>|</tr>", "\n", text)
+    text = re.sub(r"(?s)<[^>]+>", "", text)
+    text = _html_lib.unescape(text)
+    return re.sub(r"[ \t]*\n[ \t]*\n+", "\n\n", text).strip()
 
 
 def extract_from_eml(eml_bytes: bytes, api_key: str | None = None,
@@ -588,10 +641,12 @@ def extract_from_eml(eml_bytes: bytes, api_key: str | None = None,
                 data = extract_from_pdf(pdf_bytes, api_key=api_key, filename=pdf_fn)
                 return data, "pdf", pdf_bytes
 
-    # 2. Extraire le corps texte
+    # 2. Extraire le corps texte (text/plain, ou repli sur le HTML si le mail n'a que ça)
     body = ""
+    html_body = ""
     for part in msg.walk():
-        if part.get_content_type() == "text/plain":
+        ctype = part.get_content_type()
+        if ctype == "text/plain" and not body:
             payload = part.get_payload(decode=True)
             if payload:
                 for enc in ("utf-8", "latin-1", "cp1252"):
@@ -600,17 +655,28 @@ def extract_from_eml(eml_bytes: bytes, api_key: str | None = None,
                         break
                     except (UnicodeDecodeError, AttributeError):
                         continue
-            if body:
-                break
-
+        elif ctype == "text/html" and not html_body:
+            html_body = part.get_payload(decode=True) or ""
     if not body.strip():
-        raise RuntimeError("Aucun contenu extractible dans l'email (ni PDF, ni texte).")
+        body = _html_to_text(html_body)
+
+    # 3. Images jointes/intégrées substantielles (le devis est parfois envoyé en image
+    #    plutôt qu'en PDF — on ignore les petites icônes de signature)
+    images: list[tuple[bytes, str | None]] = []
+    for part in msg.walk():
+        if part.get_content_maintype() == "image" and len(images) < _MAX_INLINE_IMAGES:
+            img_bytes = part.get_payload(decode=True)
+            if img_bytes and len(img_bytes) >= _MIN_INLINE_IMAGE_BYTES:
+                images.append((img_bytes, part.get_filename()))
+
+    if not body.strip() and not images:
+        raise RuntimeError("Aucun contenu extractible dans l'email (ni PDF, ni texte, ni image).")
 
     # Construire le contexte complet pour le LLM
-    email_context = f"Expéditeur : {sender}\nObjet : {subject}\n\n{body}"
-    hint = f"Nom du fichier : {filename}" if filename else None
+    hint = f"Nom du fichier : {filename}" if filename else ""
+    email_context = f"Expéditeur : {sender}\nObjet : {subject}\n{hint}\n\n{body}".strip()
 
-    data = _extract_from_text(email_context, api_key=api_key, hint=hint)
+    data = extract_from_paste(email_context, images, api_key=api_key)
 
     # Détection HT : si le corps contient des prix en HT → coeff_base = "ht"
     if re.search(r"\d[\s ]*[€$]?\s*HT\b|\bHT\s*[:=]\s*\d", body, re.IGNORECASE):
@@ -639,6 +705,7 @@ def extract_from_msg(msg_bytes: bytes, api_key: str | None = None,
     """
     try:
         import extract_msg as _msg_lib
+        from extract_msg.enums import ErrorBehavior
     except ImportError:
         raise RuntimeError(
             "La bibliothèque extract-msg est requise pour les fichiers .msg. "
@@ -646,29 +713,48 @@ def extract_from_msg(msg_bytes: bytes, api_key: str | None = None,
         )
 
     from io import BytesIO
-    msg = _msg_lib.Message(BytesIO(msg_bytes))
+    # SUPPRESS_ALL : certains .msg exportés par des outils tiers (CRM, ticketing SAV
+    # marque) ne respectent pas strictement le format Outlook — sans ça, extract-msg
+    # lève une exception et le fichier est illisible.
+    msg = _msg_lib.Message(BytesIO(msg_bytes), errorBehavior=ErrorBehavior.SUPPRESS_ALL)
 
     subject = msg.subject or ""
     sender  = msg.sender  or ""
 
     # 1. Chercher un PDF joint
     for att in (msg.attachments or []):
-        name = (att.longFilename or att.shortFilename or "").lower()
-        if name.endswith(".pdf"):
+        name = (att.longFilename or att.shortFilename or "").strip("\x00")
+        if name.lower().endswith(".pdf"):
             pdf_bytes = att.data
             if pdf_bytes:
                 data = extract_from_pdf(pdf_bytes, api_key=api_key, filename=name)
                 return data, "pdf", pdf_bytes
 
-    # 2. Extraire le corps texte
+    # 2. Extraire le corps texte (repli sur le HTML si le mail n'a pas de texte brut)
     body = msg.body or ""
     if not body.strip():
+        body = _html_to_text(msg.htmlBody)
+
+    # 3. Images jointes/intégrées substantielles (le devis est parfois envoyé en image
+    #    plutôt qu'en PDF — on ignore les petites icônes de signature)
+    images: list[tuple[bytes, str | None]] = []
+    for att in (msg.attachments or []):
+        if len(images) >= _MAX_INLINE_IMAGES:
+            break
+        name = (att.longFilename or att.shortFilename or "").strip("\x00")
+        ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+        if ext in _IMAGE_MEDIA_TYPES:
+            img_bytes = att.data
+            if img_bytes and len(img_bytes) >= _MIN_INLINE_IMAGE_BYTES:
+                images.append((img_bytes, name))
+
+    if not body.strip() and not images:
         raise RuntimeError("Aucun contenu extractible dans le fichier .msg.")
 
-    email_context = f"Expéditeur : {sender}\nObjet : {subject}\n\n{body}"
-    hint = f"Nom du fichier : {filename}" if filename else None
+    hint = f"Nom du fichier : {filename}" if filename else ""
+    email_context = f"Expéditeur : {sender}\nObjet : {subject}\n{hint}\n\n{body}".strip()
 
-    data = _extract_from_text(email_context, api_key=api_key, hint=hint)
+    data = extract_from_paste(email_context, images, api_key=api_key)
 
     if re.search(r"\d[\s ]*[€$]?\s*HT\b|\bHT\s*[:=]\s*\d", body, re.IGNORECASE):
         data["coeff_base"] = "ht"

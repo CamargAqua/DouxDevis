@@ -333,6 +333,29 @@
     <iframe class="source-pdf-frame" src="{{ url_for('source_file', token=token) }}#toolbar=0&navpanes=0&view=FitH" title="Devis source (PDF)"></iframe>
   </div>
 </aside>
+{% elif source_kind == "image" %}
+<aside class="review-source-col">
+  <div class="source-pdf-card">
+    <div class="source-pdf-bar">
+      <span class="source-pdf-icon" aria-hidden="true">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+      </span>
+      <div class="source-pdf-meta">
+        <div class="source-pdf-title">Devis source{% if data.marque %} — {{ data.marque }}{% endif %}</div>
+        <div class="source-pdf-sub">Document partenaire (image)</div>
+      </div>
+      <div class="source-pdf-actions">
+        <a class="source-pdf-btn" href="{{ url_for('source_file', token=token) }}" download title="Télécharger" aria-label="Télécharger l'image">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </a>
+        <a class="source-pdf-btn" href="{{ url_for('source_file', token=token) }}" target="_blank" rel="noopener" title="Ouvrir dans un nouvel onglet" aria-label="Ouvrir dans un nouvel onglet">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
+        </a>
+      </div>
+    </div>
+    <img class="source-pdf-frame" src="{{ url_for('source_file', token=token) }}" alt="Devis source" style="object-fit:contain;background:#fff;">
+  </div>
+</aside>
 {% elif source_kind == "text" %}
 <aside class="review-source-col">
   <div class="source-mail-card">

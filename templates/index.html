@@ -21,11 +21,11 @@
 
   <!-- Mode fichier -->
   <form id="form-file" action="{{ url_for('extract') }}" method="post" enctype="multipart/form-data" class="upload-form">
-    <label for="pdf" class="dropzone" id="dropzone">
+    <label for="pdf" class="dropzone" id="dropzone" tabindex="0">
       <span class="dropzone-icon">📄</span>
       <span class="dropzone-title">Glisser-déposer le fichier ici</span>
-      <span class="dropzone-sub">PDF, email (.eml) ou message Outlook (.msg) — max 25 Mo</span>
-      <input type="file" id="pdf" name="pdf" accept="application/pdf,.pdf,.eml,message/rfc822,.msg,application/vnd.ms-outlook" required>
+      <span class="dropzone-sub">PDF, image (jpg/png), email (.eml) ou message Outlook (.msg) — ou Ctrl+V après avoir copié le fichier — max 25 Mo</span>
+      <input type="file" id="pdf" name="pdf" accept="application/pdf,.pdf,.eml,message/rfc822,.msg,application/vnd.ms-outlook,image/jpeg,image/png,image/webp,image/gif" required>
       <span id="filename" class="dropzone-filename" style="display:none"></span>
     </label>
     <button type="submit" id="submit-file" class="btn btn-primary btn-lg" style="align-self:center;min-width:220px">
@@ -36,7 +36,7 @@
   </form>
 
   <!-- Mode coller -->
-  <form id="form-paste" action="{{ url_for('extract') }}" method="post" class="upload-form" style="display:none" onsubmit="return validatePaste()">
+  <form id="form-paste" action="{{ url_for('extract') }}" method="post" enctype="multipart/form-data" class="upload-form" style="display:none" onsubmit="return validatePaste()">
     <!-- Zone visuelle — même style que dropzone fichier -->
     <div id="paste-zone" class="dropzone" tabindex="0"
          onclick="document.getElementById('paste-area').focus()"
@@ -45,11 +45,11 @@
       <span id="paste-empty">
         <span class="dropzone-icon">✉️</span>
         <span class="dropzone-title">Cliquer ici puis Ctrl+V</span>
-        <span class="dropzone-sub">Copier tout le mail Outlook (Ctrl+A → Ctrl+C) puis coller ici</span>
+        <span class="dropzone-sub">Coller le texte du mail — ou une image (capture d'écran, image copiée dans le mail)</span>
       </span>
       <!-- État rempli (masqué par défaut) -->
       <span id="paste-ready" style="display:none;text-align:center;">
-        <span style="font-size:2rem;">✉️</span>
+        <span id="paste-ready-icon" style="font-size:2rem;">✉️</span>
         <span id="paste-badge" style="display:block;margin-top:8px;font-weight:700;font-size:15px;color:var(--gold)">Email collé</span>
         <span id="paste-info" style="display:block;font-size:12px;color:var(--ink-soft);margin-top:4px"></span>
         <button type="button" id="paste-clear"
@@ -61,6 +61,9 @@
       <!-- Textarea invisible qui stocke le texte -->
       <textarea id="paste-area" name="paste_text"
         style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;"></textarea>
+      <!-- Input fichier invisible qui stocke l'image (ou les images) collée(s) -->
+      <input type="file" id="paste-images-input" name="pasted_images" accept="image/*" multiple
+        style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;">
     </div>
 
     <button type="submit" id="submit-paste" class="btn btn-primary btn-lg" style="align-self:center;min-width:220px">
@@ -113,20 +116,82 @@
     } catch (_) {}
   });
 
-  /* ── Zone coller email ── */
-  const pasteZone  = document.getElementById('paste-zone');
-  const pasteArea  = document.getElementById('paste-area');
-  const pasteEmpty = document.getElementById('paste-empty');
-  const pasteReady = document.getElementById('paste-ready');
-  const pasteBadge = document.getElementById('paste-badge');
-  const pasteInfo  = document.getElementById('paste-info');
+  // Coller (Ctrl+V) un fichier copié dans l'explorateur Windows (.msg, .pdf, .eml, image…).
+  // Écoute au niveau document : un <label> (la dropzone) ne reçoit pas toujours le focus
+  // clavier nécessaire pour capter l'événement paste directement.
+  document.addEventListener('paste', function(e) {
+    if (document.getElementById('form-file').style.display === 'none') return; // onglet "Coller" actif
+    const clipboard = e.clipboardData || window.clipboardData;
+    const files = clipboard && clipboard.files;
+    if (!files || !files.length) return;
+    e.preventDefault();
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(files[0]);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    } catch (_) {}
+  });
 
-  function setPasteReady(text) {
+  /* ── Zone coller email (texte, image(s), ou les deux) ── */
+  const pasteZone      = document.getElementById('paste-zone');
+  const pasteArea      = document.getElementById('paste-area');
+  const pasteImagesInput = document.getElementById('paste-images-input');
+  const pasteEmpty     = document.getElementById('paste-empty');
+  const pasteReady     = document.getElementById('paste-ready');
+  const pasteReadyIcon = document.getElementById('paste-ready-icon');
+  const pasteBadge     = document.getElementById('paste-badge');
+  const pasteInfo      = document.getElementById('paste-info');
+
+  // Certains clients mail (webmail) collent une image intégrée au corps du mail comme
+  // <img src="data:image/...;base64,..."> dans le HTML copié plutôt que comme fichier
+  // séparé dans le presse-papiers — on les récupère en scannant le HTML collé.
+  function extractEmbeddedImages(html) {
+    const files = [];
+    const regex = /<img[^>]+src=["'](data:image\/[a-zA-Z0-9.+-]+;base64,[^"']+)["']/gi;
+    let match;
+    while ((match = regex.exec(html)) && files.length < 5) {
+      const file = dataUriToFile(match[1], 'inline_' + files.length + '.png');
+      if (file) files.push(file);
+    }
+    return files;
+  }
+
+  function dataUriToFile(dataUri, filename) {
+    try {
+      const [meta, b64] = dataUri.split(',');
+      const mime = /data:(.*?);base64/.exec(meta)[1];
+      const bin = atob(b64);
+      const arr = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      return new File([arr], filename, { type: mime });
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Normalise un fichier collé sans extension (arrive parfois pour un paste direct)
+  function namedImageFile(file, fallbackName) {
+    if (file.name && file.name.includes('.')) return file;
+    const ext = (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+    return new File([file], fallbackName + '.' + ext, { type: file.type });
+  }
+
+  function setPasteReady(text, images) {
     pasteArea.value = text;
-    // Compter les lignes non vides pour l'info
+    const dt = new DataTransfer();
+    images.forEach(f => dt.items.add(f));
+    pasteImagesInput.files = dt.files;
+
     const lines = text.split('\n').filter(l => l.trim()).length;
-    pasteBadge.textContent = 'Email collé — prêt à extraire';
-    pasteInfo.textContent  = lines + ' ligne' + (lines > 1 ? 's' : '') + ' copiée' + (lines > 1 ? 's' : '');
+    const hasText = lines > 0;
+    pasteReadyIcon.textContent = images.length ? (hasText ? '✉️🖼️' : '🖼️') : '✉️';
+    pasteBadge.textContent = (hasText ? 'Email collé' : 'Image collée') + ' — prêt à extraire';
+    const parts = [];
+    if (hasText) parts.push(lines + ' ligne' + (lines > 1 ? 's' : '') + ' copiée' + (lines > 1 ? 's' : ''));
+    if (images.length) parts.push(images.length + ' image' + (images.length > 1 ? 's' : ''));
+    pasteInfo.textContent = parts.join(' · ');
+
     pasteEmpty.style.display = 'none';
     pasteReady.style.display = '';
     pasteZone.style.borderColor = 'var(--gold)';
@@ -136,28 +201,47 @@
   function clearPaste(e) {
     if (e) e.stopPropagation();
     pasteArea.value = '';
+    pasteImagesInput.value = '';
     pasteEmpty.style.display = '';
     pasteReady.style.display = 'none';
     pasteZone.style.borderColor = '';
     pasteZone.style.background  = '';
   }
 
-  // Coller via Ctrl+V sur la zone ou le textarea caché
-  pasteZone.addEventListener('paste', function(e) {
-    const text = (e.clipboardData || window.clipboardData).getData('text');
-    if (text && text.trim()) { e.preventDefault(); setPasteReady(text.trim()); }
-  });
-  pasteArea.addEventListener('paste', function(e) {
-    const text = (e.clipboardData || window.clipboardData).getData('text');
-    if (text && text.trim()) { e.preventDefault(); setPasteReady(text.trim()); }
-  });
+  // Coller via Ctrl+V sur la zone ou le textarea caché — capte le texte ET les images
+  // (fichier direct dans le presse-papiers, ou image intégrée dans le HTML copié).
+  function handlePasteEvent(e) {
+    const clipboard = e.clipboardData || window.clipboardData;
+    const items = clipboard && clipboard.items;
+    const images = [];
+
+    if (items) {
+      let i = 0;
+      for (const item of items) {
+        if (item.type && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) images.push(namedImageFile(file, 'clipboard_' + (i++)));
+        }
+      }
+    }
+
+    const text = clipboard.getData('text/plain') || clipboard.getData('text') || '';
+    const html = clipboard.getData('text/html');
+    if (html) images.push(...extractEmbeddedImages(html));
+
+    if (!text.trim() && !images.length) return; // rien d'exploitable, laisser le paste par défaut
+    e.preventDefault();
+    setPasteReady(text.trim(), images);
+  }
+  pasteZone.addEventListener('paste', handlePasteEvent);
+  pasteArea.addEventListener('paste', handlePasteEvent);
 
   // Focus sur la zone → focus sur textarea caché pour capter Ctrl+V
   pasteZone.addEventListener('focus', () => pasteArea.focus());
   pasteZone.addEventListener('click', () => pasteArea.focus());
 
   function validatePaste() {
-    if (!pasteArea.value.trim()) {
+    if (!pasteArea.value.trim() && !pasteImagesInput.files.length) {
       pasteZone.style.borderColor = '#e53e3e';
       pasteZone.style.boxShadow = '0 0 0 3px rgba(229,62,62,0.15)';
       setTimeout(() => { pasteZone.style.borderColor=''; pasteZone.style.boxShadow=''; }, 1500);
