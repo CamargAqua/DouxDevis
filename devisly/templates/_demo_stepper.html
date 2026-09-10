@@ -1,0 +1,19 @@
+{# Frise d'état — sans `status` : légende générique (pédagogique, rien en surbrillance).
+   Avec `status` : reflète l'état réel du ticket. "Envoyé" est un instant (le SMS part),
+   l'état qui dure c'est "En attente de validation" — les deux se remplissent ensemble dès
+   l'envoi, seule la 3e étape reste "courante" tant que le client n'a pas répondu. #}
+{% set labels = ["Généré", "Envoyé", "Attente validation client", "Décision"] %}
+{# valide/refuse pointent au-delà du dernier index : la décision est prise, "Décision" doit
+   s'afficher coché (done), pas en cours (current) — sinon le dernier cercle reste vide alors
+   que tout est déjà tranché, ce qui ne veut rien dire pour qui regarde. #}
+{% set status_step = {"a_valider": 0, "envoye": 2, "valide": 4, "refuse": 4} %}
+{% set current = status_step.get(status, -1) if status else -1 %}
+<div class="demo-stepper">
+  {% for label in labels %}
+  <div class="demo-step {{ 'is-done' if current > loop.index0 else '' }} {{ 'is-current' if current == loop.index0 else '' }}">
+    <span class="demo-step-dot"></span>
+    <span class="demo-step-label">{{ label }}</span>
+  </div>
+  {% if not loop.last %}<span class="demo-step-line {{ 'is-done' if current > loop.index0 else '' }}"></span>{% endif %}
+  {% endfor %}
+</div>

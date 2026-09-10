@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Lot généré — {{ maison_name }}{% endblock %}
+{% block page_title %}Partenaire — lot généré{% endblock %}
+{% block container_class %}{% endblock %}
+{% block content %}
+
+<div class="erp-card">
+  <div class="erp-card-head">
+    <div><div class="erp-eyebrow">Devis partenaire</div><h2>{{ generated|length }} devis générés avec succès</h2></div>
+    <a href="{{ url_for('download_all') }}" class="erp-btn erp-btn-primary erp-btn-sm">📦 Tout télécharger (.zip)</a>
+  </div>
+
+  <div class="erp-table-wrap">
+    <table class="erp-table">
+      <thead><tr><th>Devis</th><th>Fichiers</th><th></th></tr></thead>
+      <tbody>
+        {% for d in generated %}
+        <tr>
+          <td>{{ d.names[0].rsplit('.', 1)[0] }}</td>
+          <td>
+            <div class="erp-actions" style="justify-content:flex-start">
+              {% for n in d.names %}
+              <a class="erp-btn erp-btn-ghost erp-btn-sm" href="{{ url_for('download', token=d.token, filename=n) }}">{{ n.rsplit('.', 1)[-1]|upper }}</a>
+              {% endfor %}
+            </div>
+          </td>
+          <td>
+            {% for n in d.names %}
+            {% if n.lower().endswith('.pdf') %}
+            <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-pdf-{{ d.token }}').showModal()">Aperçu</button>
+            {% endif %}
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="erp-actions" style="justify-content:space-between">
+  <a href="{{ url_for('comptoir') }}" class="erp-btn erp-btn-ghost">← Retour au Comptoir</a>
+  <a href="{{ url_for('fournisseur') }}" class="erp-btn erp-btn-primary">Voir dans Partenaire →</a>
+</div>
+
+{% for d in generated %}
+{% for n in d.names %}
+{% if n.lower().endswith('.pdf') %}
+<dialog class="erp-dialog erp-dialog-pdf" id="dlg-pdf-{{ d.token }}">
+  <div class="erp-dialog-head">
+    <div><strong>{{ n }}</strong></div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-pdf-{{ d.token }}').close()">Fermer ✕</button>
+  </div>
+  <iframe src="{{ url_for('demo_view_pdf', token=d.token, filename=n) }}"></iframe>
+</dialog>
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endblock %}

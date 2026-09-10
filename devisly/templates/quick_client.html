@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Mode rapide — {{ maison_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="hero">
+    <div style="display:flex;align-items:center;gap:10px">
+      <h1 style="margin:0">Mode rapide</h1>
+    </div>
+    <p class="lead">Vérifiez le résumé, indiquez le client, et le devis est généré directement.</p>
+  </div>
+
+  <div style="background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:16px 20px;margin-bottom:20px">
+    <div style="font-size:12px;color:var(--ink-soft);letter-spacing:.3px;text-transform:uppercase;margin-bottom:8px">Résumé extrait</div>
+    <div style="font-family:Georgia,serif;font-size:18px;margin-bottom:4px">
+      {{ data.marque or 'Marque non identifiée' }}{% if data.montre.modele %} — {{ data.montre.modele }}{% endif %}
+    </div>
+    {% set nec = data.interventions_necessaires or [] %}
+    <div style="font-size:13px;color:var(--ink-mid)">
+      {{ nec|length }} intervention{{ 's' if nec|length > 1 }} nécessaire{{ 's' if nec|length > 1 }}
+      {% if data.sav.numero %} · SAV {{ data.sav.numero }}{% endif %}
+    </div>
+    {% if montre_photo_files %}
+    <div style="display:flex;gap:8px;margin-top:12px">
+      {% for name in montre_photo_files %}
+      <img src="{{ url_for('session_photo', token=token, name=name) }}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--line)">
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if not nec %}
+    <p style="font-size:13px;color:#b91c1c;margin-top:10px">⚠️ Aucune intervention détectée — mieux vaut passer par la vérification complète.</p>
+    {% endif %}
+  </div>
+
+  <form method="post" action="{{ url_for('quick_client_submit') }}">
+    <label class="field" style="max-width:360px;margin-bottom:20px">
+      Nom du client
+      <input type="text" name="client_nom" value="{{ client_nom }}" placeholder="NOM Prénom" required autofocus style="font-weight:600">
+    </label>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <a href="{{ url_for('review') }}" class="btn btn-ghost">Voir le détail complet →</a>
+      <button type="submit" class="btn btn-gold btn-lg">Générer le devis →</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

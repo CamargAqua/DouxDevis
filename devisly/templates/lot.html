@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Lot de devis — {{ maison_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <div class="hero" style="margin-bottom:18px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <h1 style="margin:0">Vérification du lot</h1>
+      <span style="font-size:13px;color:var(--ink-mid)">{{ counts.total }} devis</span>
+    </div>
+    <p class="lead" style="margin-top:6px">
+      Vérifiez chaque devis dans l'ordre que vous voulez, puis générez-les tous d'un coup.
+    </p>
+  </div>
+
+  {% if generated %}
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:11px 15px;background:var(--ok-bg,#EAF4EF);border:1px solid #5DCAA5;border-radius:8px">
+    <span style="font-size:13px;color:#0F6E56">✅ Lot déjà généré. Modifiez un devis puis régénérez si besoin.</span>
+    <a href="{{ url_for('lot_done') }}" style="font-size:13px;color:#0F6E56;font-weight:600">📦 Voir les téléchargements →</a>
+  </div>
+  {% endif %}
+
+  {% if counts.pending %}
+  {% set _done = counts.ready + counts.verified + counts.ignored + counts.error %}
+  <div id="lot-extracting" style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:11px 15px;background:#FAEEDA;border:1px solid #EF9F27;border-radius:8px">
+    <span style="width:8px;height:8px;border-radius:50%;background:#BA7517;flex:none"></span>
+    <span style="font-size:13px;color:#633806">
+      Extraction en cours — <strong>{{ _done }}/{{ counts.total }}</strong> devis prêts. La page se met à jour toute seule.
+    </span>
+  </div>
+  <style>
+    @keyframes lot-indeterminate { 0% { left: -40%; } 100% { left: 100%; } }
+    .lot-indeterminate-track { position: relative; height: 4px; margin-top: 8px; max-width: 220px;
+      border-radius: 999px; background: var(--gold-ultra, #F5EDD6); overflow: hidden; }
+    .lot-indeterminate-bar { position: absolute; top: 0; height: 100%; width: 40%;
+      border-radius: 999px; background: var(--gold, #B8962E); animation: lot-indeterminate 1.3s ease-in-out infinite; }
+  </style>
+  {% endif %}
+
+  <div style="display:flex;flex-direction:column;gap:8px">
+    {% for e in lot %}
+    {% set s = e.summary %}
+    <details class="lot-row" {% if loop.first and e.status in ('ready', 'verified') %}open{% endif %}
+      style="border:1px solid {% if e.status == 'verified' %}#5DCAA5{% elif e.status == 'error' %}var(--err-ink,#a3282c){% else %}var(--line){% endif %};border-radius:8px;overflow:hidden;{% if e.status == 'ignored' %}opacity:.6{% endif %}">
+      <summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:13px 15px">
+        <span style="font-size:12px;color:var(--ink-soft)">▸</span>
+        <div style="flex:1;min-width:0">
+          {% if e.status == 'pending' %}
+          <div style="font-size:14px;color:var(--ink-mid)">Extraction en cours…</div>
+          <div class="lot-indeterminate-track"><div class="lot-indeterminate-bar"></div></div>
+          {% elif e.status == 'error' %}
+          <div style="font-size:14px;font-weight:600;color:var(--err-ink,#a3282c)">Échec de l'extraction</div>
+          <div style="font-size:12px;color:var(--ink-soft)">Réf. {{ e.err_ref }} — retirez ce fichier et réessayez</div>
+          {% else %}
+          <div style="font-size:14px;font-weight:600">
+            {{ s.marque or 'Marque ?' }}{% if s.modele %} · {{ s.modele }}{% endif %}
+            {% if s.client %}<span style="font-weight:400;color:var(--ink-mid)"> — {{ s.client }}</span>{% endif %}
+          </div>
+          <div style="font-size:12px;color:var(--ink-soft)">{{ '%0.0f'|format(s.total|float) }} € · {{ s.lines }} ligne{{ 's' if s.lines > 1 }}</div>
+          {% endif %}
+        </div>
+        {% if e.status == 'verified' %}
+        <span style="font-size:12px;font-weight:600;color:#0F6E56;background:#E1F5EE;padding:3px 10px;border-radius:20px;white-space:nowrap">Vérifié</span>
+        {% elif e.status == 'ready' %}
+        <span style="font-size:12px;font-weight:600;color:#854F0B;background:#FAC775;padding:3px 10px;border-radius:20px;white-space:nowrap">À vérifier</span>
+        {% elif e.status == 'ignored' %}
+        <span style="font-size:12px;font-weight:600;color:var(--ink-mid);background:var(--bg);padding:3px 10px;border-radius:20px;white-space:nowrap">Ignoré</span>
+        {% elif e.status == 'pending' %}
+        <span style="width:9px;height:9px;border-radius:50%;background:#EF9F27;flex:none"></span>
+        {% endif %}
+      </summary>
+
+      {% if e.status in ('ready', 'verified', 'ignored') %}
+      <div style="padding:0 15px 15px 39px;border-top:1px solid var(--line)">
+        <div style="font-size:13px;color:var(--ink-mid);margin:12px 0">
+          {% if s.client %}Client : <strong>{{ s.client }}</strong> · {% endif %}
+          {{ s.lines }} ligne{{ 's' if s.lines > 1 }} · Total {{ '%0.0f'|format(s.total|float) }} €
+          {% if e.status == 'ready' %}<span style="color:var(--ink-soft)"> (prix partenaire — le coefficient s'appliquera à la génération si vous ne l'ouvrez pas)</span>{% endif %}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          {% if e.status == 'ignored' %}
+          <form method="post" action="{{ url_for('lot_restore', token=e.token) }}" style="margin:0">
+            <button type="submit" class="btn btn-ghost" style="font-size:13px">Réintégrer</button>
+          </form>
+          {% else %}
+          <a href="{{ url_for('lot_edit', token=e.token) }}" class="btn btn-gold" style="font-size:13px">Vérifier / Modifier</a>
+          <form method="post" action="{{ url_for('lot_ignore', token=e.token) }}" style="margin:0">
+            <button type="submit" class="btn btn-ghost" style="font-size:13px">Ignorer</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </details>
+    {% endfor %}
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;padding-top:15px;border-top:1px solid var(--line)">
+    <span style="font-size:13px;color:var(--ink-mid)">
+      {{ counts.to_generate }} devis seront générés{% if counts.ignored %} · {{ counts.ignored }} ignoré{{ 's' if counts.ignored > 1 }}{% endif %}
+    </span>
+    <div style="display:flex;gap:10px">
+      <a href="{{ url_for('index') }}" class="btn btn-ghost">Nouveau lot</a>
+      <form method="post" action="{{ url_for('lot_generate') }}" style="margin:0"
+        onsubmit="const b=this.querySelector('button');b.disabled=true;b.textContent='Génération en cours…';">
+        <button type="submit" class="btn btn-gold btn-lg"{% if not counts.to_generate %} disabled{% endif %}>
+          {{ 'Regénérer' if generated else 'Générer' }} les {{ counts.to_generate }} devis →
+        </button>
+      </form>
+    </div>
+  </div>
+</section>
+
+{% if counts.pending %}
+<script>
+  (function () {
+    var readyNow = {{ counts.ready + counts.verified }};
+    var timer = setInterval(function () {
+      fetch("{{ url_for('lot_status') }}", { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (s) {
+          // recharge dès qu'un devis de plus est prêt (ou plus aucun en attente)
+          if (s.pending === 0 || (s.ready + s.verified) > readyNow) {
+            clearInterval(timer);
+            location.reload();
+          }
+        })
+        .catch(function () {});
+    }, 3000);
+  })();
+</script>
+{% endif %}
+{% endblock %}

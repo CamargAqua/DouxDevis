@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% import "_demo_lines_macro.html" as linesmacro %}
+{% block title %}Horloger — {{ maison_name }}{% endblock %}
+{% block page_title %}Horloger — devis SAV interne{% endblock %}
+{% block page_route %}/comptoir/horloger — suivi, la création reste sur Comptoir{% endblock %}
+{% block container_class %}{% endblock %}
+{% block content %}
+
+<div class="erp-card">
+  <div class="erp-card-head">
+    <div><div class="erp-eyebrow">Registre</div><h2>{{ suivis|length }} devis en attente</h2></div>
+    <div class="erp-chip-row" style="margin:0">
+      {% for value, label in statuts %}
+      <a class="erp-chip" href="{{ url_for('horloger', statut=value) if value else url_for('horloger') }}"
+         style="{{ 'border-color:var(--erp-gold);color:var(--erp-ink)' if statut == value }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if not suivis %}
+  <div class="erp-empty">
+    {% if statut %}Aucun devis avec ce statut — <a href="{{ url_for('horloger') }}">voir tous les devis</a>.
+    {% else %}Aucun devis chiffré pour l'instant. Un dépôt saisi au Comptoir apparaît ici une fois chiffré par l'atelier.{% endif %}
+  </div>
+  {% else %}
+  <div class="erp-table-wrap">
+    <table class="erp-table">
+      <thead><tr><th></th><th>N° devis</th><th>Client</th><th>Pièce</th><th class="num">Montant</th><th>Avancement</th><th></th></tr></thead>
+      <tbody>
+        {# Même frise/vocabulaire que le Tableau de bord (Chiffrage → Envoi → Décision client) —
+           ce registre part de "chiffré" donc jamais à l'étape 0, mais garde les mêmes 3 mots. #}
+        {% set STEP = {"a_valider": 1, "envoye": 2, "refuse": 2} %}
+        {% set RESP = {"a_valider": "Comptoir", "envoye": "Client"} %}
+        {% for t in suivis %}
+        <tr id="row-{{ t.id }}" class="{{ 'erp-focus' if focus == t.id }}">
+          <td>
+            {% if t.photo_file %}
+            <img class="erp-thumb" src="{{ url_for('demo_photo', ticket_id=t.id, name=t.photo_file) }}" loading="lazy" alt="">
+            {% else %}
+            <span class="erp-thumb erp-thumb-brand{{ ' is-empty' if not t.marque }}" style="background:{{ t.marque|brand_color }}">{{ (t.marque or '')[:2]|upper }}</span>
+            {% endif %}
+          </td>
+          <td class="num">{{ t.devis_numero }}</td>
+          <td>{{ t.client_nom }}</td>
+          <td>{{ t.piece }}{{ " · " + t.marque if t.marque }}</td>
+          <td class="num">{{ "%.2f"|format(t.total) }} €</td>
+          <td>
+            <div class="erp-mstep-cell">
+              {% if t.status in RESP %}<span class="erp-responsable-tag">{{ RESP[t.status] }}</span>{% endif %}
+              <div class="erp-mstep-row">
+                {% for label in ["Chiffrage", "Envoi", "Décision client"] %}
+                <div class="erp-mstep {{ 'done' if STEP[t.status] > loop.index0 else '' }} {{ 'current' if STEP[t.status] == loop.index0 else '' }}">
+                  <span class="erp-mstep-dot"></span><span class="erp-mstep-label">{{ label }}</span>
+                </div>
+                {% if not loop.last %}<span class="erp-mstep-line {{ 'done' if STEP[t.status] > loop.index0 else '' }}"></span>{% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="erp-actions">
+              <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-{{ t.id }}').showModal()">Aperçu</button>
+              {% if t.status == "a_valider" %}
+              <form action="{{ url_for('demo_send', ticket_id=t.id) }}" method="post">
+                <button type="submit" class="erp-btn erp-btn-primary erp-btn-sm">Envoyer →</button>
+              </form>
+              {% else %}
+              <a class="erp-btn erp-btn-ghost erp-btn-sm" href="{{ url_for('download', token=t.token, filename=t.pdf_name) }}">Télécharger</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+{% if valides %}
+<details class="erp-card erp-details">
+  <summary class="erp-card-head erp-details-summary">
+    <div><div class="erp-eyebrow">Suite du workflow</div><h2>Devis validés — {{ valides|length }}</h2></div>
+  </summary>
+  <div class="erp-details-body">
+    <div class="erp-table-wrap">
+      <table class="erp-table">
+        <thead><tr><th></th><th>N° devis</th><th>Client</th><th>Pièce</th><th class="num">Montant</th><th>Statut</th><th></th></tr></thead>
+        <tbody>
+          {% for t in valides %}
+          <tr class="erp-row-link" onclick="document.getElementById('dlg-pdf-{{ t.id }}').showModal()">
+            <td>
+              {% if t.photo_file %}
+              <img class="erp-thumb" src="{{ url_for('demo_photo', ticket_id=t.id, name=t.photo_file) }}" loading="lazy" alt="">
+              {% else %}
+              <span class="erp-thumb erp-thumb-brand{{ ' is-empty' if not t.marque }}" style="background:{{ t.marque|brand_color }}">{{ (t.marque or '')[:2]|upper }}</span>
+              {% endif %}
+            </td>
+            <td class="num">{{ t.devis_numero }}</td>
+            <td>{{ t.client_nom }}</td>
+            <td>{{ t.piece }}{{ " · " + t.marque if t.marque }}</td>
+            <td class="num">{{ "%.2f"|format(t.total) }} €</td>
+            <td><span class="erp-pill erp-pill-success">accepté</span></td>
+            <td>
+              <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="event.stopPropagation(); document.getElementById('dlg-pdf-{{ t.id }}').showModal()">Aperçu</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</details>
+{% for t in valides %}
+{# Depuis "Devis validés" : juste consulter le PDF, pas la fiche complète (stepper/téléphone/
+   actions) qui n'a plus lieu d'être une fois le devis accepté. #}
+<dialog class="erp-dialog erp-dialog-pdf" id="dlg-pdf-{{ t.id }}">
+  <div class="erp-dialog-head">
+    <div><strong>{{ t.client_nom }}</strong> — {{ t.piece }} · <span class="num">{{ t.devis_numero }}</span> · <span class="num">{{ "%.2f"|format(t.total) }} €</span></div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="this.closest('dialog').close()">Fermer ✕</button>
+  </div>
+  <iframe src="{{ url_for('demo_view_pdf', token=t.token, filename=t.pdf_name) }}" style="width:100%;height:65vh;border:0;border-radius:4px;background:var(--erp-sunken)"></iframe>
+  <div class="erp-dialog-foot">
+    <a class="erp-btn erp-btn-ghost" href="{{ url_for('download', token=t.token, filename=t.pdf_name) }}">Télécharger</a>
+  </div>
+</dialog>
+{% endfor %}
+{% endif %}
+
+{% for t in suivis %}
+<dialog class="erp-dialog erp-dialog-pdf" id="dlg-{{ t.id }}">
+  <div class="erp-dialog-head">
+    <div><strong>{{ t.client_nom }}</strong> — {{ t.piece }} — <span class="num">{{ t.devis_numero }}</span> — <span class="num">{{ "%.2f"|format(t.total) }} €</span></div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-{{ t.id }}').close()">Fermer ✕</button>
+  </div>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:16px;align-items:start">
+    <div>
+      {% with status = t.status %}{% include "_demo_stepper.html" %}{% endwith %}
+      {% if t.status == "a_valider" %}
+      <form action="{{ url_for('demo_recalc', ticket_id=t.id) }}" method="post">
+        <div class="erp-hint" style="margin-bottom:10px">Chiffré par l'horloger — à vérifier avant envoi (coefficient modifiable)</div>
+        {% if t.lines.opt %}<div class="erp-eyebrow" style="margin-bottom:4px">Nécessaire</div>{% endif %}
+        {{ linesmacro.lines_table(t, "nec", editable=false, coeff_editable=true) }}
+        {% if t.lines.opt %}<div class="erp-eyebrow" style="margin:14px 0 4px">Optionnel</div>{{ linesmacro.lines_table(t, "opt", editable=false, coeff_editable=true) }}{% endif %}
+        <button type="submit" class="erp-btn erp-btn-ghost erp-btn-sm" style="margin-top:14px">↻ Recalculer et régénérer le PDF</button>
+      </form>
+      {% else %}
+      <div>
+        <div class="erp-hint" style="margin-bottom:10px">Devis figé — envoyé au client, plus modifiable.</div>
+        {% if t.lines.opt %}<div class="erp-eyebrow" style="margin-bottom:4px">Nécessaire</div>{% endif %}
+        {{ linesmacro.lines_table(t, "nec", editable=false) }}
+        {% if t.lines.opt %}<div class="erp-eyebrow" style="margin:14px 0 4px">Optionnel</div>{{ linesmacro.lines_table(t, "opt", editable=false) }}{% endif %}
+      </div>
+      {% endif %}
+      <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" style="margin-top:14px" onclick="document.getElementById('dlg-pdf-{{ t.id }}').showModal()">Aperçu</button>
+    </div>
+    {# Popup téléphone/SMS — chrome de fenêtre propre (bord + ombre + en-tête) pour lire comme
+       une deuxième popup posée à côté de la fiche SAV, plutôt qu'une colonne de plus. Deux
+       vrais <dialog> ouverts en même temps se marchent dessus sur les clics (le ::backdrop
+       plein écran du second, ouvert après, recouvre le premier dans le top layer) — un seul
+       <dialog> réel reste le choix robuste. Comportement téléphone/SMS 100% repris de
+       _demo_phone.html, inchangé. #}
+    <div class="erp-dialog-phone-pop">
+      <div class="erp-dialog-phone-pop-head">Téléphone</div>
+      {% with selected = t %}{% include "_demo_phone.html" %}{% endwith %}
+    </div>
+  </div>
+  <div class="erp-dialog-foot">
+    <a class="erp-btn erp-btn-ghost" href="{{ url_for('download', token=t.token, filename=t.pdf_name) }}">Télécharger</a>
+    {% if t.status == "a_valider" %}
+    <form action="{{ url_for('demo_send', ticket_id=t.id) }}" method="post">
+      <button type="submit" class="erp-btn erp-btn-primary">Envoyer au client →</button>
+    </form>
+    {% endif %}
+  </div>
+</dialog>
+{# Aperçu PDF en popup — remplace l'ancien lien "voir le PDF en grand" (nouvel onglet). Empilée
+   par-dessus la popup SAV (fermeture normale ensuite, aucun clic requis sur la SAV pendant que
+   celle-ci est ouverte). #}
+<dialog class="erp-dialog erp-dialog-pdf" id="dlg-pdf-{{ t.id }}">
+  <div class="erp-dialog-head">
+    <div><strong>{{ t.client_nom }}</strong> — {{ t.piece }} · <span class="num">{{ t.devis_numero }}</span> · <span class="num">{{ "%.2f"|format(t.total) }} €</span></div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="this.closest('dialog').close()">Fermer ✕</button>
+  </div>
+  <iframe src="{{ url_for('demo_view_pdf', token=t.token, filename=t.pdf_name) }}" style="width:100%;height:65vh;border:0;border-radius:4px;background:var(--erp-sunken)"></iframe>
+  <div class="erp-dialog-foot">
+    <a class="erp-btn erp-btn-ghost" href="{{ url_for('download', token=t.token, filename=t.pdf_name) }}">Télécharger</a>
+  </div>
+</dialog>
+{% endfor %}
+
+{% if focus %}
+<script>
+  // Arrivée depuis Comptoir : la ligne est déjà repérée, on ouvre son aperçu directement
+  // — un clic au comptoir = le devis sous les yeux, pas un clic de plus dans la liste.
+  (function () {
+    var row = document.getElementById("row-{{ focus }}");
+    if (row) row.scrollIntoView({ block: "center" });
+    var dlg = document.getElementById("dlg-{{ focus }}");
+    if (dlg) dlg.showModal();
+  })();
+</script>
+{% endif %}
+{% endblock %}

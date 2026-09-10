@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Devis prêt — {{ maison_name }}{% endblock %}
+{% block page_title %}Partenaire — devis généré{% endblock %}
+{% block container_class %}{% endblock %}
+{% block content %}
+<div class="erp-card">
+
+  <div class="done-hero">
+    <div class="check">
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="24" cy="24" r="22" stroke="#B8962E" stroke-width="1.5"/>
+        <path d="M14 24.5L21 31.5L34 17" stroke="#B8962E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1>Devis généré avec succès</h1>
+    <p class="lead">Les fichiers sont prêts. Téléchargez-les ci-dessous ou faites un aperçu du PDF.</p>
+    {% if confidence is not none %}
+    {% set _anchors = {
+      "Marque non identifiée":      "field-marque",
+      "Nom client absent":          "field-client-nom",
+      "N° SAV invalide ou absent":  "field-sav-numero",
+      "Date SAV absente":           "field-sav-date",
+      "Modèle montre absent":       "field-modele",
+      "Référence boîtier absente":  "field-reference",
+      "Numéro de série absent":     "field-serie",
+      "État / diagnostic absent":   "field-etat",
+      "Aucune intervention détectée": "nec-lines",
+      "Total TTC nul ou absent":    "nec-lines"
+    } %}
+    {% if confidence <= 5 %}{% set _lvl = "low" %}{% set _label = "À compléter" %}
+    {% elif confidence <= 7 %}{% set _lvl = "mid" %}{% set _label = "Acceptable" %}
+    {% else %}{% set _lvl = "high" %}{% set _label = "Bonne extraction" %}{% endif %}
+    <div class="eq-block eq-{{ _lvl }}">
+      <div class="eq-header">
+        <div class="eq-badge">
+          <span class="eq-num">{{ confidence }}</span><span class="eq-denom">/10</span>
+        </div>
+        <div class="eq-meta">
+          <strong class="eq-title">Qualité d'extraction</strong>
+          <span class="eq-subtitle">
+            {% if confidence_missing %}{{ confidence_missing|length }} champ(s) à vérifier{% else %}Tous les champs sont renseignés{% endif %}
+          </span>
+        </div>
+      </div>
+      {% if confidence_missing %}
+      <table class="eq-table">
+        {% for issue in confidence_missing %}
+        {% set anchor = _anchors.get(issue, '') %}
+        <tr>
+          <td class="eq-warn-icon">▲</td>
+          <td class="eq-warn-label">{{ issue }}</td>
+          <td class="eq-warn-action">
+            <a href="{{ url_for('review') }}{% if anchor %}#{{ anchor }}{% endif %}" class="eq-fix-btn">Corriger →</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="downloads">
+    <a class="download-card" href="{{ url_for('download', token=token, filename=docx_name) }}">
+      <span class="download-badge docx">WORD</span>
+      <span class="download-filename">{{ docx_name }}</span>
+      <span style="font-size:12px;color:var(--ink-soft)">Modifiable — Word / Pages</span>
+      <span class="download-cta">Télécharger</span>
+    </a>
+    <button type="button" class="download-card" style="cursor:pointer" onclick="document.getElementById('dlg-pdf-{{ token }}').showModal()">
+      <span class="download-badge pdf">PDF</span>
+      <span class="download-filename">{{ pdf_name }}</span>
+      <span style="font-size:12px;color:var(--ink-soft)">Prêt à imprimer &amp; envoyer</span>
+      <span class="download-cta">Aperçu</span>
+    </button>
+    {% if csv_name %}
+    <a class="download-card" href="{{ url_for('download', token=token, filename=csv_name) }}">
+      <span class="download-badge csv">CSV</span>
+      <span class="download-filename">{{ csv_name }}</span>
+      <span style="font-size:12px;color:var(--ink-soft)">Pour import/ressaisie Bijoux3 · Odéis</span>
+      <span class="download-cta">Télécharger</span>
+    </a>
+    {% endif %}
+  </div>
+
+
+  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--line);margin-top:8px">
+    <a href="{{ url_for('comptoir') }}" class="btn btn-ghost">← Retour au Comptoir</a>
+    <a href="{{ url_for('fournisseur') }}" class="btn btn-gold">Voir dans Partenaire →</a>
+  </div>
+
+</div>
+
+<dialog class="erp-dialog erp-dialog-pdf" id="dlg-pdf-{{ token }}">
+  <div class="erp-dialog-head">
+    <div><strong>{{ pdf_name }}</strong></div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-pdf-{{ token }}').close()">Fermer ✕</button>
+  </div>
+  <iframe src="{{ url_for('demo_view_pdf', token=token, filename=pdf_name) }}"></iframe>
+  <div class="erp-dialog-foot">
+    <a class="erp-btn erp-btn-ghost" href="{{ url_for('download', token=token, filename=pdf_name) }}">Télécharger</a>
+  </div>
+</dialog>
+
+{% endblock %}

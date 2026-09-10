@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Devis {{ maison_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='erp.css') }}">
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+</head>
+{# `shell` vient du contexte : "full" (coquille ERP, défaut) ou "bare" pour les
+   pages hors tenant — landing, connexions, superadmin, erreurs. #}
+<body class="{{ 'erp' if shell != 'bare' }}">
+{% if shell != 'bare' %}
+  <div class="erp-layout">
+
+    <aside class="erp-side" role="navigation" aria-label="Navigation principale">
+      <a href="{{ url_for('tableau_de_bord') }}" class="erp-side-brand">
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="Reverso">
+      </a>
+
+      <div class="erp-group">Vue d'ensemble</div>
+      <a href="{{ url_for('tableau_de_bord') }}" class="erp-nav-item {{ 'active' if nav_active == 'dashboard' }}" {{ ('aria-current="page"' if nav_active == 'dashboard' else '')|safe }}>
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+        Tableau de bord
+      </a>
+
+      <div class="erp-group">SAV</div>
+      {# Pas de compteur ici : la somme des deux sous-catégories serait redondante avec les
+         compteurs juste en dessous, sur la bonne ligne — demande explicite de Victor. #}
+      <a href="{{ url_for('comptoir') }}" class="erp-nav-item {{ 'active' if nav_active == 'comptoir' }}" {{ ('aria-current="page"' if nav_active == 'comptoir' else '')|safe }}>
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-6 9 6v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        Comptoir
+      </a>
+      {# Sous-pages de Comptoir : suivi seulement, aucune création. Libellés alignés sur les
+         titres de colonne de Comptoir ("Devis Horloger" / "Devis Partenaire") pour que le lien
+         entre la sidebar et la page soit immédiat. #}
+      <a href="{{ url_for('fournisseur') }}" class="erp-nav-item sub {{ 'active' if nav_active == 'fournisseur' }}" {{ ('aria-current="page"' if nav_active == 'fournisseur' else '')|safe }}>
+        Devis Partenaire
+        {% if erp_nav.partenaires %}<span class="erp-nav-count">{{ erp_nav.partenaires }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('horloger') }}" class="erp-nav-item sub {{ 'active' if nav_active == 'horloger' }}" {{ ('aria-current="page"' if nav_active == 'horloger' else '')|safe }}>
+        Devis Horloger
+        {% if erp_nav.a_valider %}<span class="erp-nav-count">{{ erp_nav.a_valider }}</span>{% endif %}
+      </a>
+      <a href="{{ url_for('atelier') }}" class="erp-nav-item {{ 'active' if nav_active == 'atelier' }}" {{ ('aria-current="page"' if nav_active == 'atelier' else '')|safe }}>
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.2-1.6l2-1.5-2-3.4-2.3.9a7 7 0 00-1.4-.8L14.7 3H9.3l-.4 2.6a7 7 0 00-1.4.8l-2.3-.9-2 3.4 2 1.5A7 7 0 005 12"/></svg>
+        Atelier
+        {% if erp_nav.en_cours %}<span class="erp-nav-count">{{ erp_nav.en_cours }}</span>{% endif %}
+      </a>
+
+      <div class="erp-group">Réglages</div>
+      <a href="{{ url_for('admin_coefficients') }}" class="erp-nav-item {{ 'active' if nav_active == 'marques' }}" {{ ('aria-current="page"' if nav_active == 'marques' else '')|safe }}>
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 002.83 0l4.35-4.35a2 2 0 000-2.83z"/></svg>
+        Marques &amp; coefficients
+      </a>
+
+      {% if g.tenant and (g.tenant.feature_creation or g.tenant.feature_sav_rapide) %}
+      <div class="erp-group">Outils</div>
+      {% if g.tenant.feature_creation %}
+      <a href="{{ url_for('admin_creation') }}" class="erp-nav-item {{ 'active' if nav_active == 'creation' }}" {{ ('aria-current="page"' if nav_active == 'creation' else '')|safe }}>
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.4 5.6L20 11l-5.6 2.4L12 19l-2.4-5.6L4 11l5.6-2.4z"/></svg>
+        Création
+      </a>
+      {% endif %}
+      {% if g.tenant.feature_sav_rapide %}
+      <a href="{{ url_for('admin_sav_rapide') }}" class="erp-nav-item {{ 'active' if nav_active == 'sav_rapide' }}" {{ ('aria-current="page"' if nav_active == 'sav_rapide' else '')|safe }}>
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h8l-1 8 10-12h-8z"/></svg>
+        SAV rapide
+      </a>
+      {% endif %}
+      {% endif %}
+
+      <nav class="erp-side-foot" aria-label="Liens secondaires">
+        <a href="{{ url_for('guide') }}">Guide</a>
+        <a href="{{ url_for('mentions_legales') }}">Mentions légales</a>
+        <a href="{{ url_for('confidentialite') }}">Confidentialité</a>
+        {% if show_douxdevis_link %}<a href="/">← Retour à Doux Devis</a>{% endif %}
+      </nav>
+    </aside>
+
+    <div class="erp-content">
+      <header class="erp-topbar">
+        <button type="button" id="sidebarToggle" class="erp-sidebar-toggle" title="Afficher/masquer le menu" aria-label="Afficher/masquer le menu">
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+        </button>
+        <div class="erp-topbar-title">
+          {% if nav_active in ('fournisseur', 'horloger') %}
+          <a href="{{ url_for('comptoir') }}" class="erp-breadcrumb">← Comptoir</a>
+          {% elif nav_active and nav_active != 'dashboard' %}
+          <a href="{{ url_for('tableau_de_bord') }}" class="erp-breadcrumb">← Tableau de bord</a>
+          {% endif %}
+          <h1>{% block page_title %}{{ self.title() }}{% endblock %}</h1>
+          <span class="erp-route">{% block page_route %}{% endblock %}</span>
+        </div>
+        {% if g.tenant and g.tenant.logo_png %}
+        <img src="{{ url_for('tenant_logo') }}" class="erp-topbar-logo" alt="{{ maison_name }}">
+        {% endif %}
+      </header>
+
+      <main class="erp-main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="erp-flashes">
+              {% for category, message in messages %}
+                <div class="erp-flash erp-flash-{{ category }}">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        <div class="{% block container_class %}container{% endblock %}">
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+    </div>
+
+  </div>
+  <script>
+    (function () {
+      var layout = document.querySelector(".erp-layout");
+      var toggle = document.getElementById("sidebarToggle");
+      if (!layout || !toggle) return;
+      // Atelier replie systématiquement la sidebar à chaque arrivée sur la page (plus de
+      // place pour chiffrer), même si l'horloger l'avait rouverte ailleurs. Les autres pages
+      // respectent la dernière préférence mémorisée (bouton) par appareil.
+      var isAtelier = {{ "true" if nav_active == "atelier" else "false" }};
+      var collapsed = isAtelier;
+      if (!isAtelier) {
+        var stored = null;
+        try { stored = localStorage.getItem("erp_sidebar_collapsed"); } catch (e) {}
+        collapsed = stored === "1";
+      }
+      layout.classList.toggle("sidebar-collapsed", collapsed);
+      toggle.addEventListener("click", function () {
+        var isCollapsed = layout.classList.toggle("sidebar-collapsed");
+        try { localStorage.setItem("erp_sidebar_collapsed", isCollapsed ? "1" : "0"); } catch (e) {}
+      });
+    })();
+  </script>
+{% else %}
+  {# Pages hors coquille : landing, connexions, superadmin, erreurs. #}
+  <header class="topbar">
+    <a href="{{ url_for('index') }}" class="brand">
+      <img src="{{ url_for('static', filename='logo.svg') }}" class="brand-logo" alt="Reverso">
+    </a>
+    {% if g.tenant %}
+      <a href="{{ url_for('index') }}" class="client-brand">
+        {% if g.tenant.logo_png %}
+          <img src="{{ url_for('tenant_logo') }}" class="client-logo" alt="{{ maison_name }}">
+        {% else %}
+          <span class="brand-name">{{ maison_name }}</span>
+        {% endif %}
+      </a>
+    {% endif %}
+    <nav class="topbar-right">Service après-vente</nav>
+  </header>
+
+  <main class="container {{ self.container_class() }}">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {{ self.content() }}
+  </main>
+
+  <footer class="site-footer">
+    <a href="{{ url_for('mentions_legales') }}">Mentions légales</a>
+    <span class="topbar-sep">·</span>
+    <a href="{{ url_for('confidentialite') }}">Confidentialité</a>
+  </footer>
+{% endif %}
+</body>
+</html>

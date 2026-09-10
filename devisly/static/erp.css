@@ -1,0 +1,571 @@
+/* ─────────────────────────────────────────────────────────────
+   Reverso ERP — coquille multi-modules (sidebar + pages dédiées)
+   Design repris de la maquette validée : navy/or, Fira Sans/Fira Code,
+   densité "dashboard". Chargé APRÈS style.css : ne redéfinit que la
+   coquille et les composants des nouvelles pages, l'existant (form,
+   review, lot, admin) continue de tourner sur style.css.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --erp-primary:   #1E3A5F;
+  --erp-gold:      #B08D3F;
+  --erp-gold-soft: #E4D5AE;
+  /* Variante texte : --erp-gold en avant-plan sur fond clair tombe à ~3:1 (échec WCAG AA
+     pour du petit texte, ex. eyebrows). Réservée aux usages texte-sur-clair ; les bordures/
+     fonds/hovers gardent --erp-gold (leur contraste ne suit pas la même règle). */
+  --erp-gold-text: #8A6E2E;
+  --erp-bg:        #F6F5F1;
+  --erp-surface:   #FFFFFF;
+  --erp-sunken:    #EFEEE8;
+  --erp-ink:       #161B22;
+  --erp-ink-soft:  #5B6472;
+  --erp-border:    #DDDAD0;
+  --erp-success:   #1E7A4C;
+  --erp-success-bg:#E4F3EA;
+  --erp-warning:   #9C6B12;
+  --erp-warning-bg:#FBF0DC;
+  --erp-danger:    #B4362C;
+  --erp-danger-bg: #FAE7E4;
+  --erp-chrome:    #2B2F36;
+  --erp-sidebar-w: 208px;
+
+  /* Tags d'origine (Horloger / Partenaire) — distincts de l'or (accent) et des couleurs
+     sémantiques succès/alerte/danger, appliqués partout où l'origine d'un devis apparaît. */
+  --erp-tag-horloger:    #1E3A5F;
+  --erp-tag-horloger-bg: #E3E9F0;
+  --erp-tag-partner:     #2D6E77;
+  --erp-tag-partner-bg:  #E1EEEF;
+}
+
+.erp-num,
+.erp .num { font-family: "Fira Code", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+/* ── Coquille ───────────────────────────────────────────────── */
+body.erp {
+  background: var(--erp-bg);
+  color: var(--erp-ink);
+  font-family: "Fira Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+.erp-layout { display: flex; min-height: 100vh; align-items: stretch; }
+
+.erp-side {
+  width: var(--erp-sidebar-w); flex: none;
+  background: var(--erp-chrome);
+  padding: 18px 12px;
+  display: flex; flex-direction: column; gap: 2px;
+  overflow: hidden;
+  /* ponytail: transition sur width/padding (layout property) plutôt que transform — la
+     largeur doit réellement changer pour que .erp-content récupère l'espace, un transform
+     seul ne le ferait pas. Déclenché uniquement par un clic (repli sidebar), pas en boucle
+     ni au scroll : coût de repaint négligeable en pratique. */
+  transition: width .16s ease, padding .16s ease;
+}
+/* Repli du menu (bouton topbar, cf. base.html) — surtout utile sur Atelier, replié par
+   défaut là-bas pour laisser toute la largeur au chiffrage. */
+.sidebar-collapsed .erp-side { width: 0; padding-left: 0; padding-right: 0; }
+.erp-sidebar-toggle {
+  flex: none; width: 30px; height: 30px; border: 1px solid var(--erp-border); border-radius: 6px;
+  background: var(--erp-surface); color: var(--erp-ink-soft); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; margin-right: 12px;
+}
+.erp-sidebar-toggle:hover { border-color: var(--erp-gold); color: var(--erp-ink); }
+.erp-side-brand {
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 8px 16px; color: #EDEDEA; font-weight: 600; font-size: .95rem;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 8px;
+}
+/* Le logo Reverso est encré foncé (fait pour un fond clair) : sur la sidebar
+   sombre on le passe en blanc plutôt que de maintenir un second fichier.
+   Élément de branding principal de la sidebar — volontairement grand. */
+.erp-side-brand img { height: 52px; filter: brightness(0) invert(1); opacity: .92; }
+.erp-group {
+  font-family: "Fira Code", monospace; font-size: .62rem; letter-spacing: .1em;
+  text-transform: uppercase; color: #6E7580; padding: 16px 10px 6px;
+}
+.erp-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 6px;
+  font-size: .82rem; color: #B7BCC4; text-decoration: none;
+  border-left: 2px solid transparent;
+}
+.erp-nav-item svg { opacity: .75; flex: none; }
+.erp-nav-item:hover { background: rgba(255,255,255,.05); color: #fff; }
+.erp-nav-item.active { background: rgba(255,255,255,.08); color: #fff; border-left-color: var(--erp-gold); }
+.erp-nav-count {
+  margin-left: auto; font-family: "Fira Code", monospace; font-size: .68rem;
+  background: rgba(255,255,255,.1); padding: 1px 7px; border-radius: 20px;
+}
+.erp-nav-item.active .erp-nav-count { background: var(--erp-gold); color: #2B2205; }
+
+/* Sous-pages de Comptoir (Fournisseur / Horloger) : indentées, sans icône, puce discrète —
+   hiérarchie visuelle plutôt qu'une catégorie de sidebar en plus. */
+.erp-nav-item.sub { padding-left: 30px; font-size: .76rem; gap: 8px; color: #9AA0AA; }
+.erp-nav-item.sub.active { padding-left: 28px; }
+.erp-nav-item.sub::before {
+  content: ""; width: 4px; height: 4px; border-radius: 50%;
+  background: currentColor; opacity: .6; flex: none;
+}
+.erp-side-foot { margin-top: auto; padding: 12px 10px 0; font-size: .7rem; }
+.erp-side-foot a { color: #9BA3AF; text-decoration: none; display: block; padding: 3px 0; } /* #6E7580 ~2.9:1 sur --erp-chrome, échec WCAG AA → ~5.3:1 */
+.erp-side-foot a:hover { color: #B7BCC4; }
+
+.erp-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.erp-topbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 12px 26px; background: var(--erp-surface);
+  border-bottom: 1px solid var(--erp-border);
+}
+.erp-topbar-title { flex: 1; min-width: 0; }
+.erp-breadcrumb {
+  display: inline-block; font-size: .72rem; color: var(--erp-ink-soft);
+  text-decoration: none; margin-bottom: 3px;
+}
+.erp-breadcrumb:hover { color: var(--erp-gold); }
+.erp-topbar h1 { font-size: 1.02rem; font-weight: 600; margin: 0; }
+.erp-topbar .erp-route {
+  font-family: "Fira Code", monospace; font-size: .7rem; color: var(--erp-ink-soft);
+}
+.erp-topbar-logo { max-height: 30px; max-width: 130px; }
+.erp-main { padding: 22px 26px 60px; }
+@media (max-width: 760px) {
+  .erp-layout { flex-direction: column; }
+  .erp-side { width: auto; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  /* Libellé de groupe retiré (pas de place en ligne), mais la largeur 100% force un retour à
+     la ligne : la séparation entre groupes reste visible sans le texte (hiérarchie perdue sinon). */
+  .erp-group { font-size: 0; width: 100%; height: 1px; background: rgba(255,255,255,.1); margin: 4px 0; padding: 0; }
+  /* Touch targets ≥44px (WCAG 2.5.5) — la sidebar devient une rangée d'items tactiles. */
+  .erp-nav-item { min-height: 44px; padding: 12px 14px; }
+  .erp-side-foot { display: flex; flex-wrap: wrap; gap: 4px 12px; width: 100%; padding-top: 8px; }
+}
+
+/* ── Accordéon (<details>/<summary>) — carte pliable (Pilotage) ou section pliable dans une
+   carte (Validés) ── */
+.erp-details summary.erp-details-summary { cursor: pointer; list-style: none; }
+.erp-details summary.erp-details-summary::-webkit-details-marker { display: none; }
+.erp-details summary.erp-details-summary::before {
+  content: "▸"; display: inline-block; margin-right: 6px; font-size: .7em;
+  color: var(--erp-ink-soft); transition: transform .15s ease;
+}
+.erp-details[open] summary.erp-details-summary::before { transform: rotate(90deg); }
+.erp-details-body { padding-top: 12px; }
+.erp-details:not([open]) > summary.erp-details-summary { margin-bottom: 0; }
+/* Résumé pliable en style "groupe à puce" (Validés) — la puce doit rester le tout premier
+   élément (comme dans les entêtes de groupe non pliables) pour tomber à la même position
+   horizontale ; le triangle ▸ passe donc en fin de ligne plutôt qu'avant la puce. */
+.erp-details-summary.erp-wb-section { padding-left: 4px; }
+.erp-details summary.erp-details-summary.erp-wb-section::before { display: none; }
+.erp-details summary.erp-details-summary.erp-wb-section::after {
+  content: "▸"; display: inline-block; margin-left: 4px; font-size: .7em;
+  color: var(--erp-ink-soft); transition: transform .15s ease;
+}
+.erp-details[open] summary.erp-details-summary.erp-wb-section::after { transform: rotate(90deg); }
+
+/* Carte "Suivi" — encadrée d'une couleur pâle pour se repérer dans la page. */
+.erp-card.erp-card-suivi { border: 2px solid var(--erp-gold-soft); }
+
+/* "À traiter" : qui doit agir, fondu dans la cellule "Prochaine étape" plutôt qu'une colonne
+   Responsable à part (redondante avec l'ancienne colonne Statut, cf. retour utilisateur). */
+.erp-responsable-tag {
+  display: inline-block; font-size: .62rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .03em; color: var(--erp-tag-horloger); background: var(--erp-tag-horloger-bg);
+  border-radius: 4px; padding: 1px 6px; margin-right: 5px; vertical-align: middle;
+}
+/* Montant pas encore chiffré/vérifié : texte discret plutôt qu'un tiret nu qui lit comme une
+   donnée manquante/cassée. */
+.erp-amt-pending { color: var(--erp-ink-soft); font-style: italic; font-weight: 400; }
+/* Mini-frise "Avancement" (carte À traiter) — même principe que .demo-stepper (style.css)
+   mais miniaturisée pour tenir dans une cellule de tableau ; le tag responsable au-dessus
+   dit QUI agit, la frise dit OÙ ça en est — deux informations, deux éléments. */
+.erp-mstep-cell { display: flex; flex-direction: column; gap: 4px; }
+.erp-mstep-row { display: flex; align-items: center; gap: 0; min-width: 190px; }
+.erp-mstep { display: flex; align-items: center; gap: 4px; }
+.erp-mstep-dot { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--erp-border); background: var(--erp-surface); flex: none; }
+.erp-mstep.done .erp-mstep-dot { background: var(--erp-gold); border-color: var(--erp-gold); }
+.erp-mstep.current .erp-mstep-dot { border-color: var(--erp-gold); box-shadow: 0 0 0 3px var(--erp-gold-soft); }
+.erp-mstep-label { font-size: .66rem; color: var(--erp-ink-soft); white-space: nowrap; }
+.erp-mstep.done .erp-mstep-label, .erp-mstep.current .erp-mstep-label { color: var(--erp-ink); font-weight: 600; }
+.erp-mstep-line { flex: 1; height: 2px; background: var(--erp-border); margin: 0 5px; min-width: 14px; }
+.erp-mstep-line.done { background: var(--erp-gold); }
+/* Ancienneté du dépôt — signal vert/orange/rouge absent jusqu'ici : quoi traiter en premier
+   se voit sans lire chaque ligne. */
+.erp-since { display: inline-flex; align-items: center; gap: 5px; font-family: "Fira Code", monospace; font-size: .72rem; font-weight: 600; border-radius: 20px; padding: 2px 9px; }
+.erp-since::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.erp-since-ok { background: var(--erp-success-bg); color: var(--erp-success); }
+.erp-since-warn { background: var(--erp-warning-bg); color: var(--erp-warning); }
+.erp-since-late { background: var(--erp-danger-bg); color: var(--erp-danger); }
+
+/* ── Flashes ────────────────────────────────────────────────── */
+.erp-flashes { margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px; }
+.erp-flash {
+  padding: 9px 12px; border-radius: 6px; font-size: .82rem;
+  border: 1px solid var(--erp-border); background: var(--erp-surface);
+}
+.erp-flash-success { background: var(--erp-success-bg); border-color: var(--erp-success); color: var(--erp-success); }
+.erp-flash-error   { background: var(--erp-danger-bg);  border-color: var(--erp-danger);  color: var(--erp-danger); }
+
+/* ── Composants de page ─────────────────────────────────────── */
+.erp-kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.erp-kpi { background: var(--erp-surface); border: 1px solid var(--erp-border); border-radius: 6px; padding: 10px 12px; }
+.erp-kpi .label { font-size: .64rem; color: var(--erp-ink-soft); text-transform: uppercase; letter-spacing: .06em; }
+.erp-kpi .value { font-family: "Fira Code", monospace; font-size: 1.15rem; font-weight: 600; margin-top: 2px; }
+.erp-kpi .value.up { color: var(--erp-success); }
+a.erp-kpi { text-decoration: none; color: inherit; display: block; }
+a.erp-kpi:hover { border-color: var(--erp-gold); }
+
+.erp-table { width: 100%; border-collapse: collapse; background: var(--erp-surface); border: 1px solid var(--erp-border); border-radius: 6px; overflow: hidden; }
+.erp-table th {
+  text-align: left; font-size: .64rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--erp-ink-soft); font-weight: 600; padding: 7px 10px; white-space: nowrap;
+  background: var(--erp-sunken); border-bottom: 1px solid var(--erp-border);
+}
+.erp-table td { padding: 7px 10px; border-bottom: 1px solid var(--erp-border); font-size: .78rem; }
+.erp-table tbody tr:last-child td { border-bottom: none; }
+.erp-table tbody tr:hover { background: var(--erp-sunken); }
+.erp-table a { color: var(--erp-ink); }
+.erp-table-wrap { overflow-x: auto; }
+
+.erp-pill { display: inline-block; padding: 1px 8px; border-radius: 20px; font-size: .66rem; font-weight: 600; white-space: nowrap; }
+.erp-pill-success { background: var(--erp-success-bg); color: var(--erp-success); }
+.erp-pill-warning { background: var(--erp-warning-bg); color: var(--erp-warning); }
+.erp-pill-danger  { background: var(--erp-danger-bg);  color: var(--erp-danger); }
+.erp-pill-neutral { background: var(--erp-sunken); color: var(--erp-ink); border: 1px solid var(--erp-ink-soft); }
+.erp-pill-blink { animation: erp-blink 1.4s ease-in-out infinite; }
+@keyframes erp-blink { 50% { opacity: .35; } }
+/* Statut "plein" — réservé aux lignes qui attendent vraiment une décision (carte À traiter),
+   pour que le pastel des lignes calmes (Tous les devis) ne se confonde jamais avec l'urgent. */
+.erp-pill-solid { background: var(--erp-warning); color: #fff; }
+
+.tag-origin { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 20px; font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.tag-origin::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.tag-origin.horloger { background: var(--erp-tag-horloger-bg); color: var(--erp-tag-horloger); }
+.tag-origin.partner  { background: var(--erp-tag-partner-bg);  color: var(--erp-tag-partner); }
+
+.erp-card { background: var(--erp-surface); border: 1px solid var(--erp-border); border-radius: 6px; padding: 14px 16px; margin-bottom: 14px; }
+.erp-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+
+/* Carte "à traiter" — bandeau d'en-tête teinté plutôt qu'un liseré latéral (déjà pris par
+   .erp-focus ailleurs dans l'appli, le dupliquer partout l'aurait banalisé). */
+.erp-card-urgent { border-color: var(--erp-warning); box-shadow: 0 0 0 1px var(--erp-warning); }
+.erp-card-urgent > .erp-card-head {
+  background: var(--erp-warning-bg); margin: -14px -16px 10px; padding: 12px 16px;
+  border-radius: 6px 6px 0 0; border-bottom: 1px solid var(--erp-border);
+}
+.erp-card-urgent .erp-eyebrow { color: var(--erp-warning); }
+.erp-eyebrow { font-family: "Fira Code", monospace; font-size: .62rem; text-transform: uppercase; letter-spacing: .08em; color: var(--erp-gold-text); }
+.erp-card-head h2 { font-size: .95rem; font-weight: 600; margin: 2px 0 0; font-family: inherit; }
+.erp-hint { font-size: .74rem; color: var(--erp-ink-soft); }
+.erp-empty { font-size: .78rem; color: var(--erp-ink-soft); padding: 10px 2px; }
+
+.erp-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+@media (max-width: 900px) { .erp-two-col { grid-template-columns: 1fr; } }
+
+/* File d'attente Atelier réductible (bouton "⟨ Réduire" dans son en-tête). Le bouton pour
+   la rouvrir est sorti du flux grid (position absolute) : une fois #fileRailCard retiré, la
+   grille repasse naturellement en une seule colonne pleine largeur. */
+#atelierLayout { position: relative; }
+#atelierLayout.filerail-collapsed { grid-template-columns: minmax(0, 1fr) !important; }
+#atelierLayout.filerail-collapsed #fileRailCard { display: none; }
+.erp-filerail-expand {
+  display: none; position: absolute; left: 0; top: 0; width: 26px; height: 40px;
+  border: 1px solid var(--erp-border); border-left: none; border-radius: 0 8px 8px 0;
+  background: var(--erp-surface); color: var(--erp-ink-soft); cursor: pointer;
+  align-items: center; justify-content: center; z-index: 1;
+}
+#atelierLayout.filerail-collapsed .erp-filerail-expand { display: flex; }
+.erp-filerail-expand:hover { color: var(--erp-gold); border-color: var(--erp-gold); }
+
+.erp-field-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+.erp-field-grid.g2 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 700px) { .erp-field-grid, .erp-field-grid.g2 { grid-template-columns: 1fr; } }
+.erp-field label, .erp-field > span { display: block; font-size: .7rem; color: var(--erp-ink-soft); margin-bottom: 4px; }
+.erp-field input[type="text"], .erp-field input[type="tel"], .erp-field input[type="file"],
+.erp-field select, .erp-field textarea {
+  width: 100%; border: 1px solid var(--erp-border); border-radius: 5px;
+  background: var(--erp-surface); padding: 7px 9px; font-size: .82rem;
+  font-family: inherit; color: var(--erp-ink);
+}
+.erp-field textarea { min-height: 62px; resize: vertical; }
+.erp-field input:focus, .erp-field select:focus, .erp-field textarea:focus {
+  outline: none; border-color: var(--erp-gold); box-shadow: 0 0 0 3px rgba(176,141,63,.15);
+}
+
+.erp-combo { position: relative; }
+.erp-combo-list {
+  position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0; max-height: 220px;
+  overflow-y: auto; margin: 0; padding: 4px; list-style: none; border-radius: 8px;
+  background: var(--erp-surface); border: 1px solid var(--erp-border);
+  box-shadow: 0 8px 24px rgba(22,27,34,.12);
+}
+.erp-combo-list li {
+  padding: 6px 9px; border-radius: 5px; font-size: .82rem; color: var(--erp-ink); cursor: pointer;
+}
+.erp-combo-list li:hover, .erp-combo-list li.active { background: var(--erp-sunken); color: var(--erp-gold); }
+.erp-combo-list li[data-empty] { color: var(--erp-ink-soft); cursor: default; }
+.erp-combo-list li[data-empty]:hover { background: none; color: var(--erp-ink-soft); }
+
+.erp-chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+/* ponytail: la carte porte ses propres puces, cachées tant qu'on n'a pas cliqué le champ —
+   :focus-within reste vrai en passant du textarea au bouton (même enfant), pas de JS blur/focus. */
+.erp-chip-field .erp-chip-row { display: none; }
+.erp-chip-field:focus-within .erp-chip-row { display: flex; }
+.erp-chip {
+  font-size: .7rem; background: var(--erp-sunken); border: 1px solid var(--erp-border);
+  padding: 3px 9px; border-radius: 20px; color: var(--erp-ink-soft);
+  display: inline-flex; gap: 5px; align-items: center; cursor: pointer; font-family: inherit;
+}
+.erp-chip:hover { border-color: var(--erp-gold); color: var(--erp-ink); }
+.erp-chip .price { color: var(--erp-gold); font-family: "Fira Code", monospace; font-weight: 600; }
+
+.erp-seg { display: inline-flex; border: 1px solid var(--erp-border); border-radius: 20px; padding: 2px; background: var(--erp-sunken); }
+.erp-seg button {
+  border: none; background: none; padding: 5px 14px; border-radius: 16px;
+  font-size: .76rem; color: var(--erp-ink-soft); cursor: pointer; font-family: inherit;
+}
+.erp-seg button.active { background: var(--erp-primary); color: #fff; }
+
+.erp-queue-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 9px; border-radius: 6px;
+  border: 1px solid transparent; margin-bottom: 2px; font-size: .8rem;
+  text-decoration: none; color: inherit;
+  /* resets pour l'usage <button> (ligne qui ouvre un popup plutôt qu'un lien) */
+  background: none; width: 100%; text-align: left; font-family: inherit; cursor: pointer;
+}
+.erp-queue-row:hover { background: var(--erp-sunken); }
+.erp-queue-row.is-selected { background: var(--erp-sunken); border-color: var(--erp-border); }
+/* Ligne qui attend une action du comptoir (ex. devis horloger "à valider") — accent doré
+   discret, à ne pas confondre avec le rouge de relance (erp-pill-blink). */
+.erp-queue-row.attn { border-left: 2px solid var(--erp-gold); padding-left: 7px; }
+.erp-pill-pulse { animation: erp-pulse 1.8s ease-in-out infinite; }
+@keyframes erp-pulse { 50% { box-shadow: 0 0 0 3px var(--erp-gold-soft); } }
+.erp-thumb { width: 30px; height: 30px; border-radius: 5px; object-fit: cover; background: var(--erp-gold-soft); flex: none; display: block; }
+.erp-thumb-lg { width: 62px; height: 62px; }
+/* Vignette sans photo, Horloger : couleur dérivée de la marque (filtre `brand_color`)
+   plutôt que le fond doré générique — la file reste scannable par marque sans photo. */
+/* Vignette "initiales de marque sur un fond coloré" retirée partout (retour utilisateur) —
+   un seul point de coupe pour les ~9 endroits qui la génèrent encore côté template. */
+.erp-thumb-brand { display: none; }
+.erp-queue-who { font-weight: 600; font-size: .8rem; }
+.erp-queue-what { font-size: .72rem; color: var(--erp-ink-soft); }
+
+.erp-tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.erp-tile { background: var(--erp-surface); border: 1px solid var(--erp-border); border-radius: 6px; padding: 8px 10px; }
+.erp-tile .k { font-size: .62rem; text-transform: uppercase; letter-spacing: .05em; color: var(--erp-ink-soft); }
+.erp-tile .v { font-size: .8rem; margin-top: 2px; }
+
+.erp-totals {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; background: var(--erp-surface); border: 1px solid var(--erp-border);
+  border-radius: 6px; margin-top: 10px;
+}
+.erp-totals .amt { font-family: "Fira Code", monospace; font-weight: 600; font-size: 1.05rem; }
+
+/* Établi atelier (option B retenue) : dossier client à gauche (lecture), espace de
+   chiffrage à droite (action) — le total reste au fil de l'eau, en bas de la colonne
+   de droite, juste au-dessus du bouton de finalisation. */
+.erp-wb { display: flex; gap: 18px; align-items: flex-start; }
+.erp-wb-left {
+  width: 260px; flex: 0 0 260px;
+  background: var(--erp-tag-horloger-bg); border: 1px solid #C7D3E0; border-radius: 10px;
+  padding: 16px;
+}
+.erp-wb-right { flex: 1; min-width: 0; }
+@media (max-width: 1100px) { .erp-wb { flex-direction: column; } .erp-wb-left { width: 100%; flex-basis: auto; } }
+
+.erp-wb-head { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+.erp-wb-avatar {
+  width: 40px; height: 40px; border-radius: 50%; background: var(--erp-primary); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .8rem; flex: none;
+}
+.erp-wb-name { font-size: 1rem; font-weight: 600; margin: 0; }
+.erp-wb-meta { display: flex; flex-direction: column; gap: 9px; }
+.erp-wb-meta .erp-tile.muted { background: transparent; }
+
+.erp-wb-total {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  background: var(--erp-primary); border-radius: 8px; padding: 14px 18px; margin-top: 16px;
+}
+.erp-wb-total .k { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; color: #C8D3E2; font-weight: 600; }
+.erp-wb-total .amt {
+  font-family: "Fira Code", monospace; font-weight: 700; font-size: 1.7rem;
+  color: var(--erp-gold-soft); font-variant-numeric: tabular-nums;
+}
+.erp-wb-total .erp-btn-primary { flex: none; }
+
+.erp-wb-section {
+  display: flex; align-items: baseline; gap: 8px; margin: 18px 0 8px;
+  font-size: .95rem; font-weight: 700; color: var(--erp-ink); white-space: nowrap;
+}
+.erp-wb-section .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--erp-primary); flex: none; align-self: center; }
+.erp-wb-section.is-option .dot { background: var(--erp-gold); }
+.erp-wb-section.is-envoye .dot { background: var(--erp-tag-partner); }
+.erp-wb-section.is-success .dot { background: var(--erp-success); }
+.erp-wb-section .hint { font-size: .72rem; font-weight: 500; color: var(--erp-ink-soft); }
+
+/* Sélecteur d'opérations — menu déroulant (option B retenue) pour choisir la famille,
+   plus compact qu'un rail vertical à défilement ; "✨ Suggéré" épinglé en tête de liste.
+   Encadré en pâle comme le dossier client (wb-left), teinte ivoire pour rester distinct du
+   bleu du dossier — regroupe visuellement tout le bloc de choix d'opération. */
+.erp-op-picker {
+  margin: 10px 0; background: var(--erp-sunken); border: 1px solid var(--erp-border);
+  border-radius: 10px; padding: 12px;
+}
+.erp-op-select-wrap { position: relative; margin-bottom: 9px; }
+.erp-op-select {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  border: 1.5px solid var(--erp-gold); border-radius: 8px; padding: 10px 14px;
+  background: var(--erp-surface); color: var(--erp-ink); font-family: inherit; font-size: .85rem;
+  font-weight: 600; cursor: pointer; box-shadow: 0 1px 3px rgba(176,141,63,.15);
+}
+.erp-op-select .c { font-family: "Fira Code", monospace; font-size: .7rem; font-weight: 500; color: var(--erp-ink-soft); margin-left: 6px; }
+.erp-op-dropdown {
+  display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 5;
+  background: var(--erp-surface); border: 1px solid var(--erp-border); border-radius: 8px;
+  box-shadow: 0 12px 28px -12px rgba(22,27,34,.25); padding: 5px; max-height: 260px; overflow-y: auto;
+}
+.erp-op-dropdown.open { display: block; }
+.erp-op-opt { display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 6px; font-size: .8rem; cursor: pointer; }
+.erp-op-opt:hover { background: var(--erp-sunken); }
+.erp-op-opt.active { background: var(--erp-primary); color: #fff; }
+.erp-op-opt.active .c { color: #C8D3E2; }
+.erp-op-opt.pinned { color: #6E5423; font-weight: 600; }
+.erp-op-opt.pinned.active { background: var(--erp-gold); color: #241C0B; }
+.erp-op-opt .c { font-family: "Fira Code", monospace; font-size: .7rem; color: var(--erp-ink-soft); }
+.erp-op-main-head { display: flex; gap: 7px; margin-bottom: 9px; }
+.erp-op-search { flex: 1; min-width: 0; border: 1px solid var(--erp-border); border-radius: 20px; background: var(--erp-surface); padding: 6px 12px; font-size: .76rem; font-family: inherit; color: var(--erp-ink); }
+.erp-op-action {
+  flex: none; font-size: .7rem; font-weight: 600; font-family: inherit; white-space: nowrap;
+  border: 1px solid var(--erp-border); background: var(--erp-surface); color: var(--erp-ink-soft);
+  border-radius: 20px; padding: 6px 12px; cursor: pointer;
+}
+.erp-op-action:hover { border-color: var(--erp-primary); color: var(--erp-ink); }
+.erp-op-action:disabled { opacity: .6; cursor: default; }
+.erp-op-row-list { display: flex; flex-direction: column; gap: 5px; max-height: 260px; overflow-y: auto; }
+.erp-op-empty { font-size: .76rem; color: var(--erp-ink-soft); padding: 5px 2px; }
+
+/* Rangée d'opération cliquable — remplace les puces plates : un clic ouvre la barre de
+   chiffrage (Prix HT/Marque/Ajouter) directement dessous, cf. wireOpPicker (atelier.html). */
+.erp-op-row {
+  border: 1px solid var(--erp-border); border-radius: 7px; padding: 8px 11px; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.erp-op-row:hover { border-color: var(--erp-gold); }
+.erp-op-row-name { font-size: .8rem; }
+.erp-op-row-hint { font-size: .68rem; color: var(--erp-ink-soft); white-space: nowrap; flex: none; }
+.erp-op-row.open {
+  flex-direction: column; align-items: stretch; border-color: var(--erp-gold);
+  background: var(--erp-gold-soft); cursor: default;
+}
+.erp-op-row.open .erp-op-row-name { font-weight: 600; }
+.erp-op-row.open .erp-op-row-hint { display: none; }
+.erp-op-row-slot:empty { display: none; }
+
+/* Barre Prix HT / Marque / Ajouter — vit par défaut dans #quickAddAnchor (bas du
+   formulaire), déplacée en JS dans la rangée d'opération cliquée. */
+#quickAddAnchor { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.erp-quick-add-bar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; flex: 1; min-width: 260px; }
+.erp-op-row-slot .erp-quick-add-bar { margin-top: 10px; }
+.erp-quick-add-bar .erp-field { flex: 1; min-width: 110px; }
+.erp-quick-add-desc { flex: 2.5 1 220px; }
+.erp-quick-add-desc input { width: 100%; }
+.erp-quick-add-price { max-width: 110px; }
+.erp-quick-add-submit { flex: none; }
+.erp-req { color: var(--erp-danger); }
+
+.erp-btn {
+  display: inline-block; border: none; border-radius: 6px; padding: 8px 16px;
+  font-size: .8rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  text-decoration: none; text-align: center;
+}
+.erp-btn-primary { background: var(--erp-gold); color: #2B2205; }
+.erp-btn-primary:hover { background: #9A7A2F; }
+.erp-btn-dark { background: var(--erp-primary); color: #fff; }
+.erp-btn-ghost { background: none; border: 1px solid var(--erp-border); color: var(--erp-ink-soft); }
+.erp-btn-ghost:hover { border-color: var(--erp-gold); color: var(--erp-ink); }
+.erp-btn-sm { padding: 5px 11px; font-size: .74rem; }
+.erp-btn-icon { padding: 6px; display: inline-flex; align-items: center; }
+.erp-btn:disabled { opacity: .5; cursor: not-allowed; }
+.erp-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
+.erp-dialog {
+  border: 1px solid var(--erp-border); border-radius: 10px; padding: 0;
+  max-width: 720px; width: calc(100% - 40px); margin: auto;
+  background: var(--erp-surface); color: var(--erp-ink);
+}
+.erp-dialog::backdrop { background: rgba(22,27,34,.45); }
+.erp-dialog > * { padding: 14px 18px; }
+.erp-dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--erp-border); font-size: .85rem; }
+.erp-dialog-foot { display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--erp-border); }
+.erp-dialog-pdf { max-width: 880px; }
+.erp-dialog-pdf iframe { width: 100%; height: 72vh; border: 0; border-radius: 4px; background: var(--erp-sunken); }
+
+/* Chrome de popup distinct pour le panneau téléphone/SMS à côté de la fiche SAV (bord + ombre
+   propres) — lit comme une deuxième popup posée à côté plutôt qu'une colonne de plus. */
+.erp-dialog-phone-pop {
+  background: var(--erp-surface); border: 1px solid var(--erp-border); border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(22,27,34,.12); padding: 14px;
+}
+.erp-dialog-phone-pop-head {
+  font-size: .78rem; font-weight: 600; color: var(--erp-ink-soft);
+  border-bottom: 1px solid var(--erp-border); padding-bottom: 8px; margin-bottom: 10px;
+}
+
+/* ── Comptoir : 2 colonnes (Horloger | Partenaire), même hauteur, teintées ── */
+.erp-comptoir-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
+@media (max-width: 760px) { .erp-comptoir-cols { grid-template-columns: 1fr; } }
+.erp-col-horloger { border-top: 3px solid var(--erp-tag-horloger); padding-top: 12px; }
+.erp-col-partner  { border-top: 3px solid var(--erp-tag-partner);  padding-top: 12px; }
+/* "Devis Horloger" / "Devis Partenaire" doivent peser plus lourd dans la hiérarchie que le
+   reste des titres de carte — la règle ciblait le h2 générique ("Atelier → Envoi") au lieu de
+   l'eyebrow qui porte le vrai nom de la colonne : corrigé pour cibler le bon élément. */
+.erp-col-horloger .erp-card-head .erp-eyebrow, .erp-col-partner .erp-card-head .erp-eyebrow { font-size: .88rem; font-weight: 700; letter-spacing: .02em; }
+.erp-col-horloger .erp-card-head h2, .erp-col-partner .erp-card-head h2 { font-size: .95rem; font-weight: 600; color: var(--erp-ink-soft); margin-top: 1px; }
+
+/* Lignes qui ouvrent directement leur page cible (Atelier / Horloger / Fournisseur). */
+a.erp-queue-row { cursor: pointer; }
+a.erp-queue-row:hover { background: var(--erp-sunken); border-color: var(--erp-border); }
+tr.erp-row-link { cursor: pointer; }
+
+/* Ligne d'arrivée d'un lien direct : repérée d'emblée, aucune recherche à refaire. */
+.erp-focus { background: var(--erp-warning-bg) !important; box-shadow: inset 3px 0 0 var(--erp-gold); }
+tr.erp-focus td { background: var(--erp-warning-bg); }
+
+/* Téléphone compact — la simulation client tient dans la 3e colonne. */
+.erp-phone-mini { background: var(--erp-chrome); color: #EDEDEA; border-color: var(--erp-chrome); }
+.erp-phone-mini .erp-eyebrow { color: var(--erp-gold); }
+.erp-phone-mini h2, .erp-phone-mini h6 { color: #fff; }
+.erp-phone-mini .erp-hint { color: #9AA0AA; }
+.erp-phone-msg {
+  background: #20242B; border-radius: 10px; padding: 8px 10px; font-size: .74rem;
+  margin-top: 8px; color: #D6D9DE; line-height: 1.45;
+}
+.erp-phone-msg + .erp-phone-msg { margin-top: 6px; }
+.erp-phone-msg.in { background: #2E3440; }
+.erp-phone-tag {
+  display: block; font-size: .58rem; text-transform: uppercase; letter-spacing: .06em;
+  color: #7C8391; margin-bottom: 3px;
+}
+
+.erp-intake-cta {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  background: linear-gradient(135deg, var(--erp-primary), #14283F); color: #fff; border: none;
+}
+.erp-intake-cta .erp-eyebrow { color: var(--erp-gold-soft); }
+.erp-intake-cta h2 { color: #fff; font-size: 1.02rem; }
+.erp-intake-cta .erp-hint { color: rgba(255,255,255,.72); margin-top: 2px; }
+.erp-intake-cta .erp-btn-ghost { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.3); color: #fff; }
+.erp-intake-cta .erp-btn-ghost:hover { border-color: #fff; }
+
+/* ── Accessibilité clavier — aucun style :focus-visible n'existait sur les éléments
+   interactifs custom (nav, boutons, lignes cliquables) : ils retombaient sur l'outline
+   navigateur par défaut, peu visible sur le fond sombre de la sidebar. Règle générique plutôt
+   qu'une règle par composant : couvre tout lien/bouton/élément focusable présent ou futur.
+   Les champs de formulaire gardent leur propre focus (bordure + glow), pas concernés ici. */
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible, dialog:focus-visible {
+  outline: 2px solid var(--erp-gold); outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  /* Touch target ≥44px (WCAG 2.5.5) pour les petits boutons d'action (Fermer, Aperçu…). */
+  .erp-btn-sm { min-height: 44px; padding: 5px 14px; }
+}

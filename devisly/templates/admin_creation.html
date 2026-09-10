@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Création — {{ maison_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <header style="margin-bottom:28px">
+    <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;margin-bottom:6px">Nouvelle création</h1>
+    <p class="lead" style="color:var(--ink-mid);font-size:14px">Devis pour une pièce fabriquée en atelier, à envoyer au client final.</p>
+  </header>
+
+  <form action="{{ url_for('admin_creation_save') }}" method="post" class="form" style="gap:16px">
+    <div class="grid grid-3">
+      <label class="field" style="max-width:360px">Nom du client
+        <input type="text" name="client_nom" required placeholder="NOM Prénom">
+      </label>
+      <label class="field">Type de pièce
+        <input type="text" name="type_piece" placeholder="Bague solitaire, collier…">
+      </label>
+      <label class="field">Matériau
+        <input type="text" name="materiau" placeholder="Or 18k, argent…">
+      </label>
+    </div>
+
+    <label class="field" style="max-width:200px">Prix HT (€)
+      <input type="text" name="prix_ht" required placeholder="2450">
+    </label>
+
+    <label class="field">Description du travail
+      <textarea name="description" rows="4" required data-phrase-assist
+                placeholder="Tapez un mot-clé (sertissage, polissage, gravure…) pour insérer une phrase toute faite."></textarea>
+    </label>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--line);margin-top:8px">
+      <a href="{{ url_for('index') }}" class="btn btn-ghost">← Retour</a>
+      <button type="submit" class="btn btn-gold btn-lg">Générer le devis →</button>
+    </div>
+  </form>
+</section>
+<script src="{{ url_for('static', filename='phrases.js') }}"></script>
+{% endblock %}

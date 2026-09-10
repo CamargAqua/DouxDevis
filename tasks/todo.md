@@ -1,5 +1,21 @@
 # DouxDevis — Todo
 
+## Session 2026-09-10 — Fusion Devisly/demo (toggle instantané, sans cold-start Render)
+
+- [x] Copier Devisly/demo → DouxDevis/devisly/ en package (imports relatifs)
+- [x] Cookie name/path configurables dans devisly/app.py::create_app()
+- [x] Monter devisly.app via DispatcherMiddleware sous /devisly dans app.py
+- [x] .env.example : DATABASE_URL, PRIMARY_TENANT_SLUG, SESSION_COOKIE_*, SHOW_DOUXDEVIS_TOGGLE
+- [x] Bouton "Essayer Devisly →" (templates/base.html) + "Retour à Doux Devis" (devisly/templates/base.html, conditionnel)
+- [x] requirements.txt fusionné (Pillow, svglib, pypdf, psycopg2-binary, Werkzeug/gunicorn bump)
+- [x] render.yaml : nouvelles env vars du service doux-devis
+- [x] test_devisly_mount.py (check runnable, skip si DATABASE_URL absente) — vert
+- [x] Vérif manuelle locale (run.bat + .env rempli) : toggle instantané testé aller-retour dans le navigateur, cookies isolés (session vs devisly_session)
+
+Reste à faire en prod (pas fait dans cette session, nécessite le dashboard Render) :
+- [ ] Coller l'External Database URL de devisly-db2 dans DATABASE_URL (Render, service doux-devis)
+- [ ] Renseigner SUPERADMIN_PASSWORD / YOUSIGN_API_KEY (sync:false) sur Render
+
 ## Session 2026-05-20
 
 - [x] Fix coefficient auto-update sur brand pré-sélectionnée (setTimeout)

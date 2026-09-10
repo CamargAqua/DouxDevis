@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% import "_demo_lines_macro.html" as linesmacro %}
+{% block title %}Atelier — {{ maison_name }}{% endblock %}
+{% block page_title %}Atelier — chiffrage{% endblock %}
+{% block page_route %}/atelier — poste horloger{% endblock %}
+{% block container_class %}{% endblock %}
+{% block content %}
+
+<div class="erp-two-col" id="atelierLayout" style="grid-template-columns:260px minmax(0,1fr)">
+
+  <button type="button" id="fileRailExpand" class="erp-filerail-expand" title="Afficher la file" aria-label="Afficher la file">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <div class="erp-card" id="fileRailCard">
+    <div class="erp-card-head">
+      <div><div class="erp-eyebrow">File</div><h2>À chiffrer</h2></div>
+      <div class="erp-actions" style="gap:8px">
+        <button type="button" id="fileRailCollapse" class="erp-btn erp-btn-ghost erp-btn-sm" title="Masquer la file — plus de place pour chiffrer">⟨ Réduire</button>
+        <a href="{{ url_for('comptoir') }}" class="erp-hint">← Comptoir</a>
+      </div>
+    </div>
+    {% if not en_cours %}
+    <div class="erp-empty">File vide — aucun dépôt en attente.</div>
+    {% endif %}
+    {% for t in en_cours %}
+    <a class="erp-queue-row {{ 'is-selected' if selected and selected.id == t.id else '' }} {{ 'erp-focus' if focus == t.id }}"
+       href="{{ url_for('atelier', ticket=t.id) }}">
+      {% if t.photo_file %}
+      <img class="erp-thumb" src="{{ url_for('demo_photo', ticket_id=t.id, name=t.photo_file) }}" loading="lazy" alt="">
+      {% else %}
+      <span class="erp-thumb erp-thumb-brand{{ ' is-empty' if not t.marque }}" style="background:{{ t.marque|brand_color }}">{{ (t.marque or '')[:2]|upper }}</span>
+      {% endif %}
+      <span>
+        <span class="erp-queue-who">{{ t.client_nom }}</span><br>
+        <span class="erp-queue-what">{{ t.piece }}{{ " · " + t.marque if t.marque }}</span>
+      </span>
+    </a>
+    {% endfor %}
+
+    {% set suivi = (a_valider + historique)[-6:] %}
+    {% if suivi %}
+    <div class="erp-eyebrow" style="margin:16px 0 4px">Déjà générés</div>
+    {% for t in suivi|reverse %}
+    <button type="button" class="erp-queue-row" onclick="document.getElementById('dlg-atelier-{{ t.id }}').showModal()">
+      <span style="flex:1"><span class="erp-queue-who">{{ t.client_nom }}</span></span>
+      {% if t.status == "a_valider" %}<span class="erp-pill erp-pill-warning">généré</span>
+      {% elif t.status == "envoye" %}<span class="erp-pill erp-pill-neutral">attente validation client</span>
+      {% elif t.status == "valide" %}<span class="erp-pill erp-pill-success">accepté</span>
+      {% else %}<span class="erp-pill erp-pill-danger">refusé</span>{% endif %}
+    </button>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <div class="erp-card">
+    {% if not selected or selected.status != "en_cours" %}
+    <div class="erp-empty" style="padding:60px 10px;text-align:center">
+      {{ "Sélectionnez un SAV dans la file pour commencer." if not selected else "Ce SAV n'est plus en attente de chiffrage." }}
+    </div>
+    {% else %}
+    <div class="erp-wb">
+      <div class="erp-wb-left">
+        <div class="erp-wb-head">
+          {% if selected.photo_file %}
+          <img class="erp-thumb erp-thumb-lg" src="{{ url_for('demo_photo', ticket_id=selected.id, name=selected.photo_file) }}" alt=""> {# pas de lazy : photo du ticket ouvert, toujours au-dessus du pli #}
+          {% else %}
+          <div class="erp-wb-avatar">{{ selected.client_nom[:2]|upper }}</div>
+          {% endif %}
+          <div>
+            <h2 class="erp-wb-name">{{ selected.client_nom }}</h2>
+            <div class="erp-hint">{{ selected.piece }}{{ " · " + selected.marque if selected.marque }}</div>
+          </div>
+        </div>
+        <div class="erp-wb-meta">
+          <div class="erp-tile"><div class="k">Motif du dépôt</div><div class="v">{{ selected.motif or "—" }}</div></div>
+          <div class="erp-tile"><div class="k">État constaté</div><div class="v">{{ selected.etat_constate or "—" }}</div></div>
+          <div class="erp-tile muted"><div class="k">Préconisation</div><div class="v">{{ atelier_detail.preconisation }}</div></div>
+          <div class="erp-tile muted"><div class="k">Stock</div><div class="v">{{ atelier_detail.stock }}</div></div>
+        </div>
+      </div>
+
+      <div class="erp-wb-right">
+        <form id="lineForm" action="{{ url_for('demo_atelier_add_line', ticket_id=selected.id) }}" method="post" enctype="multipart/form-data">
+          <div class="erp-card-head">
+            <div><div class="erp-eyebrow">Nouvelle intervention</div></div>
+            <div class="erp-seg" id="segKind">
+              <button type="button" class="active" data-kind="nec">Travail nécessaire</button>
+              <button type="button" data-kind="opt">Option proposée</button>
+            </div>
+          </div>
+          <input type="hidden" name="kind" id="kindField" value="nec">
+
+          <div class="erp-op-picker">
+            <div class="erp-op-select-wrap">
+              <button type="button" class="erp-op-select" id="opSelectBtn">
+                <span><b id="opSelectName"></b> <span class="c" id="opSelectCount"></span></span>
+                <span>▾</span>
+              </button>
+              <div class="erp-op-dropdown" id="opDropdown"></div>
+            </div>
+            <div class="erp-op-main-head">
+              <input type="text" id="opSearch" class="erp-op-search" placeholder="🔍 Rechercher une opération dans cette famille…">
+              <button type="button" id="opFillFamily" class="erp-op-action">+ Toute la famille</button>
+            </div>
+            <div class="erp-op-row-list" id="opChips"></div>
+          </div>
+          <script type="application/json" id="opCategoriesData">{{ op_categories | tojson }}</script>
+          <script type="application/json" id="suggestedOpsData">{{ (atelier_detail.recommended_ops or []) | tojson }}</script>
+
+          <div class="erp-field-grid" id="quickAddAnchor">
+            <div class="erp-quick-add-bar" id="quickAddBar">
+              <label class="erp-field erp-quick-add-desc"><span>Description — écrivez librement, ou cliquez une opération ci-dessus</span>
+                <input type="text" name="description" id="descField" placeholder="Décrivez, ou cliquez une opération.">
+              </label>
+              <label class="erp-field erp-quick-add-price"><span>Prix HT (€) <span class="erp-req">*</span></span><input type="text" name="prix_ht" id="prixHtField" placeholder="85"></label>
+              <label class="erp-field"><span>Marque (coefficient)</span>
+                <select name="marque">
+                  <option value="">—</option>
+                  {% for m in marques %}<option value="{{ m }}" {{ "selected" if selected.marque == m }}>{{ m }}</option>{% endfor %}
+                </select>
+              </label>
+              <button type="submit" class="erp-btn erp-btn-dark erp-quick-add-submit">+ Ajouter</button>
+            </div>
+            <label class="erp-field"><span>Photo (optionnel)</span><input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp"></label>
+          </div>
+          <!-- Que Haiku reformule un mot tapé à la main ou une opération cliquée : la
+               reformulation se fait automatiquement à la finalisation (_haiku_polish côté
+               serveur), quelle que soit l'origine du texte de cette Description. -->
+        </form>
+
+        <div class="erp-wb-section"><span class="dot"></span>Travaux nécessaires <span class="hint">— comptés dans le devis</span></div>
+        {% if not selected.lines.nec %}
+        <div class="erp-empty">Aucune ligne pour l'instant.</div>
+        {% else %}
+        {{ linesmacro.lines_table(selected, "nec") }}
+        {% endif %}
+
+        <div class="erp-wb-section is-option"><span class="dot"></span>Options proposées <span class="hint">— hors total, au choix du client</span></div>
+        {% if not selected.lines.opt %}
+        <div class="erp-empty">Aucune ligne pour l'instant.</div>
+        {% else %}
+        {{ linesmacro.lines_table(selected, "opt") }}
+        {% endif %}
+
+        <div class="erp-wb-total">
+          <div><div class="k">Total devis (nécessaire)</div><div class="amt">{{ "%.2f"|format(selected.total) }} €</div></div>
+          <form action="{{ url_for('demo_atelier_finalize', ticket_id=selected.id) }}" method="post">
+            <button type="submit" class="erp-btn erp-btn-primary" {{ "disabled" if not selected.lines.nec }}>Finaliser le devis →</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% for t in suivi %}
+<dialog class="erp-dialog" id="dlg-atelier-{{ t.id }}">
+  <div class="erp-dialog-head">
+    <div><strong>{{ t.client_nom }}</strong> — {{ t.piece }} — <span class="num">{{ t.devis_numero }}</span> — <span class="num">{{ "%.2f"|format(t.total) }} €</span></div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-atelier-{{ t.id }}').close()">Fermer ✕</button>
+  </div>
+  <div>
+    <div class="erp-hint" style="margin-bottom:8px">
+      {% if t.status == "a_valider" %}Chiffré — à vérifier avant envoi.
+      {% elif t.status == "envoye" %}Devis figé — attente validation client.
+      {% elif t.status == "valide" %}Devis figé — accepté par le client.
+      {% else %}Devis figé — refusé par le client.{% endif %}
+    </div>
+    {% if t.lines.opt %}<div class="erp-eyebrow">Nécessaire</div>{% endif %}
+    {{ linesmacro.lines_table(t, "nec", editable=false) }}
+    {% if t.lines.opt %}<div class="erp-eyebrow" style="margin-top:10px">Optionnel</div>{{ linesmacro.lines_table(t, "opt", editable=false) }}{% endif %}
+    <a href="{{ url_for('demo_view_pdf', token=t.token, filename=t.pdf_name) }}" target="_blank" rel="noopener" class="erp-hint">📄 {{ t.pdf_name }} — voir le PDF en grand ↗</a>
+  </div>
+  <div class="erp-dialog-foot">
+    <a class="erp-btn erp-btn-ghost" href="{{ url_for('download', token=t.token, filename=t.pdf_name) }}">Télécharger</a>
+    {% if t.status == "a_valider" %}
+    <form action="{{ url_for('demo_send', ticket_id=t.id) }}" method="post">
+      <button type="submit" class="erp-btn erp-btn-primary">Envoyer au client →</button>
+    </form>
+    {% else %}
+    <a class="erp-btn erp-btn-primary" href="{{ url_for('horloger', focus=t.id) }}">Voir dans Horloger →</a>
+    {% endif %}
+  </div>
+</dialog>
+{% endfor %}
+
+<script src="{{ url_for('static', filename='demo_chips.js') }}"></script>
+<script>
+  // File d'attente réductible — plus de place pour chiffrer une fois le ticket choisi.
+  // Non mémorisé (contrairement à la sidebar) : la file redevient utile dès qu'on change de
+  // ticket, se rouvre donc à chaque nouvelle visite d'Atelier.
+  (function () {
+    var layout = document.getElementById("atelierLayout");
+    var collapseBtn = document.getElementById("fileRailCollapse");
+    var expandBtn = document.getElementById("fileRailExpand");
+    if (!layout || !collapseBtn || !expandBtn) return;
+    collapseBtn.addEventListener("click", function () { layout.classList.add("filerail-collapsed"); });
+    expandBtn.addEventListener("click", function () { layout.classList.remove("filerail-collapsed"); });
+  })();
+
+  var seg = document.getElementById("segKind");
+  function setKind(kind) {
+    if (!seg) return;
+    document.getElementById("kindField").value = kind;
+    seg.querySelectorAll("button").forEach(function (x) { x.classList.toggle("active", x.dataset.kind === kind); });
+  }
+  if (seg) {
+    seg.querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () { setKind(b.dataset.kind); });
+    });
+  }
+
+  // Sélecteur d'opérations (familles à gauche, opérations à droite, + puces "Suggéré") :
+  // cliquer une opération remplit la Description (texte libre toujours modifiable à la main)
+  // ET fait venir la barre Prix HT/Marque/Ajouter directement sous l'opération cliquée — un
+  // seul geste pour chiffrer, au lieu de scroller jusqu'au formulaire. Cliquer dans la
+  // Description à la main (sans passer par une opération) rend la barre à sa place par
+  // défaut, en bas : les deux façons de saisir (libre ou guidée) restent toujours possibles.
+  (function wireOpPicker() {
+    var descField = document.getElementById("descField");
+    var quickAddBar = document.getElementById("quickAddBar");
+    var quickAddAnchor = document.getElementById("quickAddAnchor");
+    var prixHtField = document.getElementById("prixHtField");
+    if (!descField || !quickAddBar || !quickAddAnchor) return;
+
+    function moveBarHome() {
+      document.querySelectorAll(".erp-op-row.open").forEach(function (r) { r.classList.remove("open"); });
+      quickAddAnchor.insertBefore(quickAddBar, quickAddAnchor.firstChild);
+    }
+    function makeOpRow(text, container) {
+      var row = document.createElement("div");
+      row.className = "erp-op-row";
+      var name = document.createElement("span");
+      name.className = "erp-op-row-name";
+      name.textContent = text;
+      var hint = document.createElement("span");
+      hint.className = "erp-op-row-hint";
+      hint.textContent = "Cliquer pour chiffrer →";
+      var slot = document.createElement("div");
+      slot.className = "erp-op-row-slot";
+      row.appendChild(name);
+      row.appendChild(hint);
+      row.appendChild(slot);
+      row.addEventListener("click", function (e) {
+        if (quickAddBar.contains(e.target)) return; // ne pas re-toggler en cliquant dans la barre elle-même
+        var isOpen = row.classList.contains("open");
+        moveBarHome();
+        if (isOpen) return; // 2e clic sur la même ligne = la refermer
+        row.classList.add("open");
+        descField.value = (descField.value ? descField.value.trim() + " " : "") + text + ".";
+        slot.appendChild(quickAddBar);
+        if (prixHtField) prixHtField.focus();
+      });
+      container.appendChild(row);
+    }
+
+    // Menu déroulant unifié : "✨ Suggéré" (préconisation IA) épinglé en tête et sélectionné
+    // par défaut quand il y en a, suivi des 8 familles numérotées — une seule ligne fermée
+    // par défaut (plus compact qu'un rail vertical à défilement).
+    var dataEl = document.getElementById("opCategoriesData");
+    var suggestedDataEl = document.getElementById("suggestedOpsData");
+    var selectBtn = document.getElementById("opSelectBtn");
+    var selectName = document.getElementById("opSelectName");
+    var selectCount = document.getElementById("opSelectCount");
+    var dropdown = document.getElementById("opDropdown");
+    var list = document.getElementById("opChips");
+    var search = document.getElementById("opSearch");
+    if (!dataEl || !selectBtn || !dropdown || !list) return;
+    var categories = JSON.parse(dataEl.textContent || "[]");
+    var suggested = suggestedDataEl ? JSON.parse(suggestedDataEl.textContent || "[]") : [];
+    var items = [];
+    if (suggested.length) items.push({ name: "✨ Suggéré", ops: suggested, pinned: true });
+    categories.forEach(function (cat, i) { items.push({ name: cat[0], ops: cat[1], num: i + 1 }); });
+    var active = 0;
+
+    function selectItem(i) {
+      active = i;
+      var item = items[i];
+      selectName.textContent = item.name;
+      selectCount.textContent = item.ops.length + (item.ops.length > 1 ? " opérations" : " opération");
+      dropdown.querySelectorAll(".erp-op-opt").forEach(function (o, oi) { o.classList.toggle("active", oi === i); });
+      dropdown.classList.remove("open");
+      search.value = "";
+      renderList();
+    }
+
+    items.forEach(function (item, i) {
+      var opt = document.createElement("div");
+      opt.className = "erp-op-opt" + (i === 0 ? " active" : "") + (item.pinned ? " pinned" : "");
+      opt.innerHTML = "<span>" + (item.num ? item.num + ". " : "") + item.name + "</span><span class=\"c\">" + item.ops.length + "</span>";
+      opt.addEventListener("click", function () { selectItem(i); });
+      dropdown.appendChild(opt);
+    });
+    selectBtn.addEventListener("click", function () { dropdown.classList.toggle("open"); });
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest(".erp-op-select-wrap")) dropdown.classList.remove("open");
+    });
+    selectItem(0);
+
+    function renderList() {
+      var q = search.value.trim().toLowerCase();
+      var ops = items[active].ops.filter(function (o) { return o.toLowerCase().includes(q); });
+      list.innerHTML = "";
+      if (!ops.length) {
+        var e = document.createElement("div");
+        e.className = "erp-op-empty";
+        e.textContent = "Aucune opération ne correspond dans cette famille.";
+        list.appendChild(e);
+        return;
+      }
+      ops.forEach(function (o) { makeOpRow(o, list); });
+    }
+    search.addEventListener("input", renderList);
+
+    // "+ Toute la famille" : concatène les opérations de la famille active (texte brut).
+    // La reformulation soignée (Haiku) se fait automatiquement à la finalisation du devis,
+    // pas ici — voir _haiku_polish côté serveur.
+    document.getElementById("opFillFamily").addEventListener("click", function () {
+      var ops = items[active].ops;
+      var sentence = ops.map(function (o, i) {
+        return i === 0 ? o : o.charAt(0).toLowerCase() + o.slice(1);
+      }).join(", ") + ".";
+      descField.value = (descField.value ? descField.value.trim() + " " : "") + sentence;
+      moveBarHome();
+      descField.focus();
+    });
+  })();
+</script>
+{% endblock %}

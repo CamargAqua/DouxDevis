@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Erreur{% endblock %}
+{% block content %}
+  <div class="card" style="text-align:center; padding:3rem 1rem;">
+    <h1>Une erreur est survenue</h1>
+    <p style="margin-top:8px">Réessayez dans un instant. Si le problème persiste,
+    transmettez la référence ci-dessous à votre prestataire.</p>
+    <p style="margin-top:12px"><code style="font-size:15px;letter-spacing:1px">{{ ref }}</code></p>
+    <a href="/" class="btn btn-gold" style="margin-top:20px;display:inline-block">← Retour à l'accueil</a>
+  </div>
+{% endblock %}

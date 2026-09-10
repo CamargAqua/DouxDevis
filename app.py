@@ -980,6 +980,15 @@ def _generate_qr_cgv() -> None:
 app = create_app()
 _generate_qr_cgv()
 
+# Monte l'app Devisly (refonte multi-tenant) sous /devisly, dans le même process —
+# toggle instantané entre les deux outils, sans cold-start Render (cf. tasks/todo.md
+# session 2026-09-10). `app` reste l'objet Flask DouxDevis (gunicorn app:app inchangé) ;
+# seul le WSGI callable sous-jacent route /devisly/* vers l'app Devisly.
+from werkzeug.middleware.dispatcher import DispatcherMiddleware  # noqa: E402
+from devisly.app import app as _devisly_app  # noqa: E402
+
+app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/devisly": _devisly_app})
+
 
 if __name__ == "__main__":
     app.run(debug=True, host="127.0.0.1", port=5000)

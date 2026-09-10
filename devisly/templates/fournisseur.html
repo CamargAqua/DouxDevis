@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}Partenaire — {{ maison_name }}{% endblock %}
+{% block page_title %}Partenaire — suivi des devis{% endblock %}
+{% block page_route %}/comptoir/fournisseur — suivi, l'import reste sur Comptoir{% endblock %}
+{% block container_class %}{% endblock %}
+{% block content %}
+
+{% macro statut_pill(p) -%}
+  {% if p.status == "extraction" %}<span class="erp-pill erp-pill-neutral">extraction…</span>
+  {% elif p.status == "a_verifier" %}<span class="erp-pill erp-pill-warning">à vérifier</span>
+  {% elif p.status == "genere" %}<span class="erp-pill erp-pill-warning">à envoyer</span>
+  {% elif p.status == "envoye" %}<span class="erp-pill erp-pill-neutral">envoyé</span>
+  {% elif p.status == "accepte" %}<span class="erp-pill erp-pill-success">accepté</span>
+  {% else %}<span class="erp-pill erp-pill-danger">refusé</span>{% endif %}
+{%- endmacro %}
+
+{% set dl_icon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>' %}
+
+<div class="erp-two-col" style="grid-template-columns:minmax(280px,.9fr) minmax(0,1.6fr)">
+
+  <!-- ══ Lot en cours ══ -->
+  <div class="erp-card">
+    <div class="erp-card-head">
+      <div><div class="erp-eyebrow">Lot en cours</div>
+        <h2>{{ lot_en_cours|length }} devis à traiter</h2></div>
+      {% if lot_status == "open" %}
+      <a class="erp-btn erp-btn-primary erp-btn-sm" href="{{ url_for('lot') }}">Reprendre →</a>
+      {% endif %}
+    </div>
+    {% if not lot_en_cours %}
+    <div class="erp-empty">
+      Rien en attente de vérification. Un nouvel import se lance depuis
+      <a href="{{ url_for('comptoir') }}">Comptoir</a>.
+    </div>
+    {% else %}
+    {% for p in lot_en_cours %}
+    <div class="erp-queue-row {{ 'erp-focus' if focus == p.token }}">
+      <span class="erp-thumb erp-thumb-brand{{ ' is-empty' if not p.marque }}" style="background:{{ p.marque|brand_color }}">{{ (p.marque or '')[:2]|upper }}</span>
+      <span style="flex:1">
+        <span class="erp-queue-who">{{ p.client }}</span><br>
+        <span class="erp-queue-what">
+          {% if p.status == "extraction" %}extraction en cours…
+          {% else %}{{ p.marque or "—" }} · <span class="num">{{ "%.2f"|format(p.total) }} €</span>{% endif %}
+        </span>
+      </span>
+      {{ statut_pill(p) }}
+    </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+  <!-- ══ Registre ══ -->
+  <div class="erp-card">
+    <div class="erp-card-head">
+      <div><div class="erp-eyebrow">Registre</div><h2>{{ partenaires|length }} devis en attente</h2></div>
+      <div class="erp-chip-row" style="margin:0">
+        {% for value, label in statuts %}
+        <a class="erp-chip" href="{{ url_for('fournisseur', statut=value) if value else url_for('fournisseur') }}"
+           style="{{ 'border-color:var(--erp-gold);color:var(--erp-ink)' if statut == value }}">{{ label }}</a>
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if not partenaires %}
+    <div class="erp-empty">
+      {% if statut %}Aucun devis avec ce statut — <a href="{{ url_for('fournisseur') }}">voir tous les devis</a>.
+      {% else %}Aucun devis partenaire suivi. Importez-en un depuis <a href="{{ url_for('comptoir') }}">Comptoir</a> (bouton « Devis partenaire »).{% endif %}
+    </div>
+    {% else %}
+    <div class="erp-table-wrap">
+      <table class="erp-table">
+        <thead><tr><th>Client</th><th>Marque</th><th class="num">Montant</th><th>Avancement</th><th></th></tr></thead>
+        <tbody>
+          {# Même frise/vocabulaire que le Tableau de bord et Horloger (Chiffrage → Envoi →
+             Décision client) — "extraction" reste sur sa pill (rien d'actionnable, IA en cours). #}
+          {% set STEP = {"a_verifier": 0, "genere": 1, "envoye": 2, "refuse": 2} %}
+          {% set RESP = {"a_verifier": "Comptoir", "genere": "Comptoir", "envoye": "Client"} %}
+          {% for p in partenaires %}
+          <tr id="row-{{ p.token }}" class="{{ 'erp-focus' if focus == p.token }}">
+            <td>{{ p.client }}</td>
+            <td>{{ p.marque or "—" }}</td>
+            <td class="num">{% if p.status == "extraction" %}—{% else %}{{ "%.2f"|format(p.total) }} €{% endif %}</td>
+            <td>
+              {% if p.status == "extraction" %}{{ statut_pill(p) }}
+              {% else %}
+              <div class="erp-mstep-cell">
+                {% if p.status in RESP %}<span class="erp-responsable-tag">{{ RESP[p.status] }}</span>{% endif %}
+                <div class="erp-mstep-row">
+                  {% for label in ["Chiffrage", "Envoi", "Décision client"] %}
+                  <div class="erp-mstep {{ 'done' if STEP[p.status] > loop.index0 else '' }} {{ 'current' if STEP[p.status] == loop.index0 else '' }}">
+                    <span class="erp-mstep-dot"></span><span class="erp-mstep-label">{{ label }}</span>
+                  </div>
+                  {% if not loop.last %}<span class="erp-mstep-line {{ 'done' if STEP[p.status] > loop.index0 else '' }}"></span>{% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+            </td>
+            <td>
+              <div class="erp-actions">
+                {% if p.status == "extraction" %}
+                <span class="erp-hint">extraction en cours…</span>
+
+                {% elif p.status == "a_verifier" %}
+                <a class="erp-btn erp-btn-primary erp-btn-sm"
+                   href="{{ url_for('lot') if p.kind == 'lot' else url_for('review') }}">Vérifier →</a>
+
+                {% else %}
+                {% if p.pdf_name %}
+                <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-pdf-{{ p.token }}').showModal()">Aperçu</button>
+                <a class="erp-btn erp-btn-ghost erp-btn-sm erp-btn-icon" title="Télécharger" aria-label="Télécharger"
+                   href="{{ url_for('download', token=p.token, filename=p.pdf_name) }}">{{ dl_icon|safe }}</a>
+                {% endif %}
+                {% if p.status == "genere" %}
+                <form action="{{ url_for('fournisseur_respond', token=p.token) }}" method="post">
+                  <button type="submit" name="decision" value="envoye" class="erp-btn erp-btn-primary erp-btn-sm">Marquer envoyé →</button>
+                </form>
+                {% elif p.status == "envoye" %}
+                {# Accès direct à la décision client, sans passer par l'Aperçu — Aperçu reste pour
+                   consulter, Valider est l'action métier. #}
+                <form action="{{ url_for('fournisseur_respond', token=p.token) }}" method="post">
+                  <button type="submit" name="decision" value="refuse" class="erp-btn erp-btn-ghost erp-btn-sm">Refusé</button>
+                </form>
+                <button type="button" class="erp-btn erp-btn-primary erp-btn-sm" onclick="document.getElementById('dlg-valider-{{ p.token }}').showModal()">Valider ✓</button>
+                {% elif p.status in ("accepte", "refuse") %}
+                {# Le flux partenaire n'a pas de SMS/réponse automatique : c'est l'accueil qui
+                   enregistre la réponse — la décision se prend depuis l'aperçu (photo + montant
+                   selon options), « Annuler » reste ici pour une correction rapide sans le rouvrir. #}
+                <form action="{{ url_for('fournisseur_respond', token=p.token) }}" method="post">
+                  <button type="submit" name="decision" value="reset" class="erp-btn erp-btn-ghost erp-btn-sm">Annuler la réponse</button>
+                </form>
+                {% endif %}
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="erp-hint" style="margin-top:10px">
+      Un devis marqué « accepté » entre dans le total <strong>Accepté ce mois</strong> du tableau de bord.
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+{% if validees %}
+<details class="erp-card erp-details">
+  <summary class="erp-card-head erp-details-summary">
+    <div><div class="erp-eyebrow">Suite du workflow</div><h2>Devis validés — {{ validees|length }}</h2></div>
+  </summary>
+  <div class="erp-details-body">
+    <div class="erp-table-wrap">
+      <table class="erp-table">
+        <thead><tr><th>N° devis</th><th>Client</th><th>Pièce</th><th class="num">Montant</th><th>Statut</th><th></th></tr></thead>
+        <tbody>
+          {% for p in validees %}
+          {% if p.pdf_name %}
+          <tr class="erp-row-link" onclick="document.getElementById('dlg-apercu-{{ p.token }}').showModal()">
+          {% else %}
+          <tr>
+          {% endif %}
+            <td class="num">{{ p.numero or "—" }}</td>
+            <td>{{ p.client }}</td>
+            <td>{{ p.piece or p.marque or "—" }}</td>
+            <td class="num">{{ "%.2f"|format(p.total) }} €</td>
+            <td><span class="erp-pill erp-pill-success">accepté</span></td>
+            <td>
+              {% if p.pdf_name %}
+              <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="event.stopPropagation(); document.getElementById('dlg-apercu-{{ p.token }}').showModal()">Aperçu</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</details>
+{% endif %}
+
+{% for p in validees %}
+{% if p.pdf_name %}
+{# Même popup léger PDF que le Tableau de bord (Aperçu depuis "Tous les devis") — consultation
+   seule, aucune action ici, le devis est déjà tranché. #}
+<dialog class="erp-dialog erp-dialog-pdf" id="dlg-apercu-{{ p.token }}">
+  <div class="erp-dialog-head">
+    <div><strong>{{ p.client }}</strong> — {{ p.marque or "—" }} · <span class="num">{{ "%.2f"|format(p.total) }} €</span></div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="this.closest('dialog').close()">Fermer ✕</button>
+  </div>
+  <iframe src="{{ url_for('demo_view_pdf', token=p.token, filename=p.pdf_name) }}" style="width:100%;height:65vh;border:0;border-radius:4px;background:var(--erp-sunken)"></iframe>
+  <div class="erp-dialog-foot">
+    <a class="erp-btn erp-btn-ghost" href="{{ url_for('download', token=p.token, filename=p.pdf_name) }}">Télécharger</a>
+  </div>
+</dialog>
+{% endif %}
+{% endfor %}
+
+{% for p in partenaires %}
+{% if p.pdf_name %}
+<dialog class="erp-dialog erp-dialog-pdf" id="dlg-pdf-{{ p.token }}">
+  <div class="erp-dialog-head">
+    <div><strong>{{ p.client }}</strong> — {{ p.pdf_name }}</div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-pdf-{{ p.token }}').close()">Fermer ✕</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 220px;gap:16px">
+    <iframe src="{{ url_for('demo_view_pdf', token=p.token, filename=p.pdf_name) }}" style="width:100%;height:60vh;border:0;border-radius:4px;background:var(--erp-sunken)"></iframe>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      {% if p.photo_file %}
+      <img src="{{ url_for('demo_view_photo', token=p.token, filename=p.photo_file) }}" alt="" style="width:100%;border-radius:6px;display:block;object-fit:cover">
+      {% endif %}
+      {% if p.tiers %}
+      <div class="erp-card" style="padding:10px 12px;margin:0">
+        <div class="erp-eyebrow" style="margin-bottom:8px">Montant</div>
+        {% for amt in p.tiers %}
+        <div style="display:flex;justify-content:space-between;font-size:.78rem;padding:3px 0;{{ 'font-weight:600' if loop.first else 'color:var(--erp-ink-soft)' }}">
+          <span>{{ "Sans option" if loop.first else "+ " ~ loop.index0 ~ " option" ~ ("s" if loop.index0 > 1 else "") }}</span>
+          <span class="num">{{ "%.2f"|format(amt) }} €</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if p.status == "genere" %}
+  <div class="erp-dialog-foot">
+    <form action="{{ url_for('fournisseur_respond', token=p.token) }}" method="post">
+      <button type="submit" name="decision" value="envoye" class="erp-btn erp-btn-primary">Marquer envoyé →</button>
+    </form>
+  </div>
+  {% elif p.status == "envoye" %}
+  <div class="erp-dialog-foot" style="justify-content:space-between">
+    <form action="{{ url_for('fournisseur_respond', token=p.token) }}" method="post">
+      <button type="submit" name="decision" value="refuse" class="erp-btn erp-btn-ghost">Refusé</button>
+    </form>
+    <button type="button" class="erp-btn erp-btn-primary" onclick="document.getElementById('accept-tiers-{{ p.token }}').hidden = false; this.hidden = true; this.previousElementSibling.hidden = true">✓ Accepté</button>
+  </div>
+  <div id="accept-tiers-{{ p.token }}" hidden style="padding:0 18px 16px">
+    <div class="erp-hint" style="margin-bottom:8px">Quel montant le client a-t-il retenu ?</div>
+    <form action="{{ url_for('fournisseur_respond', token=p.token) }}" method="post" style="display:flex;gap:8px;flex-wrap:wrap">
+      <input type="hidden" name="decision" value="accepte">
+      {% if p.tiers %}
+      {% for amt in p.tiers %}
+      <button type="submit" name="amount" value="{{ amt }}" class="erp-btn erp-btn-ghost erp-btn-sm">
+        {{ "Sans option" if loop.first else "+ " ~ loop.index0 ~ " option" ~ ("s" if loop.index0 > 1 else "") }} — <span class="num">{{ "%.2f"|format(amt) }} €</span>
+      </button>
+      {% endfor %}
+      {% else %}
+      <button type="submit" name="amount" value="{{ p.total }}" class="erp-btn erp-btn-ghost erp-btn-sm">Confirmer — <span class="num">{{ "%.2f"|format(p.total) }} €</span></button>
+      {% endif %}
+    </form>
+  </div>
+  {% elif p.status in ("accepte", "refuse") %}
+  <div class="erp-dialog-foot">
+    <span class="erp-hint">{{ "Accepté — " ~ ("%.2f"|format(p.total)) ~ " €" if p.status == "accepte" else "Refusé par le client." }}</span>
+  </div>
+  {% endif %}
+</dialog>
+{% endif %}
+
+{% if p.status == "envoye" %}
+{# CTA "Valider" du registre — action métier directe, distincte de l'Aperçu (consultation). #}
+<dialog class="erp-dialog" id="dlg-valider-{{ p.token }}">
+  <div class="erp-dialog-head">
+    <div><strong>Valider le devis</strong> — {{ p.client }}</div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-valider-{{ p.token }}').close()">Fermer ✕</button>
+  </div>
+  <form action="{{ url_for('fournisseur_respond', token=p.token) }}" method="post">
+    <input type="hidden" name="decision" value="accepte">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      {% if p.tiers %}
+      {% for amt in p.tiers %}
+      <label style="display:flex;align-items:center;gap:8px;font-size:.85rem">
+        <input type="radio" name="amount" value="{{ amt }}" {{ "checked" if loop.first }}>
+        {{ "Sans option" if loop.first else "Avec option " ~ loop.index0 }} — <span class="num">{{ "%.2f"|format(amt) }} €</span>
+      </label>
+      {% endfor %}
+      {% else %}
+      <label style="display:flex;align-items:center;gap:8px;font-size:.85rem">
+        <input type="radio" name="amount" value="{{ p.total }}" checked>
+        Montant du devis — <span class="num">{{ "%.2f"|format(p.total) }} €</span>
+      </label>
+      {% endif %}
+    </div>
+    <div class="erp-dialog-foot" style="padding:14px 0 0;border-top:none">
+      <button type="button" class="erp-btn erp-btn-ghost" onclick="document.getElementById('dlg-valider-{{ p.token }}').close()">Annuler</button>
+      <button type="submit" class="erp-btn erp-btn-primary">Confirmer</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
+{% endfor %}
+
+{% if focus %}
+<script>
+  (function () {
+    var row = document.getElementById("row-{{ focus }}");
+    if (row) row.scrollIntoView({ block: "center" });
+  })();
+</script>
+{% endif %}
+{% endblock %}

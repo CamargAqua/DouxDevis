@@ -17,3 +17,19 @@ services:
         sync: false
       - key: GITHUB_TOKEN
         sync: false
+      # --- Devisly (monté sous /devisly) ---
+      # Coller ici l'External Database URL de la Postgres "devisly-db2" (dashboard Render).
+      - key: DATABASE_URL
+        sync: false
+      - key: PRIMARY_TENANT_SLUG
+        value: doux
+      - key: SESSION_COOKIE_NAME
+        value: devisly_session
+      - key: SESSION_COOKIE_PATH
+        value: /devisly
+      - key: SHOW_DOUXDEVIS_TOGGLE
+        value: "1"
+      - key: SUPERADMIN_PASSWORD
+        sync: false
+      - key: YOUSIGN_API_KEY
+        sync: false

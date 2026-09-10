@@ -1,5 +1,26 @@
 # Lessons — DouxDevis
 
+## 2026-09-10 — Monter deux apps Flask dans un seul process (Devisly sous /devisly)
+**Contexte :** Devisly (refonte multi-tenant) déployé séparément sur Render free tier
+subissait un cold-start (30-60s) à chaque bascule depuis DouxDevis. Solution : monter
+les deux apps Flask dans le même process via `werkzeug.middleware.dispatcher.
+DispatcherMiddleware` (`app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/devisly": devisly_app})`),
+`app` (DouxDevis) reste l'objet exposé à gunicorn.
+**Piège 1 — imports :** Devisly avait ses propres `app.py`/`db.py`/`docx_generator.py`/
+`pdf_extractor.py`/`pdf_generator.py`, mêmes noms que ceux de DouxDevis à la racine.
+**Règle :** packager le code importé comme sous-module (`devisly/__init__.py`) et
+convertir ses imports locaux en imports relatifs (`from . import db`) — sinon
+collision dans `sys.modules` avec les modules de DouxDevis.
+**Piège 2 — cookies de session :** Flask-Session utilise par défaut le nom de cookie
+"session" et path "/" — deux apps Flask sur le même domaine s'écrasent le cookie l'une
+l'autre. **Règle :** rendre `SESSION_COOKIE_NAME`/`SESSION_COOKIE_PATH` configurables
+par env var dans l'app secondaire (défaut inchangé pour son déploiement standalone),
+et les fixer explicitement dans le déploiement fusionné.
+**Piège 3 — lien conditionnel :** le bouton de bascule ("Retour à Doux Devis") ne doit
+apparaître que dans le déploiement fusionné, jamais chez les vrais clients Devisly
+standalone → gardé derrière une var d'env dédiée (`SHOW_DOUXDEVIS_TOGGLE`), pas un flag
+en dur.
+
 ## 2026-05-21 — Prix partenaire affiché au lieu de prix client dans PDF
 **Erreur :** `pdf_generator.py` lisait `line.get("prix")` (prix partenaire recalculé = prix_client / coeff) au lieu de `line.get("prix_client")` pour les lignes du devis.
 **Conséquence :** Le PDF affichait les prix partenaires sur les lignes, mais le total affichait les prix client. Incohérence visuelle.

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}SAV rapide — {{ maison_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <header style="margin-bottom:28px">
+    <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;margin-bottom:6px">SAV rapide</h1>
+    <p class="lead" style="color:var(--ink-mid);font-size:14px">Notez les travaux effectués sur une pièce, ça se convertit en devis SAV.</p>
+  </header>
+
+  <form action="{{ url_for('admin_sav_rapide_save') }}" method="post" class="form" style="gap:16px">
+    {% if creations %}
+    <label class="field">Pièce déjà créée (optionnel)
+      <select onchange="if(this.value) document.querySelector('[name=client_nom]').value = this.value">
+        <option value="">— Nouveau client —</option>
+        {% for c in creations %}
+        <option value="{{ c.client_nom }}">{{ c.client_nom }} — {{ c.description[:60] }} ({{ c.created_at.strftime('%d/%m/%Y') }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% endif %}
+
+    <div class="grid grid-3">
+      <label class="field" style="max-width:360px">Nom du client
+        <input type="text" name="client_nom" required placeholder="NOM Prénom">
+      </label>
+      <label class="field" style="max-width:200px">Prix (€)
+        <input type="text" name="prix" required placeholder="85">
+      </label>
+    </div>
+
+    <label class="field">Travaux effectués
+      <textarea name="note" rows="4" required data-phrase-assist
+                placeholder="Tapez un mot-clé (redimensionnement, polissage, changement de pile…) pour insérer une phrase toute faite."></textarea>
+    </label>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid var(--line);margin-top:8px">
+      <a href="{{ url_for('index') }}" class="btn btn-ghost">← Retour</a>
+      <button type="submit" class="btn btn-gold btn-lg">Générer le devis SAV →</button>
+    </div>
+  </form>
+</section>
+<script src="{{ url_for('static', filename='phrases.js') }}"></script>
+{% endblock %}

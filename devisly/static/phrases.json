@@ -1,0 +1,13 @@
+{
+  "sertissage": "Sertissage de pierre(s) sur monture existante, reprise des griffes et contrôle de tenue.",
+  "polissage": "Polissage complet de la pièce, restauration de l'éclat d'origine sans reprise de matière.",
+  "gravure": "Gravure personnalisée intérieure, texte confirmé avec le client avant exécution.",
+  "fonte": "Fonte et coulage sur mesure de la monture selon le modèle validé avec le client.",
+  "taille": "Taille et calibrage de la pierre avant montage sur la monture.",
+  "montage": "Montage de la pièce et contrôle final avant remise au client.",
+  "redimensionnement": "Redimensionnement de l'anneau avec ajout de matière et reprise de la finition intérieure.",
+  "pile": "Changement de pile et contrôle d'étanchéité du boîtier.",
+  "revision": "Révision complète du mouvement, nettoyage et réglage de la marche.",
+  "etancheite": "Contrôle et remise à niveau de l'étanchéité du boîtier (joints, poussoirs, couronne).",
+  "bracelet": "Remplacement du bracelet et ajustement à la taille du client."
+}

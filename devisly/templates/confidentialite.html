@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Politique de confidentialité — Reverso{% endblock %}
+{% block content %}
+<div class="card legal-page">
+  <h1>Politique de confidentialité</h1>
+  <p class="legal-updated">Dernière mise à jour : juillet 2026</p>
+
+  <h2>Qui sommes-nous ?</h2>
+  <p>
+    Reverso est un service de génération de devis SAV édité par
+    <strong>Victor Michel (EI)</strong> (voir les
+    <a href="{{ url_for('mentions_legales') }}">mentions légales</a>) et utilisé par des
+    maisons d'horlogerie et de joaillerie (nos clientes) pour établir les devis de
+    réparation de leurs propres clients.
+  </p>
+  <p>
+    Pour les données des clients finaux contenues dans les devis, chaque maison cliente
+    est responsable de traitement ; Reverso agit comme sous-traitant au sens de
+    l'article 28 du RGPD, sur ses instructions et dans le cadre d'un contrat de
+    sous-traitance.
+  </p>
+
+  <h2>Quelles données transitent par le service ?</h2>
+  <ul>
+    <li><strong>Documents de devis déposés</strong> (PDF ou emails) : ils peuvent contenir
+      le nom du client final, un numéro de dossier SAV et la description de l'objet confié
+      (montre ou bijou).</li>
+    <li><strong>Devis générés</strong> (PDF/DOCX) : mêmes informations, mises en forme.</li>
+    <li><strong>Cookie de session</strong> : un unique cookie technique, strictement
+      nécessaire au fonctionnement (suivi de votre session de travail). Il ne trace rien,
+      n'est partagé avec personne et expire à la fermeture de session. À ce titre, il est
+      exempté de consentement (délibération CNIL n° 2020-091). Aucun cookie publicitaire
+      ou de mesure d'audience n'est utilisé.</li>
+  </ul>
+
+  <h2>Comment sont-elles traitées ?</h2>
+  <p>
+    Lors du dépôt d'un document, son contenu est transmis à l'API Claude d'Anthropic
+    (États-Unis) pour en extraire automatiquement les informations du devis. Ce transfert
+    est encadré par l'accord de traitement des données d'Anthropic, incluant les clauses
+    contractuelles types de la Commission européenne. Anthropic n'utilise pas ces données
+    pour entraîner ses modèles.
+  </p>
+  <p>
+    Les données du service sont hébergées par Render dans l'Union européenne
+    (Francfort, Allemagne).
+  </p>
+
+  <h2>Combien de temps sont-elles conservées ?</h2>
+  <p>
+    Les documents déposés, les devis générés et les données de session sont
+    <strong>automatiquement supprimés au bout de 24 heures</strong>. Le service ne
+    conserve durablement aucune donnée personnelle des clients finaux — seuls des
+    compteurs anonymes de génération (date et maison, sans aucun nom) sont conservés à
+    des fins de facturation.
+  </p>
+
+  <h2>Vos droits</h2>
+  <p>
+    Pour toute demande d'accès, de rectification ou d'effacement concernant un devis,
+    adressez-vous à la maison qui a établi votre devis (responsable de traitement) ;
+    nous l'assistons dans le traitement de ces demandes. Pour toute question sur cette
+    politique : <a href="mailto:victormichel1@icloud.com">victormichel1@icloud.com</a>.
+    Vous disposez également du droit d'introduire une réclamation auprès de la CNIL
+    (<a href="https://www.cnil.fr" rel="noopener">cnil.fr</a>).
+  </p>
+
+  <h2>Sous-traitants ultérieurs</h2>
+  <ul>
+    <li><strong>Render</strong> (hébergement, UE/Francfort — société américaine, clauses
+      contractuelles types)</li>
+    <li><strong>Anthropic</strong> (extraction automatique des devis, États-Unis —
+      clauses contractuelles types)</li>
+    <li><strong>Yousign</strong> (signature électronique, France — uniquement si la
+      signature en ligne est utilisée)</li>
+  </ul>
+</div>
+{% endblock %}

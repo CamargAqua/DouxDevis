@@ -1,0 +1,40 @@
+{% macro lines_table(ticket, kind, editable=true, coeff_editable=false) %}
+{# Grille CSS plutôt que <table> : chaque instance (nécessaire/optionnel, dans des sections
+   séparées) partage le même gabarit de colonnes fixe — donc toujours alignée avec ses voisines,
+   contrairement à un <table> dont l'auto-layout recalcule les largeurs par instance selon son
+   propre contenu (c'était la cause du désalignement entre les deux tableaux de la popup). #}
+<div class="demo-lines {{ 'is-editable' if editable else '' }}">
+  <div class="demo-lines-row demo-lines-head">
+    <span></span>
+    <span>Description</span>
+    <span class="demo-num">HT</span>
+    <span class="demo-num">Coeff.</span>
+    <span class="demo-num">Client</span>
+    {% if editable %}<span></span>{% endif %}
+  </div>
+  {% for l in ticket.lines[kind] %}
+  <div class="demo-lines-row">
+    <span class="demo-line-thumb">
+      {% if l.photo_file %}<img class="demo-thumb" src="{{ url_for('demo_photo', ticket_id=ticket.id, name=l.photo_file) }}" loading="lazy" alt="">
+      {% else %}<span class="demo-thumb demo-thumb-empty"></span>{% endif %}
+    </span>
+    <span class="demo-line-desc">{{ l.description }}</span>
+    <span class="demo-num">{{ "%.2f"|format(l.prix_ht) }} €</span>
+    <span class="demo-num demo-line-coeff">
+      {% if coeff_editable %}
+      ×<input type="text" class="demo-coeff-input" name="{{ kind }}_coeff[]" value="{{ "%.2f"|format(l.coeff) }}"
+             aria-label="Coefficient pour {{ l.description }}">
+      {% else %}
+      ×{{ "%.2f"|format(l.coeff) }}
+      {% endif %}
+    </span>
+    <span class="demo-num">{{ "%.2f"|format(l.prix_client) }} €</span>
+    {% if editable %}
+    <form action="{{ url_for('demo_atelier_delete_line', ticket_id=ticket.id, kind=kind, idx=loop.index0) }}" method="post">
+      <button type="submit" class="demo-rm" title="Retirer">✕</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}

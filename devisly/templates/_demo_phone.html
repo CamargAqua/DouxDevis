@@ -1,0 +1,65 @@
+{# Simulation client — vitrine encadrée. Vit dans le popup Horloger (par devis, `selected`
+   = le ticket du dialog courant) : c'est là qu'on regarde une conversation précise, pas au
+   Comptoir où elle n'avait de sens que pour le dernier ticket cliqué. #}
+<div class="phone-col">
+  <div class="demo-phone-card">
+    <span class="demo-phone-eyebrow">Simulation client — en direct</span>
+    <span class="demo-phone-live">
+      <span class="demo-phone-live-dot"></span>
+      {% if selected %}Ce que {{ selected.client_nom }} reçoit{% else %}Aucun dépôt sélectionné{% endif %}
+    </span>
+    <div class="demo-phone">
+      <div class="demo-notch"></div>
+      <div class="demo-phone-screen">
+        {% if not selected %}
+        <div class="demo-phone-status"><span>Reverso</span></div>
+        <div class="demo-phone-thread"><div class="demo-phone-empty">Sélectionnez un dépôt pour voir la conversation.</div></div>
+        {% else %}
+        <div class="demo-phone-status">
+          <span>{{ selected.outbox[-1].time if selected.outbox else "" }}</span><span>Reverso</span>
+        </div>
+        <div class="demo-phone-app">
+          <div class="demo-av">{{ (maison_name or "CJ")[:2]|upper }}</div>
+          <div class="demo-who">{{ maison_name }}</div>
+        </div>
+        <div class="demo-phone-thread">
+          {% for m in selected.outbox %}
+          <div class="demo-msg demo-msg-{{ m.side }}">
+            <span class="demo-msg-tag">{{ m.channel }}</span>{{ m.text }}
+            {% if m.attach %}<div class="demo-attach">📎 {{ m.attach }}</div>{% endif %}
+            <span class="demo-msg-meta">{{ m.time }}</span>
+          </div>
+          {% endfor %}
+          {% if selected.status == "envoye" %}
+          {% set tiers = selected|ticket_tiers %}
+          {# `.demo-phone-cta` impose display:flex en classe — un simple attribut `hidden`
+             perd face à une classe qui fixe déjà `display`, donc on bascule le style inline
+             directement au clic plutôt que de compter sur l'attribut seul. #}
+          <div class="demo-phone-cta" id="phone-cta-{{ selected.id }}">
+            <form action="{{ url_for('demo_respond', ticket_id=selected.id) }}" method="post" style="display:inline">
+              <button type="submit" name="decision" value="no" class="btn btn-sm">Refuser</button>
+            </form>
+            <button type="button" class="btn btn-gold btn-sm"
+              onclick="document.getElementById('phone-tiers-{{ selected.id }}').style.display = 'flex'; document.getElementById('phone-cta-{{ selected.id }}').style.display = 'none'">✓ Accepter</button>
+          </div>
+          {# Le client a pu prendre le nécessaire seul ou avec des options — on choisit le
+             palier réellement retenu, même principe que côté Partenaire. #}
+          <div id="phone-tiers-{{ selected.id }}" style="display:none;margin-top:6px;flex-direction:column;gap:4px">
+            {% for amt in tiers %}
+            <form action="{{ url_for('demo_respond', ticket_id=selected.id) }}" method="post">
+              <input type="hidden" name="decision" value="yes">
+              <button type="submit" name="amount" value="{{ amt }}" class="btn btn-sm" style="width:100%;text-align:left">
+                {{ "Sans option" if loop.first else "+ " ~ loop.index0 ~ " option" ~ ("s" if loop.index0 > 1 else "") }} — {{ "%.2f"|format(amt) }} €
+              </button>
+            </form>
+            {% endfor %}
+          </div>
+          {% elif selected.status in ("valide", "refuse") %}
+          <div class="demo-phone-final">Devis {{ "validé" if selected.status == "valide" else "refusé" }}</div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>

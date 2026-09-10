@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}{{ "Nouveau client" if mode == "new" else "Éditer " + tenant.maison_name }} — Reverso{% endblock %}
+{% block container_class %}container-review{% endblock %}
+{% block content %}
+<section class="card">
+  <header style="display:flex;align-items:flex-start;gap:16px;margin-bottom:20px">
+    <div style="flex:1">
+      <h1 style="font-family:Georgia,serif;font-size:24px;font-weight:400;margin-bottom:6px">
+        {{ "Nouveau client" if mode == "new" else "Éditer " + tenant.maison_name }}
+      </h1>
+      <p class="lead" style="color:var(--ink-mid);font-size:14px">
+        {% if mode == "new" %}
+          Le sous-domaine ne peut plus être changé après création.
+        {% else %}
+          Sous-domaine : <code>{{ tenant.slug }}</code> (fixe)
+          {% if tenant_link %} — <a href="{{ tenant_link }}" target="_blank">{{ tenant_link }}</a>{% endif %}
+        {% endif %}
+      </p>
+    </div>
+    <a href="{{ url_for('superadmin_list') }}" class="btn btn-ghost" style="flex-shrink:0">← Retour</a>
+  </header>
+
+  {% if mode == "new" and all_tenants %}
+  <div style="margin-bottom:20px">
+    <label style="font-size:12px;color:var(--ink-mid);font-weight:600;letter-spacing:.3px;margin-bottom:8px;display:block">
+      Partir des coefficients de :
+    </label>
+    <select onchange="if(this.value) window.location='{{ url_for('superadmin_new') }}?copy_from='+this.value" style="max-width:280px">
+      <option value="">— tableau vide —</option>
+      {% for t in all_tenants %}
+      <option value="{{ t.slug }}" {{ "selected" if t.slug == copy_from else "" }}>{{ t.maison_name }} ({{ t.slug }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" id="tenant-form">
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:24px">
+      <div style="flex:1;min-width:220px">
+        <label style="font-size:12px;color:var(--ink-mid);font-weight:600;letter-spacing:.3px;margin-bottom:8px;display:block">Nom de la maison</label>
+        <input type="text" name="maison_name" value="{{ tenant.maison_name if tenant else '' }}" placeholder="Ex: Bijouterie Martin" required>
+      </div>
+      {% if mode == "new" %}
+      <div style="flex:1;min-width:180px">
+        <label style="font-size:12px;color:var(--ink-mid);font-weight:600;letter-spacing:.3px;margin-bottom:8px;display:block">Sous-domaine (slug)</label>
+        <input type="text" name="slug" placeholder="ex: martin" pattern="[a-z0-9-]+" required>
+      </div>
+      {% endif %}
+      <div style="flex:1;min-width:180px">
+        <label style="font-size:12px;color:var(--ink-mid);font-weight:600;letter-spacing:.3px;margin-bottom:8px;display:block">
+          Mot de passe admin {{ "" if mode == "new" else "(laisser vide = inchangé)" }}
+        </label>
+        <input type="password" name="admin_password" autocomplete="new-password" {{ "required" if mode == "new" else "" }}>
+      </div>
+      <div style="flex:1;min-width:180px">
+        <label style="font-size:12px;color:var(--ink-mid);font-weight:600;letter-spacing:.3px;margin-bottom:8px;display:block">
+          Logo {{ "" if mode == "new" else "(laisser vide = inchangé)" }}
+        </label>
+        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+        {% if tenant and tenant.logo_png %}<p style="font-size:12px;color:var(--ink-mid);margin-top:4px">Logo actuel présent — sans fichier, sera conservé.</p>{% endif %}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:24px;margin-bottom:24px;align-items:center;flex-wrap:wrap">
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" name="legal_footer" value="1" {{ "checked" if tenant and tenant.legal_footer else "" }}>
+        Mentions légales réelles (pied de page, cas Doux uniquement)
+      </label>
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" name="feature_creation" value="1" {{ "checked" if tenant and tenant.feature_creation else "" }}>
+        Onglet Création (joaillerie sur mesure)
+      </label>
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" name="feature_sav_rapide" value="1" {{ "checked" if tenant and tenant.feature_sav_rapide else "" }}>
+        Onglet SAV rapide
+      </label>
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" name="feature_bijoux3_export" value="1" {{ "checked" if tenant and tenant.feature_bijoux3_export else "" }}>
+        Export CSV Bijoux3/Odéis
+      </label>
+      {% if mode == "edit" %}
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px">
+        <input type="checkbox" name="active" value="1" {{ "checked" if tenant.active else "" }}>
+        Compte actif (décocher = suspendre)
+      </label>
+      {% endif %}
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px">
+        Limite de devis / mois
+        <input type="number" name="devis_limit" min="0" placeholder="illimité"
+               value="{{ tenant.devis_limit if tenant and tenant.devis_limit is not none else '' }}"
+               style="max-width:90px">
+      </label>
+    </div>
+
+    <details {{ "open" if mode == "new" else "" }} style="margin-bottom:24px">
+      <summary style="cursor:pointer;font-family:Georgia,serif;font-size:18px;color:var(--ink);padding:4px 0">
+        Coefficients par marque ({{ coefficients|length }})
+      </summary>
+      <p class="lead" style="color:var(--ink-mid);font-size:14px;margin:12px 0 16px">
+        Le coefficient s'applique sur le prix HT partenaire. « Coeff. options » s'applique aux interventions optionnelles — laisser vide pour réutiliser le coefficient principal.
+      </p>
+      <div class="adm-table-wrap">
+        <table class="adm-table">
+          <thead>
+            <tr>
+              <th>Marque</th>
+              <th>Coeff.</th>
+              <th>Coeff. options</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="coeff-rows">
+            {% for name, val in coefficients.items() %}
+            {% set e = val if val is mapping else {'coeff': val} %}
+            <tr class="adm-row">
+              <td>
+                <input type="text" name="brand[]" value="{{ name }}" placeholder="Marque">
+                <input type="hidden" name="nec_default[]" value="{{ '1' if e.get('coeff_nec_default', True) else '0' }}">
+                <input type="hidden" name="opt_default[]" value="{{ '1' if e.get('coeff_opt_default', True) else '0' }}">
+              </td>
+              <td><input type="text" name="coeff[]" inputmode="decimal" value="{{ e.coeff }}" placeholder="1,40" style="max-width:90px"></td>
+              <td><input type="text" name="coeff_opt[]" inputmode="decimal" value="{{ e.coeff_opt if e.coeff_opt is defined else '' }}" placeholder="—" style="max-width:90px"></td>
+              <td><button type="button" class="btn-remove" onclick="this.closest('tr').remove()" aria-label="Supprimer la marque">×</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-ghost" onclick="admAddRow()" style="margin-top:12px">+ Ajouter une marque</button>
+    </details>
+
+    <div class="adm-actions" style="justify-content:flex-end">
+      <button type="submit" class="btn btn-gold">{{ "Créer le client" if mode == "new" else "Enregistrer" }}</button>
+    </div>
+  </form>
+</section>
+
+<template id="adm-row-tpl">
+  <tr class="adm-row">
+    <td>
+      <input type="text" name="brand[]" value="" placeholder="Marque">
+      <input type="hidden" name="nec_default[]" value="1">
+      <input type="hidden" name="opt_default[]" value="1">
+    </td>
+    <td><input type="text" name="coeff[]" inputmode="decimal" value="" placeholder="1,40" style="max-width:90px"></td>
+    <td><input type="text" name="coeff_opt[]" inputmode="decimal" value="" placeholder="—" style="max-width:90px"></td>
+    <td><button type="button" class="btn-remove" onclick="this.closest('tr').remove()" aria-label="Supprimer la marque">×</button></td>
+  </tr>
+</template>
+
+<script>
+function admAddRow() {
+  const tpl = document.getElementById('adm-row-tpl');
+  document.getElementById('coeff-rows').appendChild(tpl.content.cloneNode(true));
+  const rows = document.querySelectorAll('#coeff-rows .adm-row');
+  rows[rows.length - 1].querySelector('input[name="brand[]"]').focus();
+}
+</script>
+{% endblock %}

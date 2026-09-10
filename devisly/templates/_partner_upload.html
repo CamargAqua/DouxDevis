@@ -1,0 +1,257 @@
+{# Import d'un devis partenaire (PDF / email) + extraction IA.
+   Utilisé par la page d'accueil historique (index.html) et par le Comptoir (comptoir.html).
+   Contexte attendu : lot_status (None|"open"|"generated"). #}
+
+  <div class="fast-mode-bar">
+    <label class="toggle-switch-wrap">
+      <span class="toggle-switch">
+        <input type="checkbox" id="fast-mode-toggle">
+        <span class="toggle-slider"></span>
+      </span>
+      <span class="toggle-switch-lbl">Mode rapide</span>
+    </label>
+    <span class="fast-mode-hint">Seul le nom du client sera demandé, puis le devis sera généré directement — sans étape de vérification.</span>
+  </div>
+
+  {% if lot_status == "generated" %}
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding:12px 16px;background:var(--ok-bg,#EAF4EF);border:1px solid #5DCAA5;border-radius:8px">
+    <span style="font-size:13px;color:#0F6E56">✅ Le dernier lot a été généré</span>
+    <a href="{{ url_for('lot_done') }}" class="btn btn-gold" style="font-size:13px">Voir les téléchargements →</a>
+  </div>
+  {% elif lot_status == "open" %}
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;padding:12px 16px;background:var(--gold-ultra,#F8F4E8);border:1px solid var(--gold-light,#D4B86A);border-radius:8px">
+    <span style="font-size:13px;color:var(--ink)">📄 Un lot de devis est en attente de vérification</span>
+    <a href="{{ url_for('lot') }}" class="btn btn-gold" style="font-size:13px">Reprendre le lot →</a>
+  </div>
+  {% endif %}
+
+  <!-- Onglets -->
+  <div style="display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid var(--line);">
+    <button type="button" id="tab-file" onclick="switchTab('file')"
+      style="background:none;border:none;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--gold);margin-bottom:-2px;color:var(--gold);">
+      📄 Fichier
+    </button>
+    <button type="button" id="tab-paste" onclick="switchTab('paste')"
+      style="background:none;border:none;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--ink-soft);">
+      ✉️ Coller un email
+    </button>
+  </div>
+
+  <!-- Mode fichier -->
+  <form id="form-file" action="{{ url_for('extract') }}" method="post" enctype="multipart/form-data" class="upload-form">
+    <input type="hidden" name="fast_mode" id="fast-mode-file" value="0">
+    <label for="pdf" class="dropzone" id="dropzone">
+      <span class="dropzone-icon">📄</span>
+      <span class="dropzone-title">Glisser-déposer le ou les fichiers ici</span>
+      <span class="dropzone-sub">PDF, email (.eml) ou message Outlook (.msg) — plusieurs fichiers possibles, max 25 Mo</span>
+      <input type="file" id="pdf" name="pdf" multiple accept="application/pdf,.pdf,.eml,message/rfc822,.msg,application/vnd.ms-outlook" required>
+      <span id="filename" class="dropzone-filename" style="display:none"></span>
+    </label>
+    <button type="submit" id="submit-file" class="btn btn-primary btn-lg" style="align-self:center;min-width:220px">
+      Extraire les informations
+    </button>
+    <p class="hint" id="hint-normal-file">⏱ L'extraction prend généralement 10 à 20 secondes</p>
+    <div id="progress-file" class="extract-progress" style="display:none">
+      <div class="extract-progress-bar"><div class="extract-progress-fill"></div></div>
+      <p class="extract-progress-label"></p>
+    </div>
+  </form>
+
+  <!-- Mode coller -->
+  <form id="form-paste" action="{{ url_for('extract') }}" method="post" class="upload-form" style="display:none" onsubmit="return validatePaste()">
+    <input type="hidden" name="fast_mode" id="fast-mode-paste" value="0">
+    <!-- Zone visuelle — même style que dropzone fichier -->
+    <div id="paste-zone" class="dropzone" tabindex="0"
+         onclick="document.getElementById('paste-area').focus()"
+         style="cursor:pointer;outline:none;">
+      <!-- État vide -->
+      <span id="paste-empty">
+        <span class="dropzone-icon">✉️</span>
+        <span class="dropzone-title">Cliquer ici puis Ctrl+V</span>
+        <span class="dropzone-sub">Copier tout le mail Outlook (Ctrl+A → Ctrl+C) puis coller ici</span>
+      </span>
+      <!-- État rempli (masqué par défaut) -->
+      <span id="paste-ready" style="display:none;text-align:center;">
+        <span style="font-size:2rem;">✉️</span>
+        <span id="paste-badge" style="display:block;margin-top:8px;font-weight:700;font-size:15px;color:var(--gold)">Email collé</span>
+        <span id="paste-info" style="display:block;font-size:12px;color:var(--ink-soft);margin-top:4px"></span>
+        <button type="button" id="paste-clear"
+          onclick="clearPaste(event)"
+          style="margin-top:10px;background:none;border:1.5px solid var(--line);border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--ink-soft)">
+          ✕ Effacer
+        </button>
+      </span>
+      <!-- Textarea invisible qui stocke le texte -->
+      <textarea id="paste-area" name="paste_text"
+        style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;"></textarea>
+    </div>
+
+    <button type="submit" id="submit-paste" class="btn btn-primary btn-lg" style="align-self:center;min-width:220px">
+      Extraire les informations
+    </button>
+    <p class="hint" id="hint-normal-paste">⏱ L'extraction prend généralement 10 à 20 secondes</p>
+    <div id="progress-paste" class="extract-progress" style="display:none">
+      <div class="extract-progress-bar"><div class="extract-progress-fill"></div></div>
+      <p class="extract-progress-label"></p>
+    </div>
+  </form>
+
+<script>
+  /* ── Mode rapide ── */
+  document.getElementById('fast-mode-toggle').addEventListener('change', function() {
+    const v = this.checked ? '1' : '0';
+    document.getElementById('fast-mode-file').value = v;
+    document.getElementById('fast-mode-paste').value = v;
+  });
+
+  /* ── Onglets ── */
+  function switchTab(tab) {
+    const isFile = tab === 'file';
+    document.getElementById('form-file').style.display  = isFile ? '' : 'none';
+    document.getElementById('form-paste').style.display = isFile ? 'none' : '';
+    document.getElementById('tab-file').style.borderBottomColor  = isFile ? 'var(--gold)' : 'transparent';
+    document.getElementById('tab-file').style.color              = isFile ? 'var(--gold)' : 'var(--ink-soft)';
+    document.getElementById('tab-paste').style.borderBottomColor = isFile ? 'transparent' : 'var(--gold)';
+    document.getElementById('tab-paste').style.color             = isFile ? 'var(--ink-soft)' : 'var(--gold)';
+  }
+
+  /* ── Dropzone fichier ── */
+  const input = document.getElementById('pdf');
+  const fname = document.getElementById('filename');
+  const zone  = document.getElementById('dropzone');
+
+  const MAX_MO = 25;
+  input.addEventListener('change', () => {
+    const tooBig = [...input.files].filter(f => f.size > MAX_MO * 1024 * 1024);
+    if (tooBig.length) {
+      const keep = [...input.files].filter(f => f.size <= MAX_MO * 1024 * 1024);
+      const dt = new DataTransfer();
+      keep.forEach(f => dt.items.add(f));
+      input.files = dt.files;
+      alert('Fichier(s) au-dessus de ' + MAX_MO + ' Mo ignoré(s) : ' + tooBig.map(f => f.name).join(', '));
+      if (!keep.length) { fname.style.display = 'none'; return; }
+    }
+    if (input.files.length) {
+      fname.textContent = input.files.length === 1
+        ? input.files[0].name
+        : input.files.length + ' fichiers — ils seront traités l’un après l’autre';
+      fname.style.display = 'inline';
+      zone.style.borderColor = 'var(--gold)';
+      zone.style.background  = 'var(--gold-ultra)';
+    }
+  });
+
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const dtIn = e.dataTransfer;
+    if (dtIn && dtIn.files && dtIn.files.length) {
+      try {
+        const dt = new DataTransfer();
+        for (const f of dtIn.files) dt.items.add(f);
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change'));
+      } catch (_) {}
+      return;
+    }
+    // Drop direct depuis Outlook : pas de fichier exposé au navigateur, mais souvent
+    // le contenu du mail en texte → on bascule sur le mode "coller un email".
+    const txt = dtIn ? (dtIn.getData('text/plain') || '') : '';
+    if (txt.trim().length > 40) {
+      switchTab('paste');
+      setPasteReady(txt.trim());
+      return;
+    }
+    // Rien d'exploitable (Outlook classique ne donne rien au navigateur)
+    fname.textContent = '⚠️ Outlook n’a pas transmis le mail : glissez-le d’abord sur le Bureau puis déposez-le ici, ou copiez-collez son contenu (onglet « Coller un email »).';
+    fname.style.display = 'inline';
+  });
+
+  /* ── Zone coller email ── */
+  const pasteZone  = document.getElementById('paste-zone');
+  const pasteArea  = document.getElementById('paste-area');
+  const pasteEmpty = document.getElementById('paste-empty');
+  const pasteReady = document.getElementById('paste-ready');
+  const pasteBadge = document.getElementById('paste-badge');
+  const pasteInfo  = document.getElementById('paste-info');
+
+  function setPasteReady(text) {
+    pasteArea.value = text;
+    // Compter les lignes non vides pour l'info
+    const lines = text.split('\n').filter(l => l.trim()).length;
+    pasteBadge.textContent = 'Email collé — prêt à extraire';
+    pasteInfo.textContent  = lines + ' ligne' + (lines > 1 ? 's' : '') + ' copiée' + (lines > 1 ? 's' : '');
+    pasteEmpty.style.display = 'none';
+    pasteReady.style.display = '';
+    pasteZone.style.borderColor = 'var(--gold)';
+    pasteZone.style.background  = 'var(--gold-ultra)';
+  }
+
+  function clearPaste(e) {
+    if (e) e.stopPropagation();
+    pasteArea.value = '';
+    pasteEmpty.style.display = '';
+    pasteReady.style.display = 'none';
+    pasteZone.style.borderColor = '';
+    pasteZone.style.background  = '';
+  }
+
+  // Coller via Ctrl+V sur la zone ou le textarea caché
+  pasteZone.addEventListener('paste', function(e) {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (text && text.trim()) { e.preventDefault(); setPasteReady(text.trim()); }
+  });
+  pasteArea.addEventListener('paste', function(e) {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (text && text.trim()) { e.preventDefault(); setPasteReady(text.trim()); }
+  });
+
+  // Focus sur la zone → focus sur textarea caché pour capter Ctrl+V
+  pasteZone.addEventListener('focus', () => pasteArea.focus());
+  pasteZone.addEventListener('click', () => pasteArea.focus());
+
+  function validatePaste() {
+    if (!pasteArea.value.trim()) {
+      pasteZone.style.borderColor = '#e53e3e';
+      pasteZone.style.boxShadow = '0 0 0 3px rgba(229,62,62,0.15)';
+      setTimeout(() => { pasteZone.style.borderColor=''; pasteZone.style.boxShadow=''; }, 1500);
+      return false;
+    }
+    return true;
+  }
+
+  /* ── Progression par étapes (perçue — pas de télémétrie backend temps réel,
+     juste pour montrer que ça avance pendant les 10-20s d'extraction) ── */
+  var EXTRACT_STEPS = [
+    { at: 0,     pct: 12, label: '📤 Envoi du document…' },
+    { at: 1500,  pct: 30, label: '🔍 Lecture du contenu…' },
+    { at: 4000,  pct: 55, label: '🤖 Analyse par l’IA…' },
+    { at: 10000, pct: 80, label: '✨ Extraction des données…' },
+    { at: 18000, pct: 92, label: '🧾 Finalisation…' },
+  ];
+  ['file','paste'].forEach(function(mode) {
+    document.getElementById('form-' + mode).addEventListener('submit', function(event) {
+      // ponytail: validatePaste() (onsubmit) et ce listener tournent tous deux sur le
+      // même événement submit — s'il a déjà été annulé (validation échouée), ne pas
+      // démarrer l'animation de progression, sinon elle tourne indéfiniment sans requête.
+      if (event.defaultPrevented) return;
+      var btn = document.getElementById('submit-' + mode);
+      btn.disabled = true;
+      btn.textContent = '⏳ Extraction en cours…';
+      btn.style.opacity = '0.7';
+      document.getElementById('hint-normal-' + mode).style.display = 'none';
+      var box   = document.getElementById('progress-' + mode);
+      var fill  = box.querySelector('.extract-progress-fill');
+      var label = box.querySelector('.extract-progress-label');
+      box.style.display = 'block';
+      EXTRACT_STEPS.forEach(function(step) {
+        setTimeout(function() {
+          fill.style.transform = 'scaleX(' + (step.pct / 100) + ')'; // pas width : évite le layout thrash
+          label.textContent = step.label;
+        }, step.at);
+      });
+    });
+  });
+</script>

@@ -1,0 +1,10 @@
+<svg viewBox="0 0 250 90" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Reverso">
+  <g transform="translate(0,10)" stroke="#262220" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="8" y="6" width="40" height="52" rx="4"/>
+    <rect x="22" y="16" width="40" height="52" rx="4"/>
+    <line x1="30" y1="34" x2="54" y2="34"/>
+    <line x1="30" y1="44" x2="54" y2="44"/>
+    <line x1="30" y1="54" x2="50" y2="54" stroke="#b8863b" stroke-width="4"/>
+  </g>
+  <text x="90" y="58" font-family="Georgia, serif" font-size="32" fill="#262220">Reverso</text>
+</svg>

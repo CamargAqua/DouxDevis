@@ -1,0 +1,1160 @@
+{% extends "base.html" %}
+{% block title %}Vérification — {{ maison_name }}{% endblock %}
+{% block container_class %}container-review{% endblock %}
+{% block content %}
+<div class="review-layout">
+<div class="review-form-col">
+<section class="card">
+  <header style="margin-bottom:28px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <h1 style="font-family:Georgia,serif;font-size:26px;font-weight:400;margin:0">Vérification &amp; ajustement</h1>
+      {% if lot_mode %}
+      <a href="{{ url_for('lot') }}" style="font-size:12px;font-weight:700;color:var(--gold-dark,#8a6d1f);background:var(--gold-ultra,#F8F4E8);border:1px solid var(--gold-light,#D4B86A);border-radius:20px;padding:3px 11px;white-space:nowrap;text-decoration:none">← Retour au lot</a>
+      {% endif %}
+    </div>
+    <p class="lead" style="color:var(--ink-mid);font-size:14px">Vérifiez les données extraites, ajustez les prix, appliquez votre marge — puis générez.</p>
+  </header>
+
+  <form action="{{ url_for('generate') }}" method="post" enctype="multipart/form-data" class="form">
+
+    <!-- ── EN-TÊTE ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">📋</span>
+        <span class="section-title">En-tête du devis</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+
+        <!-- Marque — barre de recherche -->
+        <div id="field-marque">
+          <div style="font-size:12px;color:var(--ink-mid);font-weight:600;margin-bottom:8px;letter-spacing:.3px">Marque partenaire</div>
+          <div class="marque-search-wrap" id="marque-wrap">
+            <div class="marque-search-box">
+              <span class="marque-search-icon">🔍</span>
+              <input type="text" id="marque-search-input" autocomplete="off"
+                     placeholder="Rechercher ou saisir une marque…"
+                     value="{{ data.marque or '' }}">
+              <button type="button" id="marque-clear" class="marque-clear" style="display:none" onclick="clearMarque()">×</button>
+            </div>
+            <ul class="marque-dropdown" id="marque-dropdown"></ul>
+            <div id="marque-badge" class="marque-badge" style="display:none"></div>
+          </div>
+          <input type="hidden" name="marque" id="marque-value" value="{{ data.marque or '' }}">
+        </div>
+
+        <div class="grid grid-3">
+          <label class="field" id="field-sav-numero">Numéro SAV
+            <input type="text" name="sav_numero" value="{{ data.sav.numero or '' }}" required>
+          </label>
+          <label class="field" id="field-sav-date">Date
+            <input type="text" name="sav_date" id="sav-date" value="" placeholder="JJ.MM.AAAA">
+          </label>
+          <label class="field">Lieu
+            <input type="text" name="sav_lieu" value="{{ data.sav.lieu }}">
+          </label>
+        </div>
+
+        <label class="field" id="field-client-nom" style="max-width:360px">Nom du client
+          <input type="text" name="client_nom" value="{{ data.client.nom or '' }}" placeholder="NOM PRENOM" style="font-weight:600">
+        </label>
+      </div>
+    </div>
+
+    <!-- ── MONTRE ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">⌚</span>
+        <span class="section-title">Informations de la montre</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <div class="grid grid-3">
+          <label class="field" id="field-modele">Modèle<input type="text" name="modele" value="{{ data.montre.modele or '' }}"></label>
+          <label class="field" id="field-reference">Référence<input type="text" name="reference" value="{{ data.montre.reference or '' }}"></label>
+          <label class="field" id="field-serie">N° de série<input type="text" name="numero_serie" value="{{ data.montre.numero_serie or '' }}"></label>
+        </div>
+        <div class="grid grid-3">
+          <label class="field">Poids<input type="text" name="poids" value="{{ data.montre.poids or '' }}" placeholder="—"></label>
+          <label class="field">Métal<input type="text" name="metal" value="{{ data.montre.metal or '' }}" placeholder="Acier, Or blanc…"></label>
+          <label class="field">Taille<input type="text" name="taille" value="{{ data.montre.taille or '' }}" placeholder="41 mm"></label>
+        </div>
+        <label class="field" id="field-etat">État constaté
+          <textarea name="etat" rows="4" placeholder="Une ligne par constat…">{% if data.montre.etat is iterable and data.montre.etat is not string %}{% for line in data.montre.etat %}{{ line }}
+{% endfor %}{% else %}{{ data.montre.etat or '' }}{% endif %}</textarea>
+        </label>
+        <div class="photo-upload">
+          <div style="font-size:12px;color:var(--ink-mid);font-weight:600;letter-spacing:.3px">Photos <span style="font-weight:400;color:var(--ink-soft)">(facultatif, jpg/png/webp — 2 maximum, fond blanc)</span></div>
+          <div class="photo-thumbs" id="existing-montre" style="display:flex">
+            {% for name in montre_photo_files %}
+            <div class="photo-thumb">
+              <img src="{{ url_for('session_photo', token=token, name=name) }}" alt="photo pièce">
+              <input type="hidden" name="montre_photos_kept[]" value="{{ name }}">
+              <button type="button" class="photo-thumb-x" title="Retirer cette photo" onclick="this.closest('.photo-thumb').remove();if(window.updatePhotoMax_montre)updatePhotoMax_montre()">×</button>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="photo-thumbs" id="thumbs-montre"></div>
+          <label class="btn btn-ghost" id="add-montre-btn" style="cursor:pointer;font-size:13px;margin-top:8px;display:inline-block">
+            ＋ Ajouter des photos
+            <input type="file" name="photos_montre" data-photo-sec="montre" data-photo-max="2" data-existing="existing-montre" multiple accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" style="display:none">
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── NOTES PARTENAIRE ── -->
+    <div class="form-section{% if not data.notes_partenaire %} collapsed{% endif %}">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">📝</span>
+        <span class="section-title">Notes</span>
+        {% if data.notes_partenaire %}<span class="section-badge nec">Auto</span>{% endif %}
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <label class="field">
+          <span style="font-size:12px;color:var(--ink-mid);font-weight:600;letter-spacing:.3px">Notes à afficher sur le devis <span style="font-weight:400;color:var(--ink-soft)">(entre « Informations de la montre » et le tableau de travaux)</span></span>
+          <textarea name="notes_partenaire" rows="3" placeholder="Notes extraites du devis partenaire, ou à saisir manuellement…" style="margin-top:6px">{{ data.notes_partenaire or '' }}</textarea>
+        </label>
+      </div>
+    </div>
+
+    <!-- ── TRAVAIL NÉCESSAIRE ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">🔧</span>
+        <span class="section-title">Travail nécessaire</span>
+        <label class="toggle-switch-wrap section-header-toggle" onclick="event.stopPropagation()">
+          <span class="toggle-switch">
+            <input type="checkbox" id="coeff-nec-toggle" {{ '' if data.coeff_nec_enabled is sameas false else 'checked' }}>
+            <span class="toggle-slider"></span>
+          </span>
+          <span class="toggle-switch-lbl">Coeff.</span>
+        </label>
+        <span class="section-badge nec">Facturation</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <input type="hidden" name="service_complet" value="{{ data.service_complet_description or '' }}">
+
+        <div class="interventions" id="nec-lines">
+          {% for line in (data.interventions_necessaires or [{'description':'','prix':''}]) %}
+          {% set is_offert   = line.prix_label == 'OFFERT' %}
+          {% set is_incl     = line.prix_label == 'INCL' %}
+          {% set base_val    = '' if (is_offert or is_incl) else ('%.2f'|format(line.prix or 0)) %}
+          {% set display_val = '' if (is_offert or is_incl) else ('%.2f'|format(line.prix_client if line.prix_client else (line.prix or 0))) %}
+          <div class="intervention-line {% if is_offert %}is-offert{% endif %}{% if is_incl %} is-incl{% endif %}">
+            <span class="drag-handle" title="Déplacer" onmousedown="initHandleDrag(event, this.closest('.intervention-line'))">⠿</span>
+            <input type="text" name="nec_description[]" value="{{ line.description or '' }}" placeholder="Intitulé" data-phrase-assist>
+            <div class="prix-wrapper">
+              <input type="text" name="nec_prix[]" class="prix-input"
+                     data-base="{{ base_val }}"
+                     value="{{ display_val }}"
+                     placeholder="0,00">
+              {% if not (is_offert or is_incl) and line.prix %}
+              <span class="prix-info-btn" title="HT: {{ '%.2f'|format(line.prix or 0) }}€">ⓘ
+                <span class="tooltip">HT: {{ '%.2f'|format(line.prix or 0) }}€</span>
+              </span>
+              {% endif %}
+            </div>
+            <input type="hidden" name="nec_base_prix[]" class="base-prix-input" value="{{ base_val }}">
+            <input type="hidden" name="nec_label[]" class="label-input" value="{{ 'OFFERT' if is_offert else ('INCL' if is_incl else '') }}">
+            {% if not (loop.first and data.service_complet_description) %}
+            <button type="button" class="toggle-incl {% if is_incl %}active{% endif %}" onclick="toggleIncl(this)">
+              <span class="dot"></span>INCL
+            </button>
+            <button type="button" class="toggle-offert {% if is_offert %}active{% endif %}" onclick="toggleOffert(this)">
+              <span class="dot"></span>OFFERT
+            </button>
+            {% endif %}
+            <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>
+          </div>
+          {% endfor %}
+        </div>
+        <button type="button" class="btn-add" onclick="addLine('nec')">＋ Ajouter une intervention</button>
+      </div>
+    </div>
+
+    <!-- ── TARIFICATION ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">💶</span>
+        <span class="section-title">Tarification</span>
+        <span class="section-badge nec" id="coeff-header-badge">×1,00</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <div class="coeff-block">
+
+          <!-- Ligne 1 : label + nom de marque -->
+          <div class="coeff-top-row">
+            <span class="coeff-title">Coefficient</span>
+            <span id="coeff-brand-tag" class="coeff-brand-tag" style="display:none"></span>
+          </div>
+
+          <!-- Ligne 2 : presets + champ perso (masqué si coeff Travail désactivé) -->
+          <div class="coeff-controls" id="coeff-controls">
+            <div class="seg-ctrl" id="coeff-presets">
+              <button type="button" class="seg-btn" data-coeff="1.30" onclick="setCoeff(1.30)">×1,30</button>
+              <button type="button" class="seg-btn" data-coeff="1.40" onclick="setCoeff(1.40)">×1,40</button>
+              <button type="button" class="seg-btn" data-coeff="1.50" onclick="setCoeff(1.50)">×1,50</button>
+              <button type="button" class="seg-btn" data-coeff="1.60" onclick="setCoeff(1.60)">×1,60</button>
+              <button type="button" class="seg-btn" data-coeff="1.70" onclick="setCoeff(1.70)">×1,70</button>
+              <button type="button" class="seg-btn" data-coeff="1.80" onclick="setCoeff(1.80)">×1,80</button>
+            </div>
+            <label class="coeff-perso-wrap">
+              <span class="coeff-perso-lbl">Perso</span>
+              <input type="number" id="coeff-input" min="1" max="5" step="0.0001" value="1.00">
+              <span class="coeff-perso-unit">×</span>
+            </label>
+          </div>
+
+          <!-- Ligne 3 : prix partenaire → prix client -->
+          <div class="coeff-prices-row" id="coeff-prices-row">
+            <div class="coeff-price-item">
+              <span class="coeff-price-lbl">Prix partenaire</span>
+              <span class="coeff-price-val">€&nbsp;<span id="total-display">0,00</span></span>
+            </div>
+            <div class="coeff-price-sep">→</div>
+            <div class="coeff-price-item coeff-price-item--gold">
+              <span class="coeff-price-lbl">Prix client</span>
+              <span class="coeff-price-val coeff-price-val--gold">€&nbsp;<span id="total-final-display">0,00</span></span>
+              <span class="coeff-gain" id="coeff-gain"></span>
+            </div>
+          </div>
+
+        </div>
+        <input type="hidden" name="total_ttc"   id="total-override-input">
+        <input type="hidden" name="coeff"        id="coeff-hidden"        value="{{ data.coeff or 1.0 }}">
+        <input type="hidden" name="coeff_opt"    id="coeff-opt-hidden"    value="{{ data.coeff_opt or '' }}">
+        <input type="hidden" name="coeff_base"   id="coeff-base-hidden"   value="{{ data.coeff_base or 'ttc' }}">
+        <input type="hidden" name="coeff_opt_base" id="coeff-opt-base-hidden" value="{{ data.coeff_opt_base or '' }}">
+        <input type="hidden" name="coeff_split_nec" id="coeff-split-nec-hidden" value="{{ '1' if data.coeff_split_nec else '0' }}">
+        <input type="hidden" name="coeff_nec_enabled" id="coeff-nec-enabled-hidden" value="{{ '0' if data.coeff_nec_enabled is sameas false else '1' }}">
+        <input type="hidden" name="coeff_opt_enabled" id="coeff-opt-enabled-hidden" value="{{ '0' if data.coeff_opt_enabled is sameas false else '1' }}">
+      </div>
+    </div>
+
+    <!-- ── TRAVAIL OPTIONNEL ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">✨</span>
+        <span class="section-title">Travail optionnel</span>
+        <label class="toggle-switch-wrap section-header-toggle" onclick="event.stopPropagation()">
+          <span class="toggle-switch">
+            <input type="checkbox" id="coeff-opt-toggle" {{ '' if data.coeff_opt_enabled is sameas false else 'checked' }}>
+            <span class="toggle-slider"></span>
+          </span>
+          <span class="toggle-switch-lbl">Coeff.</span>
+        </label>
+        <span class="section-badge opt">Options</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <div class="interventions" id="opt-lines">
+          {% for line in (data.interventions_optionnelles or []) %}
+          <div class="intervention-line has-photo-slot">
+            <span class="drag-handle" title="Déplacer" onmousedown="initHandleDrag(event, this.closest('.intervention-line'))">⠿</span>
+            <label class="opt-photo-btn" title="Ajouter une photo à cette option">
+              <span class="opt-photo-icon" {% if line.photo_file %}style="display:none"{% endif %}>📷</span>
+              <img class="opt-photo-preview{{ ' visible' if line.photo_file }}" alt=""
+                   {% if line.photo_file %}src="{{ url_for('session_photo', token=token, name=line.photo_file) }}"{% endif %}>
+              <input type="hidden" name="opt_photo_file[]" value="{{ line.photo_file or '' }}">
+              <input type="file" name="opt_photo[]" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onchange="optPhotoPreview(this)" style="display:none">
+            </label>
+            <input type="text" name="opt_description[]" value="{{ line.description or '' }}" placeholder="Option proposée" data-phrase-assist>
+            <div class="prix-wrapper">
+              <input type="text" name="opt_prix[]" class="prix-input"
+                     data-base="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
+                     value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}"
+                     placeholder="0,00">
+              {% if line.prix %}
+              <span class="prix-info-btn" title="HT: {{ '%.2f'|format(line.prix) }}€">ⓘ
+                <span class="tooltip">HT: {{ '%.2f'|format(line.prix) }}€</span>
+              </span>
+              {% endif %}
+            </div>
+            <input type="hidden" name="opt_base_prix[]" class="base-prix-input" value="{% if line.prix %}{{ '%.2f'|format(line.prix) }}{% endif %}">
+            <input type="hidden" name="opt_label[]" class="label-input" value="{{ line.prix_label or '' }}">
+            <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>
+            <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove()">×</button>
+          </div>
+          {% endfor %}
+        </div>
+        <button type="button" class="btn-add" onclick="addLine('opt')">＋ Ajouter une option</button>
+        <p class="hint" style="margin-top:6px">📷 sur une ligne = photo attachée à cette option précise, affichée sur le devis en face du prix.</p>
+      </div>
+    </div>
+
+    <!-- ── DÉLAI ── -->
+    <div class="form-section">
+      <div class="form-section-header" onclick="toggleSection(this)">
+        <span class="section-icon">📅</span>
+        <span class="section-title">Délai estimé</span>
+        <span class="section-chevron">▾</span>
+      </div>
+      <div class="form-section-body">
+        <div class="delai-pills">
+          {% for d in ['4 semaines','4 à 6 semaines','6 à 8 semaines','8 à 10 semaines','8 à 12 semaines','Sur devis'] %}
+          <span class="delai-pill {% if (data.delai or '4 à 6 semaines') == d %}selected{% endif %}"
+                onclick="selectDelai(this,'{{ d }}')">{{ d }}</span>
+          {% endfor %}
+        </div>
+        <input type="text" name="delai" id="delai-input"
+               value="{{ data.delai or '4 à 6 semaines' }}"
+               class="delai-custom" placeholder="Délai personnalisé" style="margin-top:10px">
+      </div>
+    </div>
+
+    <!-- ── VALIDATION BLOC ── -->
+    <div id="validation-bloc" style="margin-bottom:16px;display:none">
+      <div id="validation-errors" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px 18px;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:#b91c1c;letter-spacing:.5px;margin-bottom:8px">❌ ERREURS — Génération impossible</div>
+        <ul id="errors-list" style="margin:0;padding-left:18px;font-size:13px;color:#991b1b"></ul>
+      </div>
+      <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:14px 18px">
+        <div style="font-size:12px;font-weight:700;color:#92400e;letter-spacing:.5px;margin-bottom:8px">⚠️ Vérifiez avant de générer</div>
+        <ul style="margin:0;padding-left:18px;font-size:13px;color:#78350f">
+          <li>Le <strong>total HT partenaire</strong> correspond-il exactement au devis original ?</li>
+          <li>La <strong>marque</strong> est-elle correcte (détermine le coefficient) ?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="form-actions-sticky">
+      {% if lot_mode %}
+      <a href="{{ url_for('lot') }}" class="btn btn-ghost">← Retour au lot</a>
+      <button type="submit" id="btn-generate" class="btn btn-gold btn-lg">Enregistrer &amp; revenir au lot →</button>
+      {% else %}
+      <a href="{{ url_for('index') }}" class="btn btn-ghost">← Recommencer</a>
+      <button type="submit" id="btn-generate" class="btn btn-gold btn-lg">Générer le devis →</button>
+      {% endif %}
+    </div>
+  </form>
+</section>
+</div>
+
+{% if source_kind == "pdf" %}
+<aside class="review-source-col">
+  <div class="source-pdf-card">
+    <div class="source-pdf-bar">
+      <span class="source-pdf-icon" aria-hidden="true">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>
+      </span>
+      <div class="source-pdf-meta">
+        <div class="source-pdf-title">Devis source{% if data.marque %} — {{ data.marque }}{% endif %}</div>
+        <div class="source-pdf-sub">Document partenaire (PDF)</div>
+      </div>
+      <div class="source-pdf-actions">
+        <a class="source-pdf-btn" href="{{ url_for('source_file', token=token) }}" download title="Télécharger" aria-label="Télécharger le PDF">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </a>
+        <a class="source-pdf-btn" href="{{ url_for('source_file', token=token) }}" target="_blank" rel="noopener" title="Ouvrir dans un nouvel onglet" aria-label="Ouvrir dans un nouvel onglet">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/></svg>
+        </a>
+      </div>
+    </div>
+    <iframe class="source-pdf-frame" src="{{ url_for('source_file', token=token) }}#toolbar=0&navpanes=0&view=FitH" title="Devis source (PDF)"></iframe>
+  </div>
+</aside>
+{% elif source_kind == "text" %}
+<aside class="review-source-col">
+  <div class="source-mail-card">
+    <div class="mail-head">
+      <div class="mail-avatar" id="mail-avatar">@</div>
+      <div class="mail-head-meta">
+        <div class="mail-subject" id="mail-subject">Devis source</div>
+        <div class="mail-sender" id="mail-sender">Email d'origine</div>
+      </div>
+    </div>
+    <div class="mail-body">
+      <div class="mail-key-label" id="mail-key-label" hidden>Lignes chiffrées détectées</div>
+      <div class="mail-key-list" id="mail-key-list"></div>
+      <button type="button" class="mail-toggle" id="mail-toggle" hidden aria-expanded="false">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        <span>Voir l'email complet</span>
+      </button>
+      <pre class="mail-full" id="mail-full" hidden></pre>
+    </div>
+    <div hidden id="mail-raw">{{ source_text }}</div>
+  </div>
+</aside>
+<script>
+(function() {
+  const rawEl = document.getElementById('mail-raw');
+  if (!rawEl) return;
+  const norm = (rawEl.textContent || '').replace(/\r\n/g, '\n');
+
+  let sender = '', subject = '';
+  const lines = norm.split('\n');
+  let i = 0;
+  for (; i < lines.length; i++) {
+    if (/^Exp[ée]diteur\s*:/i.test(lines[i]))   sender  = lines[i].split(':').slice(1).join(':').trim();
+    else if (/^Objet\s*:/i.test(lines[i]))      subject = lines[i].split(':').slice(1).join(':').trim();
+    else break;
+  }
+  while (i < lines.length && lines[i].trim() === '') i++;
+  const body = lines.slice(i).join('\n').trim();
+
+  function initials(s) {
+    const email = (s.match(/[\w.+-]+@[\w.-]+/) || [])[0];
+    if (email) { const [loc, dom] = email.split('@'); return ((loc[0] || '') + (dom[0] || '')).toUpperCase(); }
+    const p = s.trim().split(/\s+/);
+    return (((p[0] || '')[0] || '') + ((p[1] || '')[0] || '')).toUpperCase() || '@';
+  }
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  const AMOUNT = /(\d[\d  ]*(?:[.,]\d+)?\s*(?:€|euros?)(?:\s*(?:HT|TTC))?|€\s*\d[\d  ]*(?:[.,]\d+)?)/gi;
+  function highlight(line) { return esc(line).replace(AMOUNT, '<span class="mail-amt">$1</span>'); }
+  function isKey(line) { return /€/.test(line) || /\d[\d  .,]*\s*(?:euros?|HT|TTC)\b/i.test(line); }
+
+  if (subject) document.getElementById('mail-subject').textContent = subject;
+  if (sender)  document.getElementById('mail-sender').textContent  = sender;
+  document.getElementById('mail-avatar').textContent = initials(sender || subject || '@');
+
+  const keyLines = body.split('\n').map(l => l.trim()).filter(l => l && isKey(l));
+  const list = document.getElementById('mail-key-list');
+  const fullEl = document.getElementById('mail-full');
+  fullEl.textContent = body;
+
+  if (keyLines.length > 0) {
+    document.getElementById('mail-key-label').hidden = false;
+    list.innerHTML = keyLines.map(l => `<div class="mail-key-row">${highlight(l)}</div>`).join('');
+    const toggle = document.getElementById('mail-toggle');
+    toggle.hidden = false;
+    toggle.addEventListener('click', () => {
+      const open = fullEl.hidden;
+      fullEl.hidden = !open;
+      toggle.classList.toggle('open', open);
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.querySelector('span').textContent = open ? "Masquer l'email complet" : "Voir l'email complet";
+    });
+  } else {
+    fullEl.hidden = false;
+  }
+})();
+</script>
+{% endif %}
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   BASE DE DONNÉES MARQUES (top 20 + extras)
+═══════════════════════════════════════════════ */
+const MARQUES_DB = [
+  'Rolex','Patek Philippe','Audemars Piguet','Richard Mille',
+  'Cartier','Omega','IWC Schaffhausen','Jaeger-LeCoultre',
+  'Vacheron Constantin','Breguet','A. Lange & Söhne','Hublot',
+  'TAG Heuer','Breitling','Chanel','Bvlgari','Chopard',
+  'Tudor','Longines','Panerai','Girard-Perregaux','Zenith',
+  'Blancpain','Grand Seiko','March LA.B','Piaget','Bulgari',
+  'Hermès','Louis Vuitton','Frederique Constant',
+];
+
+/* ── Date du jour (toujours) ── */
+(function() {
+  const f = document.getElementById('sav-date');
+  if (f) {
+    const d  = new Date();
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    f.value  = `${dd}.${mm}.${d.getFullYear()}`;
+  }
+})();
+
+/* ── Marque search ── */
+(function() {
+  const inp     = document.getElementById('marque-search-input');
+  const hidden  = document.getElementById('marque-value');
+  const drop    = document.getElementById('marque-dropdown');
+  const badge   = document.getElementById('marque-badge');
+  const clearBtn= document.getElementById('marque-clear');
+
+  function showBadge(val) {
+    if (!val) return hideBadge();
+    badge.textContent = val;
+    badge.style.display = 'inline-flex';
+    clearBtn.style.display = 'flex';
+    hidden.value = val;
+    drop.style.display = 'none';
+    drop.innerHTML = '';
+  }
+
+  function hideBadge() {
+    badge.style.display = 'none';
+    clearBtn.style.display = 'none';
+    hidden.value = '';
+  }
+
+  // Init si marque déjà définie
+  const init = inp.value.trim();
+  if (init) {
+    showBadge(init);
+    inp.value = '';
+    inp.placeholder = init;
+    // Appeller selectMarque après que l'override soit appliqué
+    setTimeout(() => { selectMarque(init); }, 0);
+  }
+
+  inp.addEventListener('input', () => {
+    const q = inp.value.trim().toLowerCase();
+    hideBadge();
+    if (!q) { drop.style.display = 'none'; drop.innerHTML = ''; return; }
+
+    const matches = MARQUES_DB.filter(m => m.toLowerCase().includes(q));
+    drop.innerHTML = '';
+    drop.style.display = 'block';
+
+    matches.slice(0, 8).forEach(m => {
+      const li = document.createElement('li');
+      li.className = 'marque-option';
+      const hl = m.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi'),
+                           s => `<mark>${s}</mark>`);
+      li.innerHTML = hl;
+      li.addEventListener('mousedown', e => { e.preventDefault(); selectMarque(m); });
+      drop.appendChild(li);
+    });
+
+    // Option "Ajouter"
+    if (!MARQUES_DB.some(m => m.toLowerCase() === q)) {
+      const li = document.createElement('li');
+      li.className = 'marque-option marque-add';
+      li.innerHTML = `＋ Utiliser "<strong>${inp.value.trim()}</strong>"`;
+      li.addEventListener('mousedown', e => { e.preventDefault(); selectMarque(inp.value.trim()); });
+      drop.appendChild(li);
+    }
+  });
+
+  inp.addEventListener('blur', () => {
+    setTimeout(() => { drop.style.display = 'none'; }, 150);
+    if (!hidden.value && inp.value.trim()) selectMarque(inp.value.trim());
+  });
+
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); if (inp.value.trim()) selectMarque(inp.value.trim()); }
+    if (e.key === 'Escape') { drop.style.display = 'none'; }
+  });
+
+  window.selectMarque = function(val) {
+    inp.value = '';
+    inp.placeholder = val;
+    showBadge(val);
+  };
+
+  window.clearMarque = function() {
+    hidden.value = '';
+    inp.value = '';
+    inp.placeholder = 'Rechercher ou saisir une marque…';
+    hideBadge();
+    inp.focus();
+  };
+})();
+
+/* ── Sections toggle ── */
+function toggleSection(h) { h.closest('.form-section').classList.toggle('collapsed'); }
+
+/* ── Ancrage depuis "Corriger →" (done page) ── */
+(function() {
+  var hash = window.location.hash.replace('#', '');
+  if (!hash) return;
+  var target = document.getElementById(hash);
+  if (!target) return;
+  // Ouvrir la section parente si elle est repliée
+  var section = target.closest('.form-section');
+  if (section) section.classList.remove('collapsed');
+  // Scroll + flash de surbrillance
+  setTimeout(function() {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.style.transition = 'box-shadow .2s';
+    target.style.boxShadow = '0 0 0 3px var(--gold)';
+    setTimeout(function() { target.style.boxShadow = ''; }, 2000);
+  }, 200);
+})();
+
+/* ── Délai pills ── */
+function selectDelai(el, val) {
+  document.querySelectorAll('.delai-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('delai-input').value = val;
+}
+document.getElementById('delai-input').addEventListener('input', () =>
+  document.querySelectorAll('.delai-pill').forEach(p => p.classList.remove('selected')));
+
+/* ── Coefficients par marque (lus depuis coefficients.json) ── */
+const BRAND_COEFFS_RAW = {{ coefficients_json | safe }};
+const BRAND_COEFFS = {};
+// Extraire les coefficients (compatibilité ancienne et nouvelle structure)
+Object.entries(BRAND_COEFFS_RAW).forEach(([brand, data]) => {
+  BRAND_COEFFS[brand] = typeof data === 'object' ? data.coeff : data;
+});
+const DEFAULT_COEFF = 1.50;
+
+// Helper pour trouver la clé de marque indépendamment de la casse
+function findBrandKey(query) {
+  const lowerQuery = query.toLowerCase();
+  for (const key of Object.keys(BRAND_COEFFS_RAW)) {
+    if (key.toLowerCase() === lowerQuery) {
+      return key;
+    }
+  }
+  return null;
+}
+
+/* ── Toggles coefficient Travail / Options ── */
+function necCoeffEnabled() { return document.getElementById('coeff-nec-toggle').checked; }
+function optCoeffEnabled() { return document.getElementById('coeff-opt-toggle').checked; }
+
+function syncCoeffToggleUI() {
+  const necOn = necCoeffEnabled();
+  const optOn = optCoeffEnabled();
+  document.getElementById('coeff-nec-enabled-hidden').value = necOn ? '1' : '0';
+  document.getElementById('coeff-opt-enabled-hidden').value = optOn ? '1' : '0';
+  document.getElementById('coeff-controls').style.display = necOn ? 'flex' : 'none';
+}
+
+/* ── Toggle OFFERT ── */
+function toggleOffert(btn) {
+  const line   = btn.closest('.intervention-line');
+  const prix   = line.querySelector('.prix-input');
+  const label  = line.querySelector('.label-input');
+  const inclBtn = line.querySelector('.toggle-incl');
+  const on     = !btn.classList.contains('active');
+  if (on && inclBtn && inclBtn.classList.contains('active')) {
+    inclBtn.classList.remove('active');
+    line.classList.remove('is-incl');
+  }
+  btn.classList.toggle('active', on);
+  line.classList.toggle('is-offert', on);
+  label.value = on ? 'OFFERT' : '';
+  if (on) {
+    // Sauvegarder la valeur affichée ET la base HT — NE PAS écraser data-base
+    prix.dataset.savedDisplay = prix.value;
+    prix.dataset.savedBase    = prix.dataset.base || '';
+    prix.value = '';
+  } else {
+    // Restaurer exactement ce qui était affiché
+    prix.value          = prix.dataset.savedDisplay || '';
+    prix.dataset.base   = prix.dataset.savedBase    || '';
+  }
+  updateTotal();
+}
+
+/* ── Toggle INCL ── */
+function toggleIncl(btn) {
+  const line      = btn.closest('.intervention-line');
+  const prix      = line.querySelector('.prix-input');
+  const label     = line.querySelector('.label-input');
+  const offertBtn = line.querySelector('.toggle-offert');
+  const on        = !btn.classList.contains('active');
+  if (on && offertBtn && offertBtn.classList.contains('active')) {
+    offertBtn.classList.remove('active');
+    line.classList.remove('is-offert');
+  }
+  btn.classList.toggle('active', on);
+  line.classList.toggle('is-incl', on);
+  label.value = on ? 'INCL' : '';
+  if (on) {
+    prix.dataset.savedDisplay = prix.value;
+    prix.dataset.savedBase    = prix.dataset.base || '';
+    prix.value = '';
+  } else {
+    prix.value          = prix.dataset.savedDisplay || '';
+    prix.dataset.base   = prix.dataset.savedBase    || '';
+  }
+  updateTotal();
+}
+
+/* ── Coefficient : delta réparti proportionnellement sur les lignes ── */
+function fmt(n) { return n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+// Coeff Options courant (fallback sur coeff Travail si non défini pour la marque)
+function getCoeffOpt(coeff) {
+  const raw = document.getElementById('coeff-opt-hidden').value;
+  return raw ? (parseFloat(raw) || coeff) : coeff;
+}
+
+// Breitling (coeff_split_nec) : la ligne "SERVICE COMPLET" / "RÉVISION COMPLÈTE"
+// (1ère ligne nécessaire si service_complet_description renseigné) part du prix HT
+// partenaire converti en TTC (×1.20, TVA 20%) puis multiplié par le coeff Travail ;
+// toutes les autres lignes nécessaire utilisent le coeff Options (base HT), comme
+// la section Options.
+const TVA_RATE = 1.20;
+function splitNecActive() {
+  return document.getElementById('coeff-split-nec-hidden').value === '1';
+}
+function hasServiceComplet() {
+  const inp = document.querySelector('input[name="service_complet"]');
+  return !!(inp && inp.value.trim());
+}
+function necLineCoeff(idx, coeff, coeffOpt) {
+  if (!splitNecActive()) return coeff;
+  return (idx === 0 && hasServiceComplet()) ? (coeff * TVA_RATE) : coeffOpt;
+}
+
+// Applique le coefficient sur chaque ligne (répartition proportionnelle du delta = x coeff)
+// Pour Omega (base HT) : inp.value = prix_HT × coeff ; pour les autres : prix_TTC × coeff
+function applyCoeffToLines(coeff, force) {
+  const coeffOpt = getCoeffOpt(coeff);
+  const sections = [
+    ['#nec-lines', necCoeffEnabled(), true],
+    ['#opt-lines', optCoeffEnabled(), false],
+  ];
+  sections.forEach(([selector, enabled, isNec]) => {
+    document.querySelectorAll(selector + ' .intervention-line').forEach((line, idx) => {
+      const lbl = line.querySelector('.label-input').value;
+      if (lbl === 'OFFERT' || lbl === 'INCL') return;
+      const inp = line.querySelector('.prix-input');
+      if (!inp.dataset.base && inp.value) inp.dataset.base = inp.value;
+      const lineCoeff = isNec ? necLineCoeff(idx, coeff, coeffOpt) : coeff;
+      if (!enabled) {
+        // coeff désactivé : revenir au prix HT d'origine trouvé sur le devis
+        if (force) {
+          const base = parseFloat((inp.dataset.base || '0').replace(',','.'));
+          if (!isNaN(base) && base > 0) inp.value = base.toFixed(2);
+        }
+        return;
+      }
+      const base = parseFloat((inp.dataset.base || '0').replace(',','.'));
+      if (!isNaN(base) && base > 0) {
+        // Sur le chargement initial (force=false), ne pas écraser si value est déjà
+        // le prix_client (différent de la base HT) — évite le drift de précision.
+        const current = parseFloat((inp.value || '0').replace(',','.'));
+        const computed = Math.round(base * lineCoeff * 100) / 100;
+        if (force || Math.abs(current - computed) > 0.5 || current === base)
+          inp.value = computed.toFixed(2);
+      }
+    });
+  });
+}
+
+function refreshTotals() {
+  const coeff     = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+  const coeffOpt  = getCoeffOpt(coeff);
+  const coeffBase = document.getElementById('coeff-base-hidden').value || 'ttc';
+  const necOn     = necCoeffEnabled();
+
+  let base = 0, clientBrut = 0;
+  document.querySelectorAll('#nec-lines .intervention-line').forEach((line, idx) => {
+    const lbl = line.querySelector('.label-input').value;
+    if (lbl === 'OFFERT' || lbl === 'INCL') return;
+    const inp = line.querySelector('.prix-input');
+    const b = parseFloat((inp.dataset.base || '0').replace(',','.'));
+    const v = parseFloat((inp.value    || '0').replace(',','.'));
+    if (!isNaN(b)) base += b; // prix fournisseur — toujours calculé, même coeff Travail désactivé
+    const lineCoeff = necLineCoeff(idx, coeff, coeffOpt);
+    if (necOn) {
+      if (!isNaN(b) && b > 0) clientBrut += Math.round(b * lineCoeff); else if (!isNaN(v)) clientBrut += Math.round(v);
+    } else if (!isNaN(v)) {
+      // Coeff Travail désactivé : la valeur saisie est directement le prix client final
+      clientBrut += Math.round(v);
+    }
+  });
+
+  // Pour Omega (HT) : prix_HT × coeff = prix_TTC_client directement (pas de ×1.20 supplémentaire)
+  // Le coefficient intègre déjà la conversion HT→TTC
+  const clientTTC = clientBrut;
+  // Total client arrondi au multiple de 5 supérieur (le backend ajuste la dernière ligne).
+  // Si le coeff Travail est désactivé, les prix saisis sont déjà définitifs : pas de ré-arrondi.
+  const clientTTCRounded = necOn
+    ? (clientTTC > 0 ? Math.ceil(clientTTC / 5 - 1e-9) * 5 : clientTTC)
+    : clientTTC;
+
+  const pLblEl = document.querySelector('.coeff-price-item:first-child .coeff-price-lbl');
+  const cLblEl = document.querySelector('.coeff-price-item--gold .coeff-price-lbl');
+  if (pLblEl) pLblEl.textContent = coeffBase === 'ht' ? 'Prix partenaire (HT)' : 'Prix partenaire';
+  if (cLblEl) cLblEl.textContent = 'Prix client (TTC)';
+
+  document.getElementById('total-display').textContent = fmt(base);
+  document.getElementById('total-final-display').textContent = fmt(clientTTCRounded);
+  document.getElementById('total-override-input').value = clientTTCRounded.toFixed(2);
+  document.getElementById('coeff-hidden').value = coeff.toFixed(4);
+
+  document.getElementById('coeff-prices-row').style.display = 'flex';
+
+  const gain = clientTTCRounded - base;
+  const gainEl = document.getElementById('coeff-gain');
+  gainEl.textContent = gain > 0.01 ? `+ ${fmt(gain)} €` : '';
+  gainEl.style.color = gain > 0.01 ? '#4CAF7D' : 'transparent';
+
+  const coeffLabel = necOn ? `×${coeff.toFixed(2).replace('.',',')}` : 'OFF';
+  document.getElementById('coeff-header-badge').textContent = coeffLabel;
+
+  document.querySelectorAll('#coeff-presets .seg-btn').forEach(b =>
+    b.classList.toggle('active', Math.abs(parseFloat(b.dataset.coeff) - coeff) < 0.001));
+}
+
+// Arrondit au multiple de 5 supérieur (identique au backend)
+function ceil5(v) { return v > 0 ? Math.ceil((Math.round(v * 100) / 100 - 0.01) / 5) * 5 : v; }
+
+function roundInputs() {
+  var coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+  var coeffOpt = getCoeffOpt(coeff);
+
+  // ── NÉCESSAIRES ──
+  // Si le coeff Travail est désactivé, les valeurs saisies sont définitives : pas d'arrondi.
+  var necLines = necCoeffEnabled() ? [...document.querySelectorAll('#nec-lines .intervention-line')].filter(function(l) {
+    var lbl = l.querySelector('.label-input').value;
+    return lbl !== 'OFFERT' && lbl !== 'INCL';
+  }) : [];
+  if (necLines.length > 0) {
+    if (splitNecActive()) {
+      // Ligne "service complet" : prix HT partenaire converti en TTC (×1.20) puis
+      // ×coeff ; les autres lignes nécessaire suivent le coeff Options (HT), ceil5
+      // par ligne — comme la section Options.
+      var restLines = necLines;
+      if (hasServiceComplet()) {
+        var serviceInp = necLines[0].querySelector('.prix-input');
+        var serviceBase = parseFloat((serviceInp.dataset.base || '0').replace(',', '.')) || 0;
+        var serviceVal = serviceBase > 0 ? ceil5(serviceBase * TVA_RATE * coeff) : ceil5(parseFloat(serviceInp.value || '0') || 0);
+        if (serviceVal > 0) serviceInp.value = serviceVal.toFixed(2);
+        restLines = necLines.slice(1);
+      }
+      restLines.forEach(function(l) {
+        var inp  = l.querySelector('.prix-input');
+        var base = parseFloat((inp.dataset.base || '0').replace(',', '.')) || 0;
+        var v    = base > 0 ? ceil5(base * coeffOpt) : ceil5(parseFloat(inp.value || '0') || 0);
+        if (v > 0) inp.value = v.toFixed(2);
+      });
+    } else {
+      // ceil5 sur le TOTAL (sum_HT × coeff), dernière ligne ajustée
+      var totalHT = 0;
+      necLines.forEach(function(l) {
+        totalHT += parseFloat((l.querySelector('.prix-input').dataset.base || '0').replace(',', '.')) || 0;
+      });
+      var totalCible = ceil5(totalHT * coeff);
+
+      // Toutes les lignes sauf la dernière → ceil5(base HT × coeff)
+      var otherSum = 0;
+      necLines.slice(0, -1).forEach(function(l) {
+        var inp  = l.querySelector('.prix-input');
+        var base = parseFloat((inp.dataset.base || '0').replace(',', '.')) || 0;
+        var v    = base > 0 ? ceil5(base * coeff) : ceil5(parseFloat(inp.value || '0') || 0);
+        inp.value = v.toFixed(2);
+        otherSum += v;
+      });
+      // Dernière ligne = totalCible − somme des autres (automatiquement multiple de 5)
+      var lastInp = necLines[necLines.length - 1].querySelector('.prix-input');
+      var lastVal = totalCible - otherSum;
+      if (lastVal > 0) lastInp.value = lastVal.toFixed(2);
+    }
+  }
+
+  // ── OPTIONS : ceil5 par ligne avec coeff_opt si dispo ──
+  // Si le coeff Options est désactivé, les valeurs saisies sont définitives : pas d'arrondi.
+  if (optCoeffEnabled()) {
+    document.querySelectorAll('#opt-lines .intervention-line').forEach(function(line) {
+      var lbl = line.querySelector('.label-input').value;
+      if (lbl === 'OFFERT' || lbl === 'INCL') return;
+      var inp  = line.querySelector('.prix-input');
+      var base = parseFloat((inp.dataset.base || '0').replace(',', '.')) || 0;
+      var v    = base > 0 ? ceil5(base * coeffOpt) : ceil5(parseFloat(inp.value || '0') || 0);
+      if (v > 0) inp.value = v.toFixed(2);
+    });
+  }
+}
+
+function updateTotal(force) {
+  syncCoeffToggleUI();
+  const coeff = parseFloat(document.getElementById('coeff-input').value) || 1.0;
+  applyCoeffToLines(coeff, force !== false);
+  roundInputs();
+  refreshTotals();
+}
+
+document.getElementById('coeff-nec-toggle').addEventListener('change', () => updateTotal(true));
+document.getElementById('coeff-opt-toggle').addEventListener('change', () => updateTotal(true));
+
+function setCoeff(val) {
+  document.getElementById('coeff-input').value = val;
+  document.getElementById('coeff-hidden').value = parseFloat(val).toFixed(4);
+  updateTotal();
+}
+
+document.getElementById('coeff-input').addEventListener('input', () => updateTotal(true));
+
+// Quand l'utilisateur saisit un prix manuellement → valeur = HT partenaire
+// Le coefficient est appliqué par roundInputs() sur blur
+['nec-lines', 'opt-lines'].forEach(id => {
+  const coeffEnabled = id === 'nec-lines' ? necCoeffEnabled : optCoeffEnabled;
+  document.getElementById(id).addEventListener('input', e => {
+    if (e.target.classList.contains('prix-input')) {
+      const v = parseFloat(e.target.value || '0');
+      if (coeffEnabled()) {
+        e.target.dataset.base = v.toFixed(2);  // valeur saisie = prix HT
+        const hidden = e.target.closest('.intervention-line').querySelector('.base-prix-input');
+        if (hidden) hidden.value = v.toFixed(2);
+      }
+      // coeff désactivé : on ne touche pas au prix HT fournisseur (dataset.base / base-prix-input)
+      refreshTotals();
+    }
+  });
+  document.getElementById(id).addEventListener('blur', e => {
+    if (e.target.classList.contains('prix-input')) roundInputs();
+  }, true);
+});
+
+// Coefficient marque à la sélection de marque
+const _origSelectMarque = window.selectMarque;
+window.selectMarque = function(val) {
+  _origSelectMarque(val);
+  const brandKey  = findBrandKey(val) || val;
+  const brandData = BRAND_COEFFS_RAW[brandKey] || {};
+  const coeff       = typeof brandData === 'object' ? (brandData.coeff     || DEFAULT_COEFF) : (brandData || DEFAULT_COEFF);
+  const coeffOpt    = typeof brandData === 'object' ? (brandData.coeff_opt || null)          : null;
+  const base        = typeof brandData === 'object' ? (brandData.base      || 'ttc')         : 'ttc';
+  const coeffOptBase = typeof brandData === 'object' ? (brandData.coeff_opt_base || base)     : base;
+  const splitNec    = typeof brandData === 'object' && brandData.coeff_split_nec === true;
+
+  const tag = document.getElementById('coeff-brand-tag');
+  let tagText;
+  if (splitNec) {
+    tagText = `${val} → service complet ×${coeff.toFixed(4).replace('.',',')} (HT×1,20 → TTC) | autres + options ×${(coeffOpt || coeff).toFixed(4).replace('.',',')} (HT)`;
+  } else {
+    tagText = base === 'ht'
+      ? `${val} → ×${coeff.toFixed(4).replace('.',',')} HT`
+      : `${val} → ×${coeff.toFixed(4).replace('.',',')}`;
+    if (coeffOpt) tagText += ` | options ×${coeffOpt.toFixed(4).replace('.',',')}`;
+  }
+  tag.textContent = tagText;
+  tag.style.display = 'inline-flex';
+
+  document.getElementById('coeff-input').value       = coeff;
+  document.getElementById('coeff-hidden').value      = coeff.toFixed(4);
+  document.getElementById('coeff-opt-hidden').value  = coeffOpt ? coeffOpt.toFixed(4) : '';
+  document.getElementById('coeff-base-hidden').value = base;
+  document.getElementById('coeff-opt-base-hidden').value = coeffOptBase;
+  document.getElementById('coeff-split-nec-hidden').value = splitNec ? '1' : '0';
+
+  const necDefault = typeof brandData === 'object' ? (brandData.coeff_nec_default !== false) : true;
+  const optDefault = typeof brandData === 'object' ? (brandData.coeff_opt_default !== false) : true;
+  document.getElementById('coeff-nec-toggle').checked = necDefault;
+  document.getElementById('coeff-opt-toggle').checked = optDefault;
+
+  updateTotal(true);
+};
+
+updateTotal(false); // init — preserve prix_client déjà affichés
+
+/* ── Ajouter une ligne ── */
+function addLine(prefix) {
+  const cont = document.getElementById(prefix+'-lines');
+  const div  = document.createElement('div');
+  div.className = prefix === 'opt' ? 'intervention-line has-photo-slot' : 'intervention-line';
+  const _toggleBtns = prefix === 'nec'
+    ? `<button type="button" class="toggle-incl" onclick="toggleIncl(this)"><span class="dot"></span>INCL</button>
+       <button type="button" class="toggle-offert" onclick="toggleOffert(this)"><span class="dot"></span>OFFERT</button>`
+    : '';
+  const _photoBtn = prefix === 'opt'
+    ? `<label class="opt-photo-btn" title="Ajouter une photo à cette option">
+         <span class="opt-photo-icon">📷</span>
+         <img class="opt-photo-preview" alt="">
+         <input type="hidden" name="opt_photo_file[]" value="">
+         <input type="file" name="opt_photo[]" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onchange="optPhotoPreview(this)" style="display:none">
+       </label>`
+    : '';
+  div.innerHTML = `
+    <span class="drag-handle" title="Déplacer" onmousedown="initHandleDrag(event, this.closest('.intervention-line'))">⠿</span>
+    ${_photoBtn}
+    <input type="text" name="${prefix}_description[]" placeholder="Intitulé" data-phrase-assist>
+    <input type="text" name="${prefix}_prix[]" class="prix-input" data-base="" placeholder="0,00">
+    <input type="hidden" name="${prefix}_base_prix[]" class="base-prix-input" value="">
+    <input type="hidden" name="${prefix}_label[]" class="label-input" value="">
+    ${_toggleBtns}
+    <button type="button" class="btn-remove" onclick="this.closest('.intervention-line').remove();updateTotal()">×</button>`;
+  cont.appendChild(div);
+  if (window.phraseAssist) window.phraseAssist(div.querySelector('input[data-phrase-assist]'));
+  div.querySelector('.prix-input').focus();
+  if (prefix === 'nec') updateTotal();
+}
+
+/* ── Drag via handle ⠿ (mouse custom — fiable, sans HTML5 DnD) ── */
+function initHandleDrag(e, dragEl) {
+  e.preventDefault();
+  const parent   = dragEl.parentNode;
+  const siblings = () => [...parent.querySelectorAll(':scope > .intervention-line')];
+
+  // Ghost visuel
+  const ghost = dragEl.cloneNode(true);
+  ghost.style.cssText = 'position:fixed;opacity:.55;pointer-events:none;z-index:9999;' +
+    'width:' + dragEl.offsetWidth + 'px;box-shadow:0 4px 16px rgba(0,0,0,.15);';
+  document.body.appendChild(ghost);
+
+  let lastTarget = null;
+
+  function onMove(ev) {
+    ghost.style.left = ev.clientX - 20 + 'px';
+    ghost.style.top  = ev.clientY - 14 + 'px';
+    dragEl.style.opacity = '0.35';
+
+    // Trouver la ligne cible
+    let target = null, before = true;
+    for (const s of siblings()) {
+      if (s === dragEl) continue;
+      const r = s.getBoundingClientRect();
+      if (ev.clientY >= r.top && ev.clientY <= r.bottom) {
+        target = s;
+        before = ev.clientY < r.top + r.height / 2;
+        break;
+      }
+    }
+    if (lastTarget) lastTarget.style.borderTop = lastTarget.style.borderBottom = '';
+    if (target) {
+      target.style[before ? 'borderTop' : 'borderBottom'] = '2px solid var(--gold)';
+      lastTarget = target;
+    }
+  }
+
+  function onUp(ev) {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+    ghost.remove();
+    dragEl.style.opacity = '';
+    if (lastTarget) {
+      lastTarget.style.borderTop = lastTarget.style.borderBottom = '';
+      const r = lastTarget.getBoundingClientRect();
+      const before = ev.clientY < r.top + r.height / 2;
+      parent.insertBefore(dragEl, before ? lastTarget : lastTarget.nextSibling);
+    }
+    updateTotal();
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+}
+
+/* ── Photo par ligne d'option ── */
+function optPhotoPreview(input) {
+  const label = input.closest('.opt-photo-btn');
+  const img = label.querySelector('.opt-photo-preview');
+  const icon = label.querySelector('.opt-photo-icon');
+  const file = input.files[0];
+  if (!file) { img.classList.remove('visible'); icon.style.display = ''; return; }
+  const r = new FileReader();
+  r.onload = e => { img.src = e.target.result; img.classList.add('visible'); icon.style.display = 'none'; };
+  r.readAsDataURL(file);
+}
+
+/* ── Photos multi-sections (pièce / options) ── */
+document.querySelectorAll('input[data-photo-sec]').forEach(function(input) {
+  const sec = input.dataset.photoSec;
+  const thumbs = document.getElementById('thumbs-' + sec);
+  const max = input.dataset.photoMax ? parseInt(input.dataset.photoMax, 10) : Infinity;
+  const existing = input.dataset.existing ? document.getElementById(input.dataset.existing) : null;
+  const addBtn = document.getElementById('add-' + sec + '-btn');
+  let files = [];
+
+  function existingCount() {
+    return existing ? existing.querySelectorAll('.photo-thumb').length : 0;
+  }
+
+  function updateAddVisibility() {
+    if (max === Infinity || !addBtn) return;
+    addBtn.style.display = (existingCount() + files.length >= max) ? 'none' : 'inline-block';
+  }
+  window['updatePhotoMax_' + sec] = updateAddVisibility;
+
+  function render() {
+    const dt = new DataTransfer();
+    files.forEach(f => dt.items.add(f));
+    input.files = dt.files;
+    thumbs.innerHTML = '';
+    files.forEach(function(f, i) {
+      const wrap = document.createElement('div');
+      wrap.className = 'photo-thumb';
+      const img = document.createElement('img');
+      img.alt = f.name;
+      const r = new FileReader();
+      r.onload = e => { img.src = e.target.result; };
+      r.readAsDataURL(f);
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'photo-thumb-x';
+      x.textContent = '×';
+      x.title = 'Retirer cette photo';
+      x.onclick = function() { files.splice(i, 1); render(); };
+      wrap.appendChild(img);
+      wrap.appendChild(x);
+      thumbs.appendChild(wrap);
+    });
+    thumbs.style.display = files.length ? 'flex' : 'none';
+    updateAddVisibility();
+  }
+
+  input.addEventListener('change', function() {
+    let rejected = false;
+    for (const f of input.files) {
+      if (!/\.(jpe?g|png|webp)$/i.test(f.name)) { rejected = true; continue; }
+      if (existingCount() + files.length >= max) { rejected = true; continue; }
+      files.push(f);
+    }
+    if (rejected) {
+      alert(max === Infinity ? 'Formats acceptés : jpg, png, webp.'
+                              : `Formats acceptés : jpg, png, webp — ${max} photo${max > 1 ? 's' : ''} maximum.`);
+    }
+    render();
+  });
+
+  updateAddVisibility();
+});
+
+/* ── Validation avant génération ── */
+function validateForm(scroll) {
+  const errors = [];
+
+  // ERREUR BLOQUANTE : aucune intervention
+  const necLines = document.querySelectorAll('#nec-lines .intervention-line');
+  const hasInterventions = Array.from(necLines).some(line => {
+    const desc = line.querySelector('input[name="nec_description[]"]');
+    return desc && desc.value.trim() !== '';
+  });
+  if (!hasInterventions) errors.push('Aucune intervention n\'est présente');
+
+  // ERREUR BLOQUANTE : coefficient invalide
+  const coeff = parseFloat(document.getElementById('coeff-input')?.value || 1);
+  if (isNaN(coeff) || coeff < 1 || coeff > 5) {
+    errors.push('Coefficient invalide (doit être entre 1 et 5)');
+  }
+
+  const bloc = document.getElementById('validation-bloc');
+  const errorsDiv = document.getElementById('validation-errors');
+  const errorsList = document.getElementById('errors-list');
+  const btnGenerate = document.getElementById('btn-generate');
+
+  bloc.style.display = 'block';
+
+  if (errors.length > 0) {
+    errorsList.innerHTML = errors.map(e => `<li>${e}</li>`).join('');
+    errorsDiv.style.display = 'block';
+    btnGenerate.disabled = true;
+    btnGenerate.style.opacity = '0.4';
+    btnGenerate.style.cursor = 'not-allowed';
+    if (scroll) bloc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return false;
+  } else {
+    errorsDiv.style.display = 'none';
+    btnGenerate.disabled = false;
+    btnGenerate.style.opacity = '';
+    btnGenerate.style.cursor = '';
+    return true;
+  }
+}
+
+// Scroll vers les erreurs seulement si le user clique sur Générer
+document.querySelector('form').addEventListener('submit', function(e) {
+  if (!validateForm(true)) e.preventDefault();
+});
+
+// Ré-valider silencieusement quand le contenu change
+document.getElementById('nec-lines').addEventListener('input', function(e) {
+  if (e.target.name === 'nec_description[]') validateForm(false);
+});
+document.getElementById('coeff-input').addEventListener('input', function() {
+  validateForm(false);
+});
+
+// Afficher l'état initial sans scroller
+document.addEventListener('DOMContentLoaded', function() {
+  validateForm(false);
+});
+</script>
+<script src="{{ url_for('static', filename='phrases.js') }}"></script>
+{% endblock %}

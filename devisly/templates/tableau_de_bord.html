@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Tableau de bord — {{ maison_name }}{% endblock %}
+{% block page_title %}Aujourd'hui — {{ maison_name }}{% endblock %}
+{% block container_class %}{% endblock %}
+{% block content %}
+
+<div class="erp-kpi-row">
+  <a class="erp-kpi" href="{{ url_for('atelier') }}">
+    <div class="label">En attente atelier</div><div class="value">{{ kpi_atelier }}</div>
+  </a>
+  <a class="erp-kpi" href="{{ url_for('horloger', statut='a_valider') }}">
+    <div class="label">Prêts à envoyer</div><div class="value">{{ kpi_a_valider }}</div>
+  </a>
+  <a class="erp-kpi" href="{{ url_for('fournisseur') }}">
+    <div class="label">Partenaires à traiter</div><div class="value">{{ kpi_partenaires }}</div>
+  </a>
+  <div class="erp-kpi">
+    <div class="label">Accepté ce mois</div><div class="value up">{{ "%.0f"|format(kpi_encaisse) }} €</div>
+  </div>
+</div>
+
+<!-- ══ Répartition SAV — repliée par défaut, n'apparaît pas au premier coup d'œil ══ -->
+<details class="erp-card erp-details">
+  <summary class="erp-card-head erp-details-summary">
+    <div><div class="erp-eyebrow">Pilotage</div><h2>Répartition de l'activité SAV</h2></div>
+  </summary>
+  <div class="erp-details-body">
+    <div class="erp-tile-grid">
+      <div class="erp-tile"><div class="k">SAV Horloger</div><div class="v num">{{ nb_sav_horloger }}</div></div>
+      <div class="erp-tile"><div class="k">SAV Partenaire</div><div class="v num">{{ nb_sav_partenaire }}</div></div>
+    </div>
+    {% if top_marques %}
+    <div class="erp-hint" style="margin-bottom:6px">Marques les plus représentées</div>
+    <div class="erp-chip-row" style="margin:0">
+      {% for marque, count in top_marques %}
+      <span class="erp-chip">{{ marque }} · {{ count }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</details>
+
+{% if lot_status == "generated" %}
+<div class="erp-card">
+  <div class="erp-card-head">
+    <div><div class="erp-eyebrow">Devis partenaire</div><h2>Le dernier lot a été généré</h2></div>
+    <a class="erp-btn erp-btn-primary erp-btn-sm" href="{{ url_for('lot_done') }}">Voir les téléchargements →</a>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ À traiter — les deux origines dans la même liste, avec la prochaine étape ══ -->
+<div class="erp-card{{ ' erp-card-urgent' if a_traiter }}">
+  <div class="erp-card-head">
+    <div><div class="erp-eyebrow">⚠ À traiter</div><h2>Ce qui attend une décision</h2></div>
+    <a href="{{ url_for('comptoir') }}" class="erp-hint">Ouvrir le comptoir →</a>
+  </div>
+  {% if not a_traiter %}
+  <div class="erp-empty">Rien en attente — tout est à jour.</div>
+  {% else %}
+  <div class="erp-table-wrap">
+    <table class="erp-table">
+      <thead><tr><th>Origine</th><th>Client</th><th>Pièce</th><th class="num">Montant</th><th>Depuis</th><th>Avancement</th><th></th></tr></thead>
+      <tbody>
+        {% for d in a_traiter %}
+        <tr>
+          <td><span class="tag-origin {{ 'horloger' if d.origine == 'horloger' else 'partner' }}">{{ "Devis Horloger" if d.origine == "horloger" else "Devis Partenaire" }}</span></td>
+          <td>{{ d.client }}</td>
+          <td>{{ d.piece }}</td>
+          <td class="num">
+            {% if d.total is not none %}{{ "%.2f"|format(d.total) }} €
+            {% else %}<span class="erp-amt-pending">{{ d.next|lower }}</span>{% endif %}
+          </td>
+          <td>
+            {% if d.since %}<span class="erp-since erp-since-{{ d.since.level }}">{{ d.since.label }}</span>
+            {% else %}<span class="erp-hint">—</span>{% endif %}
+          </td>
+          <td>
+            <div class="erp-mstep-cell">
+              <span class="erp-responsable-tag">{{ d.responsable }}</span>
+              <div class="erp-mstep-row">
+                {% for label in ["Chiffrage", "Envoi", "Décision client"] %}
+                <div class="erp-mstep {{ 'done' if d.step > loop.index0 else '' }} {{ 'current' if d.step == loop.index0 else '' }}">
+                  <span class="erp-mstep-dot"></span><span class="erp-mstep-label">{{ label }}</span>
+                </div>
+                {% if not loop.last %}<span class="erp-mstep-line {{ 'done' if d.step > loop.index0 else '' }}"></span>{% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          </td>
+          <td><a class="erp-btn erp-btn-ghost erp-btn-sm" href="{{ d.link }}">Ouvrir →</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ══ Tous les devis — horloger + partenaire, regroupés par action attendue ══ -->
+<div class="erp-card erp-card-suivi">
+  <div class="erp-card-head">
+    <div><div class="erp-eyebrow">Suivi</div><h2>Tous les devis</h2></div>
+  </div>
+  {% if not tous_devis %}
+  <div class="erp-empty">Aucun devis pour l'instant.</div>
+  {% else %}
+  {% set en_attente = tous_devis|selectattr("group", "equalto", "attente")|list %}
+  {% set valides = tous_devis|selectattr("group", "equalto", "valide")|list %}
+  {% if en_attente %}
+  <div class="erp-table-wrap">
+    <table class="erp-table">
+      <thead><tr><th>Origine</th><th>Réf.</th><th>Client</th><th>Pièce</th><th class="num">Montant</th><th>Statut</th><th></th></tr></thead>
+      <tbody>
+        <tr><td colspan="7" class="erp-wb-section is-envoye" style="margin:0;padding:10px 4px 4px"><span class="dot"></span>Attente validation client — {{ en_attente|length }}</td></tr>
+        {% for d in en_attente %}
+        <tr class="erp-row-link" onclick="location.href='{{ d.link }}'">
+          <td><span class="tag-origin {{ 'horloger' if d.origine == 'horloger' else 'partner' }}">{{ "Devis Horloger" if d.origine == "horloger" else "Devis Partenaire" }}</span></td>
+          <td class="num">{{ d.ref }}</td>
+          <td>{{ d.client }}</td>
+          <td>{{ d.piece }}</td>
+          <td class="num">{{ "%.2f"|format(d.total) }} €</td>
+          <td>
+            {% if d.relance %}<span class="erp-pill erp-pill-danger erp-pill-blink">à relancer</span>
+            {% else %}<span class="erp-pill erp-pill-neutral">attente validation client</span>{% endif %}
+          </td>
+          <td>
+            <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="event.stopPropagation(); document.getElementById('dlg-apercu-{{ d.row_id }}').showModal()">Aperçu</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% if valides %}
+  <details class="erp-details" style="margin-top:{{ '14px' if en_attente else '0' }}">
+    <summary class="erp-details-summary erp-wb-section is-success" style="margin:0"><span class="dot"></span>Validés — {{ valides|length }} <span class="hint">(déplier pour voir le détail)</span></summary>
+    <div class="erp-details-body">
+      <div class="erp-table-wrap">
+        <table class="erp-table">
+          <thead><tr><th>Origine</th><th>Réf.</th><th>Client</th><th>Pièce</th><th class="num">Montant</th><th>Statut</th><th></th></tr></thead>
+          <tbody>
+            {% for d in valides %}
+            <tr class="erp-row-link" onclick="location.href='{{ d.link }}'">
+              <td><span class="tag-origin {{ 'horloger' if d.origine == 'horloger' else 'partner' }}">{{ "Devis Horloger" if d.origine == "horloger" else "Devis Partenaire" }}</span></td>
+              <td class="num">{{ d.ref }}</td>
+              <td>{{ d.client }}</td>
+              <td>{{ d.piece }}</td>
+              <td class="num">{{ "%.2f"|format(d.total) }} €</td>
+              <td><span class="erp-pill erp-pill-success">accepté</span></td>
+              <td>
+                <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="event.stopPropagation(); document.getElementById('dlg-apercu-{{ d.row_id }}').showModal()">Aperçu</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+  {% endif %}
+  {% for d in tous_devis %}
+  <dialog class="erp-dialog erp-dialog-pdf" id="dlg-apercu-{{ d.row_id }}">
+    <div class="erp-dialog-head">
+      <div><strong>{{ d.client }}</strong> — {{ d.piece }}{{ " · " + ("%.2f"|format(d.total)) + " €" }}</div>
+      <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="this.closest('dialog').close()">Fermer ✕</button>
+    </div>
+    {% if d.pdf_name %}
+    <iframe src="{{ url_for('demo_view_pdf', token=d.token, filename=d.pdf_name) }}" style="width:100%;height:65vh;border:0;border-radius:4px;background:var(--erp-sunken)"></iframe>
+    {% else %}
+    <div class="erp-empty">PDF pas encore disponible pour ce devis.</div>
+    {% endif %}
+    <div class="erp-dialog-foot">
+      {% if d.pdf_name %}<a class="erp-btn erp-btn-ghost" href="{{ url_for('download', token=d.token, filename=d.pdf_name) }}">Télécharger</a>{% endif %}
+      <a class="erp-btn erp-btn-primary" href="{{ d.link }}">Ouvrir le dossier →</a>
+    </div>
+  </dialog>
+  {% endfor %}
+  {% endif %}
+</div>
+
+{% if devis_limit is not none %}
+<div class="erp-card">
+  <div class="erp-card-head"><div><div class="erp-eyebrow">Quota</div><h2>{{ devis_used }} / {{ devis_limit }} devis ce mois-ci</h2></div>
+    <span class="erp-hint">Horloger et partenaire comptent tous les deux</span></div>
+  <div style="height:5px;background:var(--erp-sunken);border-radius:3px;overflow:hidden">
+    <div style="height:100%;width:{{ devis_pct }}%;background:{{ 'var(--erp-gold)' if devis_used < devis_limit else 'var(--erp-danger)' }}"></div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

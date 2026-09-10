@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% import "_demo_lines_macro.html" as linesmacro %}
+{% block title %}Comptoir — {{ maison_name }}{% endblock %}
+{% block page_title %}Comptoir — accueil{% endblock %}
+{% block container_class %}{% endblock %}
+{% block content %}
+
+<!-- ══ Les 4 chiffres du jour ══ -->
+<div class="erp-kpi-row">
+  <a class="erp-kpi" href="{{ url_for('atelier') }}">
+    <div class="label">En attente atelier</div><div class="value">{{ kpi_atelier }}</div>
+  </a>
+  <a class="erp-kpi" href="{{ url_for('horloger', statut='a_valider') }}">
+    <div class="label">Prêts à envoyer</div><div class="value">{{ kpi_a_valider }}</div>
+  </a>
+  <a class="erp-kpi" href="{{ url_for('fournisseur') }}">
+    <div class="label">Partenaire à traiter</div><div class="value">{{ kpi_partenaires }}</div>
+  </a>
+  <a class="erp-kpi" href="{{ url_for('tableau_de_bord') }}">
+    <div class="label">Accepté ce mois</div><div class="value up">{{ "%.0f"|format(kpi_encaisse) }} €</div>
+  </a>
+</div>
+
+<!-- ══ Nouveau SAV — seul point de création de toute l'appli ══ -->
+<div class="erp-card erp-intake-cta">
+  <div>
+    <div class="erp-eyebrow">Nouveau SAV</div>
+    <h2>Deux façons de démarrer</h2>
+    <p class="erp-hint">Un devis partenaire à extraire, ou une fiche saisie ici pour l'atelier.</p>
+  </div>
+  <div class="erp-actions">
+    <button type="button" class="erp-btn erp-btn-ghost" onclick="document.getElementById('dlg-intake-partenaire').showModal()">📄 Devis partenaire</button>
+    <button type="button" class="erp-btn erp-btn-primary" onclick="document.getElementById('dlg-intake-direct').showModal()">Devis horloger →</button>
+  </div>
+</div>
+
+<dialog class="erp-dialog" id="dlg-intake-partenaire">
+  <div class="erp-dialog-head">
+    <div><strong>Devis partenaire</strong> — import PDF/email</div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-intake-partenaire').close()">Fermer ✕</button>
+  </div>
+  <div>
+    <p class="erp-hint" style="margin-bottom:10px">Le partenaire envoie son devis : Reverso l'extrait, vous vérifiez, le devis client est généré. Suivi ensuite dans <strong>Partenaire</strong>.</p>
+    {% include "_partner_upload.html" %}
+  </div>
+</dialog>
+
+<dialog class="erp-dialog erp-dialog-pdf" id="dlg-intake-direct">
+  <div class="erp-dialog-head">
+    <div><strong>Devis horloger</strong> — fiche SAV</div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-intake-direct').close()">Fermer ✕</button>
+  </div>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:16px;align-items:start">
+    <div>
+      <p class="erp-hint" style="margin-bottom:10px">Pas de devis partenaire : la fiche est saisie ici pendant que le client est là, l'atelier chiffre ensuite. Le SMS de dépôt part dès l'enregistrement — visible à droite juste après.</p>
+      <form action="{{ url_for('demo_fiche_save') }}" method="post" enctype="multipart/form-data">
+        <div class="erp-field-grid">
+          <label class="erp-field"><span>Nom du client</span>
+            <input type="text" name="client_nom" required placeholder="NOM Prénom" autofocus>
+          </label>
+          <label class="erp-field"><span>Téléphone</span>
+            <input type="tel" name="client_tel" required placeholder="06 12 34 56 78">
+          </label>
+          <label class="erp-field"><span>Marque (si connue)</span>
+            <div class="erp-combo">
+              <input type="text" id="marqueField" name="marque" autocomplete="off" placeholder="Tapez ou choisissez...">
+              <ul class="erp-combo-list" id="marqueList" hidden></ul>
+            </div>
+          </label>
+        </div>
+        <div class="erp-field-grid g2">
+          <label class="erp-field"><span>Pièce</span>
+            <div class="erp-combo">
+              <input type="text" id="pieceField" name="piece" required autocomplete="off" placeholder="Ex. Seamaster, bague solitaire...">
+              <ul class="erp-combo-list" id="pieceList" hidden></ul>
+            </div>
+          </label>
+          <label class="erp-field"><span>Photo (optionnel)</span>
+            <input type="file" name="photo" accept=".jpg,.jpeg,.png,.webp">
+          </label>
+        </div>
+        <div class="erp-field-grid g2">
+          <div class="erp-chip-field">
+            <label class="erp-field"><span>Motif du dépôt</span>
+              <textarea id="motifField" name="motif" placeholder="Décrivez, ou cliquez un mot-clé ci-dessous."></textarea>
+            </label>
+            <div class="erp-chip-row" data-chip-group data-target="#motifField">
+              {% for kw, phrase in motif_chips %}
+              <button type="button" class="erp-chip" data-phrase="{{ phrase }}">{{ kw }}</button>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="erp-chip-field">
+            <label class="erp-field"><span>État constaté (à la remise)</span>
+              <textarea id="etatField" name="etat_constate" placeholder="Rayures, chocs, bracelet usé…"></textarea>
+            </label>
+            <div class="erp-chip-row" data-chip-group data-target="#etatField">
+              {% for kw, phrase in etat_chips %}
+              <button type="button" class="erp-chip" data-phrase="{{ phrase }}">{{ kw }}</button>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div class="erp-actions" style="padding-top:6px">
+          <button type="submit" class="erp-btn erp-btn-primary">Enregistrer le dépôt — envoie le SMS →</button>
+        </div>
+      </form>
+    </div>
+    {# Rien à afficher tant que la fiche n'est pas enregistrée (aucun ticket, aucun SMS) —
+       _demo_phone.html gère déjà le cas `selected` absent ("Aucun dépôt sélectionné"). Le
+       SMS réel apparaît juste après l'enregistrement, dans le popup qui rouvre automatiquement
+       (voir plus bas, dlg-created-<id> + script `focus`). #}
+    <div class="erp-dialog-phone-pop">
+      <div class="erp-dialog-phone-pop-head">Téléphone</div>
+      {% with selected = none %}{% include "_demo_phone.html" %}{% endwith %}
+    </div>
+  </div>
+</dialog>
+
+<!-- ══ Coup d'œil comparatif : horloger | partenaire ══ -->
+<div class="erp-comptoir-cols">
+
+  <!-- Colonne 1 — Devis Horloger -->
+  <div class="erp-card erp-col-horloger">
+    <div class="erp-card-head">
+      <div><div class="erp-eyebrow" style="color:var(--erp-tag-horloger)">Devis Horloger</div></div>
+      <a href="{{ url_for('horloger') }}" class="erp-hint">Détail →</a>
+    </div>
+
+    <div class="erp-table-wrap">
+      <table class="erp-table">
+        <thead><tr><th>N° devis</th><th>Client</th><th>Pièce</th><th class="num">Montant</th><th>Responsable</th></tr></thead>
+        <tbody>
+          <tr><td colspan="5" class="erp-wb-section" style="margin:0;padding:10px 4px 4px"><span class="dot"></span>Chiffrage ({{ en_cours|length }})</td></tr>
+          {% if not en_cours %}
+          <tr><td colspan="5" class="erp-empty" style="padding:4px 4px 10px">Rien pour l'instant.</td></tr>
+          {% else %}
+          {% for t in en_cours %}
+          <tr class="erp-row-link" onclick="document.getElementById('dlg-created-{{ t.id }}').showModal()">
+            <td class="num">—</td>
+            <td>{{ t.client_nom }}</td>
+            <td>{{ t.piece }}{{ " · " + t.marque if t.marque }}</td>
+            <td class="num">—</td>
+            <td><span class="erp-responsable-tag">Atelier</span></td>
+          </tr>
+          {% endfor %}
+          {% endif %}
+        </tbody>
+        <tbody>
+          <tr><td colspan="5" class="erp-wb-section is-option" style="margin:0;padding:10px 4px 4px"><span class="dot"></span>Envoi ({{ a_valider|length }})</td></tr>
+          {% if not a_valider %}
+          <tr><td colspan="5" class="erp-empty" style="padding:4px 4px 10px">Rien pour l'instant.</td></tr>
+          {% else %}
+          {% for t in a_valider %}
+          <tr class="erp-row-link" onclick="location.href='{{ url_for('horloger', focus=t.id) }}'">
+            <td class="num">{{ t.devis_numero }}</td>
+            <td>{{ t.client_nom }}</td>
+            <td>{{ t.piece }}{{ " · " + t.marque if t.marque }}</td>
+            <td class="num">{{ "%.2f"|format(t.total) }} €</td>
+            <td><span class="erp-responsable-tag">Comptoir</span></td>
+          </tr>
+          {% endfor %}
+          {% endif %}
+        </tbody>
+        <tbody>
+          <tr><td colspan="5" class="erp-wb-section is-envoye" style="margin:0;padding:10px 4px 4px"><span class="dot"></span>Décision client ({{ envoyes|length }})</td></tr>
+          {% if not envoyes %}
+          <tr><td colspan="5" class="erp-empty" style="padding:4px 4px 10px">Rien pour l'instant.</td></tr>
+          {% else %}
+          {% for t in envoyes %}
+          <tr class="erp-row-link" onclick="location.href='{{ url_for('horloger', focus=t.id) }}'">
+            <td class="num">{{ t.devis_numero }}</td>
+            <td>{{ t.client_nom }}</td>
+            <td>{{ t.piece }}{{ " · " + t.marque if t.marque }}</td>
+            <td class="num">{{ "%.2f"|format(t.total) }} €</td>
+            <td><span class="erp-responsable-tag">Client</span></td>
+          </tr>
+          {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Colonne 2 — Devis Partenaire -->
+  <div class="erp-card erp-col-partner">
+    <div class="erp-card-head">
+      <div><div class="erp-eyebrow" style="color:var(--erp-tag-partner)">Devis Partenaire</div></div>
+      <a href="{{ url_for('fournisseur') }}" class="erp-hint">Détail →</a>
+    </div>
+    <div class="erp-table-wrap">
+      <table class="erp-table">
+        <thead><tr><th>N° devis</th><th>Client</th><th>Pièce</th><th class="num">Montant</th><th>Responsable</th></tr></thead>
+        {% for label, dot_class, group in partenaires_groups %}
+        <tbody>
+          <tr><td colspan="5" class="erp-wb-section {{ dot_class }}" style="margin:0;padding:10px 4px 4px"><span class="dot"></span>{{ label }} ({{ group|length }})</td></tr>
+          {% if not group %}
+          <tr><td colspan="5" class="erp-empty" style="padding:4px 4px 10px">Rien pour l'instant.</td></tr>
+          {% else %}
+          {% for p in group %}
+          <tr class="erp-row-link" onclick="location.href='{{ url_for('fournisseur', focus=p.token) }}'">
+            <td class="num">{{ p.numero or "—" }}</td>
+            <td>{{ p.client }}</td>
+            <td>{{ p.piece or p.marque or "—" }}</td>
+            <td class="num">{% if p.status == "extraction" %}—{% else %}{{ "%.2f"|format(p.total) }} €{% endif %}</td>
+            <td>
+              {% if p.status == "extraction" %}<span class="erp-pill erp-pill-neutral">…</span>
+              {% elif p.status == "envoye" %}<span class="erp-responsable-tag">Client</span>
+              {% else %}<span class="erp-responsable-tag">Comptoir</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% endif %}
+        </tbody>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+
+</div>
+
+{% for t in en_cours %}
+{# Popup ouvert juste après la création d'un devis horloger — fiche + SMS de dépôt en direct
+   (même chrome de popup téléphone que Horloger), pour voir le SMS "partir" tout de suite. #}
+<dialog class="erp-dialog" id="dlg-created-{{ t.id }}">
+  <div class="erp-dialog-head">
+    <div><strong>{{ t.client_nom }}</strong> — {{ t.piece }}{{ " · " + t.marque if t.marque }}</div>
+    <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="document.getElementById('dlg-created-{{ t.id }}').close()">Fermer ✕</button>
+  </div>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:16px;align-items:start">
+    <div>
+      <div class="erp-hint" style="margin-bottom:10px">Dépôt enregistré — en attente de chiffrage par l'atelier.</div>
+      <div class="erp-tile-grid">
+        <div class="erp-tile"><div class="k">Motif du dépôt</div><div class="v">{{ t.motif or "—" }}</div></div>
+        <div class="erp-tile"><div class="k">État constaté</div><div class="v">{{ t.etat_constate or "—" }}</div></div>
+      </div>
+      <a class="erp-btn erp-btn-primary erp-btn-sm" href="{{ url_for('atelier', ticket=t.id, focus=t.id) }}">Chiffrer maintenant →</a>
+    </div>
+    <div class="erp-dialog-phone-pop">
+      <div class="erp-dialog-phone-pop-head">Téléphone</div>
+      {% with selected = t %}{% include "_demo_phone.html" %}{% endwith %}
+    </div>
+  </div>
+</dialog>
+{% endfor %}
+
+{% if focus %}
+<script>
+  (function () {
+    var dlg = document.getElementById("dlg-created-{{ focus }}");
+    if (dlg) dlg.showModal();
+  })();
+</script>
+{% endif %}
+<script type="application/json" id="marquesData">{{ marques | tojson }}</script>
+<script type="application/json" id="pieceModelsData">{{ piece_models | tojson }}</script>
+<script src="{{ url_for('static', filename='demo_chips.js') }}"></script>
+{% endblock %}

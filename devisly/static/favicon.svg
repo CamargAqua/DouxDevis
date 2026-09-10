@@ -1,0 +1,5 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Reverso">
+  <rect x="10" y="9" width="30" height="40" rx="5" fill="#b8863b"/>
+  <rect x="19" y="16" width="30" height="40" rx="5" fill="#fdfcfa" stroke="#262220" stroke-width="2.6"/>
+  <line x1="25" y1="46" x2="41" y2="46" stroke="#b8863b" stroke-width="3.4" stroke-linecap="round"/>
+</svg>

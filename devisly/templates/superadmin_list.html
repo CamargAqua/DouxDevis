@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Clients — Reverso{% endblock %}
+{% block container_class %}container-review{% endblock %}
+{% block content %}
+<section class="card">
+  <header style="display:flex;align-items:flex-start;gap:16px;margin-bottom:20px">
+    <div style="flex:1">
+      <h1 style="font-family:Georgia,serif;font-size:24px;font-weight:400;margin-bottom:6px">Clients Reverso</h1>
+      <p class="lead" style="color:var(--ink-mid);font-size:14px">
+        Un client = un sous-domaine isolé (coefficients, logo, mot de passe admin propres).
+      </p>
+    </div>
+    <a href="{{ url_for('superadmin_new') }}" class="btn btn-gold" style="flex-shrink:0">+ Nouveau client</a>
+    <a href="{{ url_for('superadmin_logout') }}" class="btn btn-ghost" style="flex-shrink:0">Déconnexion</a>
+  </header>
+
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-card-label">Clients actifs</div>
+      <div class="metric-card-value">{{ totals.active }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card-label">Devis ce mois-ci</div>
+      <div class="metric-card-value">{{ totals.month }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-card-label">Devis au total</div>
+      <div class="metric-card-value">{{ totals.total }}</div>
+    </div>
+    <div class="metric-card{{ ' metric-card-alert' if totals.quota_reached else '' }}">
+      <div class="metric-card-label">Quota atteint</div>
+      <div class="metric-card-value">{{ totals.quota_reached }}</div>
+    </div>
+  </div>
+
+  <input type="text" id="adm-search" class="adm-search" placeholder="Rechercher un client...">
+
+  <div class="adm-table-wrap">
+    <table class="adm-table">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Marques</th>
+          <th>Statut</th>
+          <th>Devis ce mois</th>
+          <th>Lien client</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="adm-table-body">
+        {% for t in tenants %}
+        {% set c = counts.get(t.slug, {"month": 0, "total": 0}) %}
+        {% set quota_full = t.devis_limit is not none and c.month >= t.devis_limit %}
+        <tr class="adm-row{{ ' adm-row-alert' if quota_full else '' }}"
+            data-search="{{ (t.maison_name ~ ' ' ~ t.slug)|lower }}">
+          <td>
+            <div>{{ t.maison_name }}</div>
+            <div style="color:var(--ink-soft);font-size:12px"><code>{{ t.slug }}</code></div>
+          </td>
+          <td>{{ t.coefficients|length }}</td>
+          <td>
+            <span class="status-pill {{ 'status-pill-active' if t.active else 'status-pill-suspended' }}">
+              {{ "Actif" if t.active else "Suspendu" }}
+            </span>
+          </td>
+          <td>
+            {% if t.devis_limit is not none %}
+            <div class="quota-cell">
+              <div class="quota-bar">
+                <div class="quota-bar-fill{{ ' quota-full' if quota_full else '' }}" style="width:{{ quota_pct.get(t.slug, 0) }}%"></div>
+              </div>
+              <span class="quota-label{{ ' quota-full' if quota_full else '' }}">{{ c.month }} / {{ t.devis_limit }}</span>
+            </div>
+            {% else %}
+            <span style="color:var(--ink-soft);font-size:12px">illimité</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if links[t.slug] %}
+              <a href="{{ links[t.slug] }}" target="_blank" style="font-size:12px">{{ links[t.slug] }}</a>
+            {% else %}
+              <span style="font-size:12px;color:var(--ink-mid)">brancher le domaine</span>
+            {% endif %}
+          </td>
+          <td style="white-space:nowrap">
+            <a href="{{ url_for('superadmin_edit', slug=t.slug) }}" class="btn btn-ghost">Éditer</a>
+            <form method="post" action="{{ url_for('superadmin_delete', slug=t.slug) }}"
+                  onsubmit="return confirm('Supprimer {{ t.maison_name }} définitivement ? Cette action est irréversible.');"
+                  style="display:inline">
+              <button type="submit" class="btn btn-ghost">Supprimer</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="color:var(--ink-mid)">Aucun client pour l'instant.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+  document.getElementById('adm-search').addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    document.querySelectorAll('#adm-table-body tr[data-search]').forEach(function (tr) {
+      tr.style.display = tr.dataset.search.includes(q) ? '' : 'none';
+    });
+  });
+</script>
+{% endblock %}
