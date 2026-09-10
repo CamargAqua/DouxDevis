@@ -131,6 +131,9 @@
                 </form>
                 {% endif %}
                 {% endif %}
+                <form action="{{ url_for('fournisseur_delete', token=p.token) }}" method="post" onsubmit="return confirm('Supprimer ce devis définitivement ?')">
+                  <button type="submit" class="erp-btn erp-btn-danger erp-btn-sm">Supprimer</button>
+                </form>
               </div>
             </td>
           </tr>
@@ -167,9 +170,14 @@
             <td class="num">{{ "%.2f"|format(p.total) }} €</td>
             <td><span class="erp-pill erp-pill-success">accepté</span></td>
             <td>
-              {% if p.pdf_name %}
-              <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="event.stopPropagation(); document.getElementById('dlg-apercu-{{ p.token }}').showModal()">Aperçu</button>
-              {% endif %}
+              <div class="erp-actions">
+                {% if p.pdf_name %}
+                <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="event.stopPropagation(); document.getElementById('dlg-apercu-{{ p.token }}').showModal()">Aperçu</button>
+                {% endif %}
+                <form action="{{ url_for('fournisseur_delete', token=p.token) }}" method="post" onsubmit="event.stopPropagation(); return confirm('Supprimer ce devis définitivement ?')" onclick="event.stopPropagation()">
+                  <button type="submit" class="erp-btn erp-btn-danger erp-btn-sm">Supprimer</button>
+                </form>
+              </div>
             </td>
           </tr>
           {% endfor %}

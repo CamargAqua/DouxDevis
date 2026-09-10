@@ -2044,6 +2044,25 @@ def create_app() -> Flask:
         session["partner_status"] = statuses
         return redirect(request.referrer or url_for("fournisseur", focus=token))
 
+    @app.route("/fournisseur/<token>/delete", methods=["POST"])
+    def fournisseur_delete(token: str):
+        """Supprime un devis partenaire (n'importe quel statut) et ses fichiers associés —
+        couvre aussi bien une entrée de lot que le devis unique hors lot (session['token'])."""
+        if _lot_entry(token):
+            session["lot"] = [e for e in _lot_get() if e["token"] != token]
+        elif session.get("token") == token:
+            _clear_single()
+        else:
+            return redirect(request.referrer or url_for("fournisseur"))
+        shutil.rmtree(UPLOAD_DIR / secure_filename(token), ignore_errors=True)
+        shutil.rmtree(GENERATED_DIR / secure_filename(token), ignore_errors=True)
+        session["lot_generated"] = [g for g in (session.get("lot_generated") or []) if g["token"] != token]
+        statuses = dict(_partner_status())
+        statuses.pop(token, None)
+        session["partner_status"] = statuses
+        flash("Devis partenaire supprimé.", "success")
+        return redirect(request.referrer or url_for("fournisseur"))
+
     def _since_badge(hhmm: str | None) -> dict | None:
         """Ancienneté d'un dépôt pour la colonne "Depuis" du tableau "À traiter" — repère
         visuel vert/orange/rouge pour trier au coup d'œil quoi traiter en premier. Basé sur
@@ -2458,6 +2477,19 @@ def create_app() -> Flask:
         _demo_save([ticket if t["id"] == ticket_id else t for t in tickets])
         flash("Devis envoyé au client — suivez sa réponse ci-dessous.", "success")
         return redirect(url_for("horloger", focus=ticket_id))
+
+    @app.route("/demo/<ticket_id>/delete", methods=["POST"])
+    def demo_delete(ticket_id: str):
+        """Supprime un devis horloger (n'importe quel statut) et ses fichiers associés."""
+        ticket = _demo_find(ticket_id)
+        if not ticket:
+            return redirect(request.referrer or url_for("horloger"))
+        if ticket.get("token"):
+            shutil.rmtree(GENERATED_DIR / secure_filename(ticket["token"]), ignore_errors=True)
+        shutil.rmtree(_demo_photo_dir(ticket_id), ignore_errors=True)
+        _demo_save([t for t in _demo_tickets() if t["id"] != ticket_id])
+        flash("Devis horloger supprimé.", "success")
+        return redirect(request.referrer or url_for("horloger"))
 
     @app.route("/demo/<ticket_id>/respond", methods=["POST"])
     def demo_respond(ticket_id: str):

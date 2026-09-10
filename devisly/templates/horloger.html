@@ -67,6 +67,9 @@
               {% else %}
               <a class="erp-btn erp-btn-ghost erp-btn-sm" href="{{ url_for('download', token=t.token, filename=t.pdf_name) }}">Télécharger</a>
               {% endif %}
+              <form action="{{ url_for('demo_delete', ticket_id=t.id) }}" method="post" onsubmit="return confirm('Supprimer ce devis définitivement ?')">
+                <button type="submit" class="erp-btn erp-btn-danger erp-btn-sm">Supprimer</button>
+              </form>
             </div>
           </td>
         </tr>
@@ -102,7 +105,12 @@
             <td class="num">{{ "%.2f"|format(t.total) }} €</td>
             <td><span class="erp-pill erp-pill-success">accepté</span></td>
             <td>
-              <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="event.stopPropagation(); document.getElementById('dlg-pdf-{{ t.id }}').showModal()">Aperçu</button>
+              <div class="erp-actions">
+                <button type="button" class="erp-btn erp-btn-ghost erp-btn-sm" onclick="event.stopPropagation(); document.getElementById('dlg-pdf-{{ t.id }}').showModal()">Aperçu</button>
+                <form action="{{ url_for('demo_delete', ticket_id=t.id) }}" method="post" onsubmit="event.stopPropagation(); return confirm('Supprimer ce devis définitivement ?')" onclick="event.stopPropagation()">
+                  <button type="submit" class="erp-btn erp-btn-danger erp-btn-sm">Supprimer</button>
+                </form>
+              </div>
             </td>
           </tr>
           {% endfor %}

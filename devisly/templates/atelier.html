@@ -144,9 +144,14 @@
 
         <div class="erp-wb-total">
           <div><div class="k">Total devis (nécessaire)</div><div class="amt">{{ "%.2f"|format(selected.total) }} €</div></div>
-          <form action="{{ url_for('demo_atelier_finalize', ticket_id=selected.id) }}" method="post">
-            <button type="submit" class="erp-btn erp-btn-primary" {{ "disabled" if not selected.lines.nec }}>Finaliser le devis →</button>
-          </form>
+          <div class="erp-actions">
+            <form action="{{ url_for('demo_delete', ticket_id=selected.id) }}" method="post" onsubmit="return confirm('Supprimer ce devis définitivement ?')">
+              <button type="submit" class="erp-btn erp-btn-danger">Supprimer</button>
+            </form>
+            <form action="{{ url_for('demo_atelier_finalize', ticket_id=selected.id) }}" method="post">
+              <button type="submit" class="erp-btn erp-btn-primary" {{ "disabled" if not selected.lines.nec }}>Finaliser le devis →</button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

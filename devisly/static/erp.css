@@ -482,6 +482,8 @@ a.erp-kpi:hover { border-color: var(--erp-gold); }
 .erp-btn-dark { background: var(--erp-primary); color: #fff; }
 .erp-btn-ghost { background: none; border: 1px solid var(--erp-border); color: var(--erp-ink-soft); }
 .erp-btn-ghost:hover { border-color: var(--erp-gold); color: var(--erp-ink); }
+.erp-btn-danger { background: none; border: 1px solid var(--erp-border); color: var(--erp-ink-soft); }
+.erp-btn-danger:hover { border-color: var(--erp-danger); color: var(--erp-danger); background: var(--erp-danger-bg); }
 .erp-btn-sm { padding: 5px 11px; font-size: .74rem; }
 .erp-btn-icon { padding: 6px; display: inline-flex; align-items: center; }
 .erp-btn:disabled { opacity: .5; cursor: not-allowed; }
