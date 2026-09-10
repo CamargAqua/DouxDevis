@@ -11,6 +11,14 @@ DispatcherMiddleware` (`app.wsgi_app = DispatcherMiddleware(app.wsgi_app, {"/dev
 **Règle :** packager le code importé comme sous-module (`devisly/__init__.py`) et
 convertir ses imports locaux en imports relatifs (`from . import db`) — sinon
 collision dans `sys.modules` avec les modules de DouxDevis.
+**Piège 1bis — imports différés ratés en prod :** un premier passage n'a corrigé que les
+imports en tête de fichier ; 3 `from pdf_extractor import ...` **à l'intérieur de fonctions**
+(chemin "coller un email", "msg", split multi-devis) ont été oubliés — un simple `import app`
+ne les exécute jamais (ils ne tournent qu'au premier appel réel de la fonction), donc rien
+ne les avait détectés avant la prod. **Règle :** après une conversion en imports relatifs,
+grep TOUT le fichier (`from (nom_module) import`), pas seulement les 20 premières lignes —
+et ajouter un test statique qui grep le code source pour ce pattern (fait dans
+`test_devisly_mount.py`, TEST 0) plutôt que de compter sur l'exécution pour l'attraper.
 **Piège 2 — cookies de session :** Flask-Session utilise par défaut le nom de cookie
 "session" et path "/" — deux apps Flask sur le même domaine s'écrasent le cookie l'une
 l'autre. **Règle :** rendre `SESSION_COOKIE_NAME`/`SESSION_COOKIE_PATH` configurables

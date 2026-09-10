@@ -4,7 +4,9 @@ et que les deux apps utilisent des noms de cookie de session distincts.
 ponytail: necessite une Postgres reelle (DATABASE_URL) pour que /devisly/ reponde 200 —
 pas mockee. Sans DATABASE_URL joignable, le test saute proprement la partie Devisly.
 """
+import re
 import sys
+from pathlib import Path
 
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
@@ -12,9 +14,23 @@ if sys.platform == "win32":
 from app import app
 from devisly.app import app as devisly_app
 
+print("=== TEST 0 : pas d'import non-relatif vers un module homonyme de DouxDevis ===")
+# ponytail: la regression reelle rencontree — un `from pdf_extractor import X` a l'interieur
+# d'une fonction (import differe, jamais execute par un simple `import app`) resolvait vers
+# le pdf_extractor.py de DouxDevis au lieu de devisly/pdf_extractor.py. Grep statique plutot
+# qu'un test qui devrait declencher chaque branche pour l'attraper a l'execution.
+_BAD_IMPORT = re.compile(r"^\s*from (db|docx_generator|pdf_extractor|pdf_generator|manage_tenants) import", re.M)
+bad = []
+for f in Path("devisly").glob("*.py"):
+    m = _BAD_IMPORT.search(f.read_text(encoding="utf-8"))
+    if m:
+        bad.append(f"{f}: {m.group(0).strip()}")
+assert not bad, "import non-relatif vers un module homonyme:\n" + "\n".join(bad)
+print("OK — aucun import non-relatif trouve")
+
 client = app.test_client()
 
-print("=== TEST 1 : DouxDevis toujours servi sur / ===")
+print("\n=== TEST 1 : DouxDevis toujours servi sur / ===")
 resp = client.get("/")
 print("status:", resp.status_code, "(attendu: 200)")
 assert resp.status_code == 200

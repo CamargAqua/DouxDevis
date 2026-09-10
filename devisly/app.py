@@ -774,12 +774,12 @@ def create_app() -> Flask:
         if ext == "eml":
             data, source_kind, source_payload = extract_from_eml(file_bytes, api_key=api_key, filename=filename)
         elif ext == "msg":
-            from pdf_extractor import extract_from_msg
+            from .pdf_extractor import extract_from_msg
             data, source_kind, source_payload = extract_from_msg(file_bytes, api_key=api_key, filename=filename)
         else:
             # PDF de 4+ pages : détection de plusieurs devis concaténés
             # ponytail: seuil 4 pages pour éviter un appel API sur les devis 1-3 pages (cas ultra-majoritaire)
-            from pdf_extractor import detect_multi_devis, split_pdf_pages
+            from .pdf_extractor import detect_multi_devis, split_pdf_pages
             try:
                 from pypdf import PdfReader
                 n_pages = len(PdfReader(io.BytesIO(file_bytes)).pages)
@@ -971,7 +971,7 @@ def create_app() -> Flask:
         # ── Mode "coller un email" ──
         if paste_text:
             _lot_clear()
-            from pdf_extractor import _extract_from_text, _detect_brand_from_text
+            from .pdf_extractor import _extract_from_text, _detect_brand_from_text
             import re as _re
             t0 = time.time()
             app.logger.info("extraction démarrée tenant=%s type=paste taille=%d car.",
