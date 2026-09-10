@@ -6,6 +6,7 @@ en teardown). Hors Flask (CLI, auto-test), on ouvre/ferme une connexion directe.
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass
 
 import psycopg2
@@ -58,7 +59,18 @@ def _connect():
     dsn = os.environ.get("DATABASE_URL")
     if not dsn:
         raise RuntimeError("DATABASE_URL non définie.")
-    return psycopg2.connect(dsn)
+    # ponytail: la Postgres gratuite Render coupe parfois la poignée de main SSL sur la
+    # première connexion (surtout entre régions, ex. service US <-> DB Frankfurt) — connu,
+    # transitoire. 2 retries avec un court délai avant d'abandonner pour de bon.
+    last_err = None
+    for attempt in range(3):
+        try:
+            return psycopg2.connect(dsn)
+        except psycopg2.OperationalError as e:
+            last_err = e
+            if attempt < 2:
+                time.sleep(0.5 * (attempt + 1))
+    raise last_err
 
 
 def get_conn():
