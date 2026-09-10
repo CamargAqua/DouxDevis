@@ -53,6 +53,21 @@ body {
 .topbar-link:hover { color: var(--gold); }
 .topbar-sep { color: var(--line-strong); margin: 0 8px; }
 
+/* ── Bascule DouxDevis / Reverso (toggle outil) ── */
+.app-switch {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 2px; border: 1px solid var(--line-strong); border-radius: 20px;
+  background: var(--bg); vertical-align: middle;
+}
+.app-switch-opt {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 16px; text-decoration: none;
+  color: var(--ink-mid); transition: color var(--transition), background var(--transition);
+}
+.app-switch-opt:hover { color: var(--gold); }
+.app-switch-opt.active { background: var(--gold); color: #fff; }
+.app-switch-opt.active:hover { color: #fff; }
+
 /* ── Container ── */
 .container { max-width: 880px; margin: 40px auto 100px; padding: 0 24px; }
 

@@ -78,7 +78,6 @@
         <a href="{{ url_for('guide') }}">Guide</a>
         <a href="{{ url_for('mentions_legales') }}">Mentions légales</a>
         <a href="{{ url_for('confidentialite') }}">Confidentialité</a>
-        {% if show_douxdevis_link %}<a href="/">← Retour à Doux Devis</a>{% endif %}
       </nav>
     </aside>
 
@@ -96,6 +95,12 @@
           <h1>{% block page_title %}{{ self.title() }}{% endblock %}</h1>
           <span class="erp-route">{% block page_route %}{% endblock %}</span>
         </div>
+        {% if show_douxdevis_link %}
+        <span class="app-switch" role="group" aria-label="Changer d'outil">
+          <a href="/" class="app-switch-opt">Doux Devis</a>
+          <a href="{{ url_for('tableau_de_bord') }}" class="app-switch-opt active" aria-current="page">Reverso</a>
+        </span>
+        {% endif %}
         {% if g.tenant and g.tenant.logo_png %}
         <img src="{{ url_for('tenant_logo') }}" class="erp-topbar-logo" alt="{{ maison_name }}">
         {% endif %}
