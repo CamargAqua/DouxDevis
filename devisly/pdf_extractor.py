@@ -562,13 +562,12 @@ def extract_from_pdf(pdf_bytes: bytes, api_key: str | None = None,
 def _parse_claude_response(raw: str) -> dict[str, Any]:
     """Parse la réponse texte de Claude en dict JSON."""
     raw = raw.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```", 2)[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip().rstrip("`").strip()
+    # Tolère fences ``` et texte avant/après le JSON (le modèle raisonne parfois en prose).
+    start = raw.find("{")
     try:
-        return json.loads(raw)
+        if start < 0:
+            raise json.JSONDecodeError("no JSON object", raw, 0)
+        return json.JSONDecoder().raw_decode(raw, start)[0]
     except json.JSONDecodeError as exc:
         logger.warning("Réponse Claude non-JSON : %s", raw[:500])
         raise ExtractionError(

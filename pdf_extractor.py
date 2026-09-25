@@ -16,7 +16,7 @@ EXTRACTION_SYSTEM = """Tu es un assistant chargé d'extraire les informations d'
 
 Le document peut être un PDF structuré ou un email en texte libre.
 
-Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc markdown) avec cette structure exacte :
+Renvoie UNIQUEMENT un objet JSON valide (sans texte avant ou après, sans bloc markdown, sans analyse ni commentaire) avec cette structure exacte :
 
 {
   "marque": "Nom exact de la marque",
@@ -99,6 +99,11 @@ Colonnes/libellés HT à reconnaître (toutes variantes) :
 Si le document ne montre QUE des prix TTC (aucune colonne HT) :
   → Diviser par 1.20 pour obtenir le HT : prix_ht = prix_ttc / 1.20
   → Arrondir à 2 décimales
+
+═══ PDF AVEC DEUX COPIES (REVENDEUR + CLIENT) ═══
+Certains PDF (ex: Chopard) contiennent deux copies du même devis : "Copie pour revendeur" (prix HT, avec Subtotal/TVA) et "Copie client" (prix TTC public).
+  → Utiliser UNIQUEMENT la "Copie pour revendeur" (HT). Ignorer entièrement la "Copie client" et le coupon-réponse pour les prix.
+  → Ne PAS commenter ce choix : renvoyer directement le JSON.
 
 ═══ ⚠️ EMAILS AVEC PRIX HT — RÈGLE ABSOLUE ⚠️ ═══
 Si le document est un email et que les prix sont exprimés en HT (ex: "28€HT", "270 €HT", "42€") :
@@ -569,13 +574,13 @@ def extract_from_paste(text: str, images: list[tuple[bytes, str | None]] | None 
 def _parse_claude_response(raw: str) -> dict[str, Any]:
     """Parse la réponse texte de Claude en dict JSON."""
     raw = raw.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```", 2)[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip().rstrip("`").strip()
+    # Tolère fences ``` et texte avant/après : sur un document ambigu (ex: 2 copies
+    # revendeur/client) le modèle "réfléchit" en prose avant le JSON.
+    start = raw.find("{")
     try:
-        return json.loads(raw)
+        if start < 0:
+            raise json.JSONDecodeError("no JSON object", raw, 0)
+        return json.JSONDecoder().raw_decode(raw, start)[0]
     except json.JSONDecodeError as exc:
         raise RuntimeError(f"Réponse Claude non-JSON : {raw[:500]}") from exc
 
